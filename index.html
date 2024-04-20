@@ -1,0 +1,129 @@
+<html>
+
+<head>
+    <title>Home</title>
+    <!-- <link rel="stylesheet" type="text/css" href="style.css"> -->
+    <script src="./src/outerbase.js"></script>
+</head>
+
+<body>
+    <h3>Outerbase Query Library</h3>
+
+    <button onclick="selectStatement()">SELECT</button>
+    <button onclick="insertStatement()">INSERT</button>
+    <button onclick="updateStatement()">UPDATE</button>
+    <button onclick="deleteStatement()">DELETE</button>
+</body>
+
+<script>
+    // EZQL API
+    // const outerbase = initOuterbase('pnrursvv2wmac674qscf1nw65ynk7j6vqeqw1bc7ud57fkj1crjnrsy8d8qaaetq');
+
+    // Raw API
+    const outerbase = initOuterbase('1wkpp5ltc5ipv7zmdfm88mkfujqqh8ubsnet1p9b4v8ppn7a67cj7kt6hyi96dxy')
+
+    // Select
+    const selectStatement = async () => {
+        // Basic Example
+        // const select = await outerbase
+        //     .select([
+        //         { table: 'person', columns: ['first_name', 'last_name', 'position', 'avatar'] }
+        //     ])
+        //     .from('person')
+        //     .query();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // Advanced Example
+        const select = await outerbase
+            .select([
+                { table: 'person', columns: ['first_name', 'last_name', 'position', 'avatar'] },
+                { table: 'users', columns: ['email'] }
+            ])
+            .from('person')
+            .leftJoin('users', 'person.user = users.id')
+            .where('avatar', '=', 0)
+            .where('first_name', 'IS NOT', null)
+            .limit(10)
+            .offset(10)
+            .orderBy('first_name', 'DESC')
+            .query();
+
+        // Raw API
+        
+        console.log('SELECT: ', select.response.items);
+
+        // EZQL API
+        // console.log('SELECT: ', select.response.results.items);
+    }
+
+    const insertStatement = async () => {
+        const insert = outerbase
+            .insert({ 
+                first_name: 'Brayden', 
+                last_name: 'Wilmoth',
+                position: 'Boss',
+                id: '9b26c6b5-65bf-4689-b23b-46aebf8f57a0'
+            })
+            .into('person')
+            .query();
+
+        console.log('INSERT: ', insert.response.items);
+    }
+
+    const updateStatement = async () => {
+        const update = outerbase
+            .update({ position: 'Past Employee' })
+            .in('person')
+            .where('id', '=', '93e8699a-79b3-457e-9e80-6316573745dd')
+            .query();
+
+        console.log('UPDATE: ', update.response.items);
+    }
+
+    const deleteStatement = async () => {
+        const deleted = outerbase
+            .delete()
+            .from('person')
+            .where('id', '=', '9b26c6b5-65bf-4689-b23b-46aebf8f57a0')
+            .query();
+
+        console.log('DELETE: ', deleted.response.items);
+    }
+    
+
+    // Insert
+    // const insert = outerbase
+    //     .insert({ email: 'test@test.com', age: 20 })
+    //     .into('users')
+    //     .query();
+
+    // console.log('INSERT: ', insert)
+
+    // // Update
+    // const updatedUser = outerbase
+    //     .update({ age: 21 })
+    //     .in('users')
+    //     .where('id', 1);
+
+    // // Delete
+    // const deletedUser = outerbase
+    //     .delete()
+    //     .from('users')
+    //     .where('id', 1);
+</script>
+
+</html>

@@ -1,0 +1,17 @@
+export interface {{ capitalize (camelCase name) }}Type {
+    {{#each columns}}
+    {{ camelCase name }}: {{ type }};
+    {{/each}}
+}
+
+export class {{ capitalize (camelCase name) }} implements {{ capitalize (camelCase name) }}Type {
+    {{#each columns}}
+    {{ camelCase name }}: {{ type }};
+    {{/each}}
+    
+    constructor(data: any) {
+        {{#each columns}}
+        this.{{ camelCase name }} = data.{{ name }};
+        {{/each}}
+    }
+}
