@@ -34,7 +34,7 @@ Outerbase Query Builder is a way to interact with your database in a SQL-like ma
 
 ### Initialize a connection to your database
 
-This library currently supports connecting to Outerbase connections, which supports Postgres, MySQL, SQLite, SQL Server, Clickhouse and more with direct integrations with platforms such as [DigitalOcean](https://digitalocean.com), [Neon](https://neon.tech), and [Turso](https://turso.tech).
+This library currently supports connecting to Outerbase connections, which supports **Postgres**, **MySQL**, **SQLite**, **SQL Server**, **Clickhouse** and more with direct integrations with platforms such as [DigitalOcean](https://digitalocean.com), [Neon](https://neon.tech), and [Turso](https://turso.tech).
 
 First we start by creating a connection object which is intended to be extensible where contributors can create a variety of connection types to other databases or additional third party tools to interact with. In this example we use the included `OuterbaseConnection` class.
 
@@ -53,7 +53,7 @@ When using the `OuterbaseConnection` class, you are required to provide an API t
 2. Attach the database you want to use
 3. Open your Base and click on _Base Settings_ on the left menu
 4. Select the _General_ section
-5. Underneath the _API Token_ section you will see a button to "Generate API Key". Click that and copy your API token to use it in declaring a new `OuterbaseConnectio` object.
+5. Underneath the _API Token_ section you will see a button to "Generate API Key". Click that and copy your API token to use it in declaring a new `OuterbaseConnection` object.
 
 ### Chaining query operations
 
@@ -63,6 +63,7 @@ Instead of writing SQL directly in your code you can chain commands together tha
 
 After you construct the series of SQL-like operations you intend to execute, you should end it by calling the `.query()` function call which will send the request to the database for exection.
 
+#### Select data from database
 ```
 let { data, error } = await db
     .selectFrom([
@@ -79,6 +80,39 @@ let { data, error } = await db
     .asClass(Person)
     .query();
 ```
+
+#### Insert data into a table
+```
+let { data } = await db
+    .insert({ first_name: 'John', last_name: 'Doe', position: 'Developer', avatar: 0 })
+    .into('person')
+    .returning(['id'])
+    .query();
+```
+
+#### Update data in a table
+```
+let { data } = await db
+    .update({ first_name: 'Brayden' })
+    .in('person')
+    .where('last_name'.equals('Raj'))
+    .query();
+```
+
+#### Delete data from a table
+```
+let { data } = await db
+    .delete()
+    .from('person')
+    .where('id'.equals('9190a2cf-e6ab-4e2c-931a-f8f5e364239f'))
+    .query();
+
+console.log('Delete Data: ', data)
+let model = data;
+res.json(model);
+```
+
+> IMPORTANT! To prevent your code from performing actions you do not want to happen, such as deleting data, make sure the database user role you provide in Outerbase has restricted scopes.
 
 ### Executing raw SQL queries
 
@@ -127,17 +161,43 @@ Based on your `API_KEY` value the command will know how to fetch your database s
 npm run sync-models
 ```
 
+The output produces a series of files, one per database table, that is a Typescript class for your queries to map their results to and you can access programatically easily. A sample output looks like the following where each property maps to a column in your database.
 
-## Roadmap
-TBD
+```
+export interface PersonType {
+    firstName: string;
+    lastName: string;
+    position: string;
+    avatar: number;
+}
+
+export class Person implements PersonType {
+    firstName: string;
+    lastName: string;
+    position: string;
+    avatar: number;
+    
+    constructor(data: any) {
+        this.firstName = data.first_name;
+        this.lastName = data.last_name;
+        this.position = data.position;
+        this.avatar = data.avatar;
+    }
+}
+```
 
 ## Contributing
-TBD
+
+If you want to add contributions to this repository, please follow the instructions [here](contributing.md).
 
 ## Support
-TBD
+
+For support join our community on [Discord](https://discord.gg/4M6AXzGG84). For enterprise solutions contact us at [support@outerbase.com](mailto:support@outerbase.com)
 
 ## License
-TBD
 
-## Top Contributors
+AGPL 3.0
+
+## Our Contributors
+
+<img align="left" src="https://contributors-img.web.app/image?repo=outerbase/query-builder"/>
