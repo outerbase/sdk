@@ -53,8 +53,6 @@ export class OuterbaseConnection implements Connection {
      */
     async query(query: string, parameters: Record<string, any>[]): Promise<{ data: any, error: Error | null }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set');
-
-        console.log('QUERY: ', query, parameters)
         
         const response = await fetch('https://app.dev.outerbase.com/api/v1/ezql', {
             method: 'POST',

@@ -43,7 +43,7 @@ app.get('/', async (req: any, res: any) => {
         .leftJoin('users', 'person.user'.equals('users.id'))
         .where('avatar'.equalsNumber(0))
         .where('first_name'.isNot(null))
-        .where('last_name'.equals('Sloka'))
+        .where('last_name'.equals('Domino'))
         .limit(10)
         .offset(0)
         .orderBy('first_name'.descending())
