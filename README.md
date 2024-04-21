@@ -93,9 +93,9 @@ let { data } = await db
 #### Update data in a table
 ```
 let { data } = await db
-    .update({ first_name: 'Brayden' })
+    .update({ first_name: 'Johnny' })
     .in('person')
-    .where('last_name'.equals('Raj'))
+    .where('last_name'.equals('Doe'))
     .query();
 ```
 
@@ -104,12 +104,8 @@ let { data } = await db
 let { data } = await db
     .delete()
     .from('person')
-    .where('id'.equals('9190a2cf-e6ab-4e2c-931a-f8f5e364239f'))
+    .where('id'.equals('1234'))
     .query();
-
-console.log('Delete Data: ', data)
-let model = data;
-res.json(model);
 ```
 
 > IMPORTANT! To prevent your code from performing actions you do not want to happen, such as deleting data, make sure the database user role you provide in Outerbase has restricted scopes.
@@ -130,7 +126,7 @@ let { data, error } = await db.queryRaw('SELECT * FROM person WHERE id=:id', { i
 
 ### Map results to class models
 
-As you construct a SQL statement to be ran you can also pass in a class type you would like the output to attempt to map to. In the below example we pass in `Person` as the class type and the query builder will know to respond either as a single `Person` object or a `Person[]` array based on the contents of the response.
+As you construct a SQL statement to be ran you can also pass in a class type you would like the output to attempt to map to by using `.asClass(ClassName)`. In the below example we pass in `Person` as the class type and the query builder will know to respond either as a single `Person` object or a `Person[]` array based on the contents of the response.
 
 ```
 let { data, error } = await db
