@@ -59,8 +59,6 @@ When using the `OuterbaseConnection` class, you are required to provide an API t
 
 Instead of writing SQL directly in your code you can chain commands together that create simple and complex SQL queries for you.
 
-> String prototypes are used to extend the functionality of strings to help make the chaining functions read more clearly.
-
 After you construct the series of SQL-like operations you intend to execute, you should end it by calling the `.query()` function call which will send the request to the database for exection.
 
 #### Select data from database
@@ -80,6 +78,8 @@ let { data, error } = await db
     .asClass(Person)
     .query();
 ```
+
+> String prototypes are used to extend the functionality of strings to help make the chaining functions read more clearly.
 
 #### Insert data into a table
 ```
@@ -147,7 +147,7 @@ To get started first add the following to your `package.json` file:
 ##### package.json
 ```
 "scripts": {
-    "sync-models": "sync-models API_KEY=ABC123 ./folder/path/to/add/models"
+    "sync-models": "sync-models ./folder/path/to/add/models API_KEY"
 }
 ```
 
@@ -193,6 +193,8 @@ For support join our community on [Discord](https://discord.gg/4M6AXzGG84). For 
 ## License
 
 AGPL 3.0
+
+Looking for an enterprise license for your business? [Contact us](mailto:support@outerbase.com)
 
 ## Our Contributors
 

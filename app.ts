@@ -33,7 +33,6 @@ app.get('/', async (req: any, res: any) => {
     // console.log('Raw Data: ', data)
     // res.json(data)
 
-
     // EXAMPLE: `.query` method mapping to `Person` class with advanced query
     let { data, error } = await db
         .selectFrom([
