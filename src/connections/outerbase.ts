@@ -54,7 +54,7 @@ export class OuterbaseConnection implements Connection {
     async query(query: string, parameters: Record<string, any>[]): Promise<{ data: any, error: Error | null }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set');
         
-        const response = await fetch('https://app.dev.outerbase.com/api/v1/ezql/raw', {
+        const response = await fetch('https://app.outerbase.com/api/v1/ezql/raw', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ export class OuterbaseConnection implements Connection {
     async runSavedQuery(queryId: string): Promise<{ data: any, error: Error | null }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set');
 
-        const response = await fetch(`https://app.dev.outerbase.com/api/v1/ezql/query/${queryId}`, {
+        const response = await fetch(`https://app.outerbase.com/api/v1/ezql/query/${queryId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

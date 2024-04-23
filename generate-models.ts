@@ -26,7 +26,7 @@ async function main() {
         const modelTemplate = compile(modelTemplateSource);
         const indexTemplate = compile(indexTemplateSource);
 
-        const response = await fetch(`https://app.dev.outerbase.com/api/v1/ezql/schema`, {
+        const response = await fetch(`https://app.outerbase.com/api/v1/ezql/schema`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

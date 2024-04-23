@@ -11,7 +11,7 @@ import { Person } from './src/generators/models';
 
 const app = express();
 
-const connection: OuterbaseConnection = new OuterbaseConnection('aqmk5c2ne3w2ah8m8kjc33j5tsqubvw9tjf87yg6t8b6m89m7kajpyk4lr7qaec7');
+const connection: OuterbaseConnection = new OuterbaseConnection('API_KEY');
 const db = outerbase(connection);
 
 const handlebars = require('handlebars');
