@@ -2,9 +2,9 @@
 
 <div align="center">
     <h1>Outerbase Query Builder</h1>
-    <a href="https://www.npmjs.com/package/outerbase/query-builder"><img src="https://img.shields.io/npm/v/outerbase/universe.svg?style=flat" /></a>
+    <a href="https://www.npmjs.com/package/@outerbase/query-builder"><img src="https://img.shields.io/npm/v/@outerbase/query-builder.svg?style=flat" /></a>
     <a href="https://github.com/outerbase/query-builder/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" /></a>
-    <a href="https://github.com/"><img src="https://img.shields.io/badge/license-AGPL_3.0-blue" /></a>
+    <a href="https://github.com/"><img src="https://img.shields.io/badge/license-MIT-blue" /></a>
     <a href="https://discord.gg/4M6AXzGG84"><img alt="Discord" src="https://img.shields.io/discord/1123612147704934400?label=Discord"></a>
     <br />
     <br />
@@ -192,9 +192,7 @@ For support join our community on [Discord](https://discord.gg/4M6AXzGG84). For 
 
 ## License
 
-AGPL 3.0
-
-Looking for an enterprise license for your business? [Contact us](mailto:support@outerbase.com)
+This project is licensed under the MIT license. See the [LICENSE](./LICENSE.txt) file for more info.
 
 ## Our Contributors
 

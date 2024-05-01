@@ -1,6 +1,6 @@
 {
   "name": "@outerbase/query-builder",
-  "version": "1.0.4",
+  "version": "1.0.7",
   "description": "",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -13,7 +13,7 @@
   "scripts": {
     "compile": "tsc --project ./tsconfig.json",
     "build": "npm run compile && ./copy-handlebars.sh",
-    "publish-npm-module": "npm publish --access restricted",
+    "publish-npm-module": "npm publish --access public",
     "prepack": "npm run build"
   },
   "keywords": [
