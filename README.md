@@ -1,24 +1,24 @@
 ![Banner Image]
 
 <div align="center">
-  <h1>Outerbase Query Builder</h1>
-  <a href="https://www.npmjs.com/package/outerbase/query-builder"><img src="https://img.shields.io/npm/v/outerbase/universe.svg?style=flat" /></a>
-  <a href="https://github.com/outerbase/query-builder/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" /></a>
-  <a href="https://github.com/"><img src="https://img.shields.io/badge/license-AGPL_3.0-blue" /></a>
-  <a href="https://discord.gg/4M6AXzGG84"><img alt="Discord" src="https://img.shields.io/discord/1123612147704934400?label=Discord"></a>
-  <br />
-  <br />
-  <a href="https://www.outerbase.com/">Website</a>
-  <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-  <a href="https://www.docs.outerbase.com/">Docs</a>
-  <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-  <a href="https://www.outerbase.com/blog/">Blog</a>
-  <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-  <a href="https://discord.gg/4M6AXzGG84">Discord</a>
-  <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-  <a href="https://twitter.com/outerbase">Twitter</a>
-  <br />
-  <hr />
+    <h1>Outerbase Query Builder</h1>
+    <a href="https://www.npmjs.com/package/outerbase/query-builder"><img src="https://img.shields.io/npm/v/outerbase/universe.svg?style=flat" /></a>
+    <a href="https://github.com/outerbase/query-builder/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" /></a>
+    <a href="https://github.com/"><img src="https://img.shields.io/badge/license-AGPL_3.0-blue" /></a>
+    <a href="https://discord.gg/4M6AXzGG84"><img alt="Discord" src="https://img.shields.io/discord/1123612147704934400?label=Discord"></a>
+    <br />
+    <br />
+    <a href="https://www.outerbase.com/">Website</a>
+    <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+    <a href="https://www.docs.outerbase.com/">Docs</a>
+    <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+    <a href="https://www.outerbase.com/blog/">Blog</a>
+    <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+    <a href="https://discord.gg/4M6AXzGG84">Discord</a>
+    <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+    <a href="https://twitter.com/outerbase">Twitter</a>
+    <br />
+    <hr />
 </div>
 
 ## What is Query Builder?
@@ -85,7 +85,7 @@ let { data, error } = await db
 ```
 let { data } = await db
     .insert({ first_name: 'John', last_name: 'Doe', position: 'Developer', avatar: 0 })
-    .into('person')
+    .in('person')
     .returning(['id'])
     .query();
 ```
@@ -102,8 +102,7 @@ let { data } = await db
 #### Delete data from a table
 ```
 let { data } = await db
-    .delete()
-    .from('person')
+    .deleteFrom('person')
     .where('id'.equals('1234'))
     .query();
 ```
@@ -147,13 +146,14 @@ To get started first add the following to your `package.json` file:
 ##### package.json
 ```
 "scripts": {
-    "sync-models": "sync-models ./folder/path/to/add/models API_KEY"
+    "sync-models": "sync-database-models ./folder/path/to/add/models API_KEY"
 }
 ```
 
 Based on your `API_KEY` value the command will know how to fetch your database schema from Outerbase. It will convert your schema into various Typescript models and save each file to the path you provide. To run this command and generate the files you can execute the command as it is written above by typing:
 
 ```
+npm i ts-node
 npm run sync-models
 ```
 

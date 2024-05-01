@@ -14,31 +14,29 @@ interface QueryBuilder {
     asClass?: any;
 }
 
-export interface Outerbase {
+export interface OuterbaseType {
     queryBuilder: QueryBuilder;
-    selectFrom: (columnsArray: { schema?: string, table: string, columns: string[] }[]) => Outerbase;
-    where: (condition: any) => Outerbase;
-    from: (table: string) => Outerbase;
-    limit: (limit: number) => Outerbase;
-    offset: (offset: number) => Outerbase;
-    orderBy: (column: string, direction?: 'ASC' | 'DESC') => Outerbase;
-    innerJoin: (table: string, condition: string, options?: any) => Outerbase;
-    leftJoin: (table: string, condition: string, options?: any) => Outerbase;
-    rightJoin: (table: string, condition: string, options?: any) => Outerbase;
-    outerJoin: (table: string, condition: string, options?: any) => Outerbase;
-    insert: (data: { [key: string]: any }) => Outerbase;
-    into: (table: string) => Outerbase;
-    update: (data: { [key: string]: any }) => Outerbase;
-    in: (table: string) => Outerbase;
-    delete: () => Outerbase;
-    returning: (columns: string[]) => Outerbase;
-    asClass: (classType: any) => Outerbase;
+    selectFrom: (columnsArray: { schema?: string, table: string, columns: string[] }[]) => OuterbaseType;
+    where: (condition: any) => OuterbaseType;
+    limit: (limit: number) => OuterbaseType;
+    offset: (offset: number) => OuterbaseType;
+    orderBy: (column: string, direction?: 'ASC' | 'DESC') => OuterbaseType;
+    innerJoin: (table: string, condition: string, options?: any) => OuterbaseType;
+    leftJoin: (table: string, condition: string, options?: any) => OuterbaseType;
+    rightJoin: (table: string, condition: string, options?: any) => OuterbaseType;
+    outerJoin: (table: string, condition: string, options?: any) => OuterbaseType;
+    insert: (data: { [key: string]: any }) => OuterbaseType;
+    update: (data: { [key: string]: any }) => OuterbaseType;
+    in: (table: string) => OuterbaseType;
+    deleteFrom: (table: string) => OuterbaseType;
+    returning: (columns: string[]) => OuterbaseType;
+    asClass: (classType: any) => OuterbaseType;
     query: () => Promise<any>;
     queryRaw: (query: string, parameters?: Record<string, any>[]) => Promise<any>;
 }
 
-export default function init(connection: Connection): Outerbase {
-    const outerbase: Outerbase = {
+export function Outerbase(connection: Connection): OuterbaseType {
+    const outerbase: OuterbaseType = {
         queryBuilder: { action: 'select' },
         selectFrom(columnsArray) {
             this.queryBuilder = {
@@ -55,10 +53,6 @@ export default function init(connection: Connection): Outerbase {
         where(condition) {
             if (this.queryBuilder.whereClauses)
                 this.queryBuilder.whereClauses.push(condition);
-            return this;
-        },
-        from(table) {
-            this.queryBuilder.table = table;
             return this;
         },
         limit(limit) {
@@ -142,10 +136,6 @@ export default function init(connection: Connection): Outerbase {
             };
             return this;
         },
-        into(table) {
-            this.queryBuilder.table = table;
-            return this;
-        },
         update(data) {
             this.queryBuilder = {
                 action: 'update',
@@ -159,10 +149,10 @@ export default function init(connection: Connection): Outerbase {
             this.queryBuilder.table = table;
             return this;
         },
-        delete() {
+        deleteFrom(table) {
             this.queryBuilder = {
                 action: 'delete',
-                table: null,
+                table: table,
                 whereClauses: []
             };
             return this;
@@ -259,8 +249,6 @@ export default function init(connection: Connection): Outerbase {
                 default:
                     throw new Error('Invalid action');
             }
-
-            console.log('Query: ', query);
 
             // If asClass is set, map the response to the class
             if (this.queryBuilder.asClass) {

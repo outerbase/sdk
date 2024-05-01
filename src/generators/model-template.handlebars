@@ -1,6 +1,6 @@
 export interface {{ capitalize (camelCase name) }}Type {
     {{#each columns}}
-    {{ camelCase name }}: {{{ type }}};
+    {{ camelCase name }}{{#if is_nullable}}?{{/if}}: {{{ type }}};
     {{/each}}
 }
 

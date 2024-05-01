@@ -1,4 +1,4 @@
-import { Connection } from '.';
+import { Connection } from './index';
 
 export class OuterbaseConnection implements Connection {
     // The API key used for Outerbase authentication
@@ -49,7 +49,7 @@ export class OuterbaseConnection implements Connection {
      * 
      * @param query - The SQL query to be executed.
      * @param parameters - An object containing the parameters to be used in the query.
-     * @returns 
+     * @returns Promise<{ data: any, error: Error | null }>
      */
     async query(query: string, parameters: Record<string, any>[]): Promise<{ data: any, error: Error | null }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set');
@@ -68,7 +68,6 @@ export class OuterbaseConnection implements Connection {
                 run: true
             })
         });
-
         
         let json = await response.json()
         let error = null
@@ -80,17 +79,21 @@ export class OuterbaseConnection implements Connection {
         };
     }
 
-    async aiQuery(query: string): Promise<{ data: any, error: Error | null }> {
-        if (!this.api_key) throw new Error('Outerbase API key is not set');
-
-        return {
-            data: [],
-            error: null
-        };
-    }
-
+    /**
+     * Runs a saved query from the Outerbase account associated with the 
+     * `OuterbaseConnection` token provided. The query ID is used to
+     * identify the query to be run and the response is returned.
+     * 
+     * You can find the query ID by navigating to the query in the Outerbase
+     * app and copying the ID from the URL. If the query is deleted this
+     * ID will no longer be valid and the query will not be able to be run.
+     * 
+     * @param queryId 
+     * @returns Promise<{ data: any, error: Error | null }>
+     */
     async runSavedQuery(queryId: string): Promise<{ data: any, error: Error | null }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set');
+        if (!queryId) throw new Error('Query ID is not set');
 
         const response = await fetch(`https://app.outerbase.com/api/v1/ezql/query/${queryId}`, {
             method: 'POST',
@@ -100,9 +103,13 @@ export class OuterbaseConnection implements Connection {
             }
         });
 
+        let json = await response.json()
+        let error = null
+        let items = await json.response?.results?.items ?? []
+
         return {
-            data: {},
-            error: null
+            data: items,
+            error: error
         }
     }
 };

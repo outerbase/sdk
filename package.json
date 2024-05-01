@@ -1,34 +1,33 @@
 {
   "name": "@outerbase/query-builder",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "",
-  "main": "index.js",
-  "publishConfig": {
-    "access": "restricted"
-  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
   "bin": {
-    "sync-database-models": "./generate-models.ts"
+    "sync-database-models": "./dist/generators/generate-models.js"
   },
+  "files": [
+    "dist/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js",
-    "start-ts": "npx nodemon --exec ts-node -P ./tsconfig.json app.ts",
+    "compile": "tsc --project ./tsconfig.json",
+    "build": "npm run compile && ./copy-handlebars.sh",
     "publish-npm-module": "npm publish --access restricted",
-    "sync-database-models": "ts-node ./generate-models.ts ./src/models aqmk5c2ne3w2ah8m8kjc33j5tsqubvw9tjf87yg6t8b6m89m7kajpyk4lr7qaec7"
+    "prepack": "npm run build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "query-builder",
+    "query",
+    "builder"
+  ],
+  "author": "Outerbase",
+  "license": "MIT",
   "dependencies": {
-    "express": "^4.19.2",
-    "handlebars": "^4.7.8",
-    "http": "^0.0.1-security",
-    "ts-node": "^10.9.2"
+    "handlebars": "^4.7.8"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "nodemon": "^3.1.0",
-    "ts-node": "^10.9.2",
+    "@types/node": "^20.12.7",
     "typescript": "^5.4.3"
   }
 }
