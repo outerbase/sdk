@@ -1,5 +1,3 @@
-![Banner Image]
-
 <div align="center">
     <h1>Outerbase Query Builder</h1>
     <a href="https://www.npmjs.com/package/@outerbase/query-builder"><img src="https://img.shields.io/npm/v/@outerbase/query-builder.svg?style=flat" /></a>
