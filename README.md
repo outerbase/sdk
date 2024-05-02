@@ -176,15 +176,15 @@ The output produces a series of files, one per database table, that is a Typescr
 export interface PersonType {
     firstName: string;
     lastName: string;
-    position: string;
-    avatar: number;
+    position?: string;
+    avatar?: number;
 }
 
 export class Person implements PersonType {
     firstName: string;
     lastName: string;
-    position: string;
-    avatar: number;
+    position?: string;
+    avatar?: number;
     
     constructor(data: any) {
         this.firstName = data.first_name;
