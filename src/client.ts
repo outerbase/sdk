@@ -12,11 +12,15 @@ interface QueryBuilder {
     orderBy?: string;
     returning?: string[];
     asClass?: any;
+    groupBy?: string;
 }
 
 export interface OuterbaseType {
     queryBuilder: QueryBuilder;
     selectFrom: (columnsArray: { schema?: string, table: string, columns: string[] }[]) => OuterbaseType;
+    insert: (data: { [key: string]: any }) => OuterbaseType;
+    update: (data: { [key: string]: any }) => OuterbaseType;
+    deleteFrom: (table: string) => OuterbaseType;
     where: (condition: any) => OuterbaseType;
     limit: (limit: number) => OuterbaseType;
     offset: (offset: number) => OuterbaseType;
@@ -25,14 +29,12 @@ export interface OuterbaseType {
     leftJoin: (table: string, condition: string, options?: any) => OuterbaseType;
     rightJoin: (table: string, condition: string, options?: any) => OuterbaseType;
     outerJoin: (table: string, condition: string, options?: any) => OuterbaseType;
-    insert: (data: { [key: string]: any }) => OuterbaseType;
-    update: (data: { [key: string]: any }) => OuterbaseType;
     in: (table: string) => OuterbaseType;
-    deleteFrom: (table: string) => OuterbaseType;
     returning: (columns: string[]) => OuterbaseType;
     asClass: (classType: any) => OuterbaseType;
     query: () => Promise<any>;
     queryRaw: (query: string, parameters?: Record<string, any>[]) => Promise<any>;
+    groupBy: (column: string) => OuterbaseType;
 }
 
 export function Outerbase(connection: Connection): OuterbaseType {
@@ -161,6 +163,10 @@ export function Outerbase(connection: Connection): OuterbaseType {
             this.queryBuilder.returning = columns;
             return this;
         },
+        groupBy(column: string) {
+            this.queryBuilder.groupBy = column;
+            return this;
+        },
         asClass(classType) {
             this.queryBuilder.asClass = classType;
             return this;
@@ -209,6 +215,10 @@ export function Outerbase(connection: Connection): OuterbaseType {
                         if (this.queryBuilder.offset !== null) {
                             query += ` OFFSET ${this.queryBuilder.offset}`;
                         }
+                    }
+
+                    if (this.queryBuilder.groupBy !== undefined) {
+                        query += ` GROUP BY ${this.queryBuilder.groupBy}`;
                     }
 
                     break;
@@ -289,4 +299,142 @@ function mapToClass<T>(data: any | any[], ctor: new (data: any) => T): T | T[] {
     } else {
         return new ctor(data);
     }
+}
+
+export function equals(a, b) {
+    return `${a} = '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function equalsNumber(a, b) {
+    return `${a} = ${b}`;
+}
+
+export function equalsColumn(a, b) {
+    return `${a} = ${b}`;
+}
+
+export function notEquals(a, b) {
+    return `${a} != '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function notEqualsNumber(a, b) {
+    return `${a} != ${b}`;
+}
+
+export function notEqualsColumn(a, b) {
+    return `${a} != ${b}`;
+}
+
+export function greaterThan(a, b) {
+    return `${a} > '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function greaterThanNumber(a, b) {
+    return `${a} > ${b}`;
+}
+
+export function lessThan(a, b) {
+    return `${a} < '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function lessThanNumber(a, b) {
+    return `${a} < ${b}`;
+}
+
+export function greaterThanOrEqual(a, b) {
+    return `${a} >= '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function greaterThanOrEqualNumber(a, b) {
+    return `${a} >= ${b}`;
+}
+
+export function lessThanOrEqual(a, b) {
+    return `${a} <= '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function lessThanOrEqualNumber(a, b) {
+    return `${a} <= ${b}`;
+}
+
+export function inValues(a, b) {
+    return `${a} IN ('${b.join("', '").replace(/'/g, "\\'")}')`;
+}
+
+export function inNumbers(a, b) {
+    return `${a} IN (${b.join(', ')})`;
+}
+
+export function notInValues(a, b) {
+    return `${a} NOT IN ('${b.join("', '").replace(/'/g, "\\'")}')`;
+}
+
+export function notInNumbers(a, b) {
+    return `${a} NOT IN (${b.join(', ')})`;
+}
+
+export function is(a, b) {
+    if (b === null) return `${this} IS NULL`;
+    return `${a} IS '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function isNumber(a, b) {
+    return `${a} IS ${b}`;
+}
+
+export function isNot(a, b) {
+    if (b === null) return `${this} IS NOT NULL`;
+    return `${a} IS NOT ${b}`;
+}
+
+export function isNotNumber(a, b) {
+    return `${a} IS NOT ${b}`;
+}
+
+export function like(a, b) {
+    return `${a} LIKE '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function notLike(a, b) {
+    return `${a} NOT LIKE '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function ilike(a, b) {
+    return `${a} ILIKE '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function notILike(a, b) {
+    return `${a} NOT ILIKE '${b.replace(/'/g, "\\'")}'`;
+}
+
+export function isNull(a) {
+    return `${a} IS NULL`;
+}
+
+export function isNotNull(a) {
+    return `${a} IS NOT NULL`;
+}
+
+export function between(a, b, c) {
+    return `${a} BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(/'/g, "\\'")}'`;
+}
+
+export function betweenNumbers(a, b, c) {
+    return `${a} BETWEEN ${b} AND ${c}`;
+}
+
+export function notBetween(a, b, c) {
+    return `${a} NOT BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(/'/g, "\\'")}'`;
+}
+
+export function notBetweenNumbers(a, b, c) {
+    return `${a} NOT BETWEEN ${b} AND ${c}`;
+}
+
+export function ascending(a) {
+    return `${a} ASC`;
+}
+
+export function descending(a) {
+    return `${a} DESC`;
 }

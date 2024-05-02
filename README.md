@@ -65,21 +65,23 @@ After you construct the series of SQL-like operations you intend to execute, you
 ```
 let { data, error } = await db
     .selectFrom([
-        { table: 'person', columns: ['first_name', 'last_name', 'position', 'avatar'] },
-        { table: 'users', columns: ['email'] }
+        {
+            schema: 'public', // <- Optional
+            table: 'person',
+            columns: ['first_name', 'last_name', 'position', 'avatar'],
+        },
+        { table: 'users', columns: ['email'] },
     ])
-    .leftJoin('users', 'person.user_id'.equals('users.id'))
-    .where('first_name'.isNot(null))
-    .where('last_name'.equals('Doe'))
-    .where('avatar'.equalsNumber(0))
+    .leftJoin('users', equalsColumn('person.user_id', 'users.id'))
+    .where(isNot('first_name', null))
+    .where(equals('last_name', 'Doe'))
+    .where(equalsNumber('avatar', 0))
     .limit(10)
     .offset(0)
-    .orderBy('first_name'.descending())
+    .orderBy(descending('first_name'))
     .asClass(Person)
-    .query();
+    .query()
 ```
-
-> String prototypes are used to extend the functionality of strings to help make the chaining functions read more clearly.
 
 #### Insert data into a table
 ```
@@ -95,7 +97,7 @@ let { data } = await db
 let { data } = await db
     .update({ first_name: 'Johnny' })
     .in('person')
-    .where('last_name'.equals('Doe'))
+    .where(equals('last_name', 'Doe'))
     .query();
 ```
 
@@ -103,7 +105,7 @@ let { data } = await db
 ```
 let { data } = await db
     .deleteFrom('person')
-    .where('id'.equals('1234'))
+    .where(equals('id', '1234'))
     .query();
 ```
 
@@ -122,6 +124,18 @@ You can optionally pass in an array of parameters for sanitizing your SQL inputs
 ```
 let { data, error } = await db.queryRaw('SELECT * FROM person WHERE id=:id', { id: "123" });
 ```
+
+### Run saved Outerbase queries
+
+When you save queries to your Outerbase bases you can then directly execute those queries from this library. This enables you to make modifications to your query without having to alter and redeploy your codebase, and instead just make the modifications via Outerbase directly for convenience.
+
+```
+let { data, error } = await connection.runSavedQuery(
+    'ea72da5f-5f7a-4bab-9f72-ffffffffffff'
+)
+```
+
+Note that this is an exported function directly from the `OuterbaseConnection` class.
 
 ### Map results to class models
 
@@ -146,14 +160,13 @@ To get started first add the following to your `package.json` file:
 ##### package.json
 ```
 "scripts": {
-    "sync-models": "sync-database-models ./folder/path/to/add/models API_KEY"
+    "sync-models": "sync-database-models PATH=./folder/path/to/add/models API_KEY=outerbase_api_key"
 }
 ```
 
 Based on your `API_KEY` value the command will know how to fetch your database schema from Outerbase. It will convert your schema into various Typescript models and save each file to the path you provide. To run this command and generate the files you can execute the command as it is written above by typing:
 
 ```
-npm i ts-node
 npm run sync-models
 ```
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { compile } from 'handlebars';
+import pkg from 'handlebars';
+const { compile } = pkg;
 import { promises as fs } from 'fs';
 
 const path = require('path');
@@ -13,9 +14,20 @@ handlebars.registerHelper('camelCase', function(str: string) {
     return str.replace(/[-_](.)/g, (_, c) => c.toUpperCase());
 });
 
+function parseArgs(args): { API_KEY?: string, PATH?: string } {
+    const argsMap = {};
+    args.slice(2).forEach(arg => {
+        const [key, value] = arg.split('=');
+        argsMap[key] = value;
+    });
+
+    return argsMap;
+}
+
 async function main() {
-    const apiKey = process.argv[3] || '';
-    const folderPath = process.argv[2] || './';
+    const args = parseArgs(process.argv);
+    const apiKey = args.API_KEY || '';
+    const folderPath = args.PATH || './';
 
     try {
         await fs.mkdir(folderPath, { recursive: true });
