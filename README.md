@@ -25,10 +25,9 @@
 
 Outerbase Query Builder is a way to interact with your database in a SQL-like manner. This library contains the following primary features:
 
-- [**Query Builder**](https://www.outerbase.com): Execute queries on your database easily.
-- [**AI Query**](https://www.outerbase.com): Use natural language to ask your database questions.
-- [**Saved Queries**](https://www.outerbase.com): Run any saved queries from Outerbase in one line.
-- [**Database Model Generator**](https://www.outerbase.com): Create Typescript models from your database schema.
+- [**Query Builder**](#chaining-query-operations): Execute queries on your database easily.
+- [**Saved Queries**](#run-saved-outerbase-queries): Run any saved queries from Outerbase in one line.
+- [**Database Model Generator**](#generate-models-from-your-database): Create Typescript models from your database schema.
 
 ## Usage
 
