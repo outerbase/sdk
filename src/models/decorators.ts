@@ -50,18 +50,12 @@ export function Column(options?: {
 
 export function isColumn(targetClass: Function, propertyName: string): boolean {
     const metadata = metadataRegistry.get(targetClass);
-    if (metadata && metadata.columns[propertyName]) {
-        return true;
-    }
-    return false;
+    return metadata && metadata.columns[propertyName];
 }
 
 export function isPropertyUnique(targetClass: Function, propertyName: string): boolean {
     const metadata = metadataRegistry.get(targetClass);
-    if (metadata && metadata[propertyName] && metadata[propertyName].unique) {
-        return true;
-    }
-    return false;
+    return metadata && metadata[propertyName] && metadata[propertyName].unique
 }
 
 export function isColumnNullable(targetClass: Function, propertyName: string): boolean {
