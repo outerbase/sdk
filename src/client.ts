@@ -2,42 +2,42 @@ import { Connection } from "./connections";
 import { BaseTable } from "./models";
 
 interface QueryBuilder {
-  action: "select" | "insert" | "update" | "delete";
-  table?: string; // Used for INSERT, UPDATE, DELETE
-  columnsWithTable?: { schema?: string; table: string; columns: string[] }[]; // Used for SELECT
-  whereClauses?: string[];
-  joins?: string[];
-  data?: { [key: string]: any };
-  limit?: number;
-  offset?: number | null;
-  orderBy?: string;
-  returning?: string[];
-  asClass?: any;
-  groupBy?: string;
+    action: "select" | "insert" | "update" | "delete";
+    table?: string; // Used for INSERT, UPDATE, DELETE
+    columnsWithTable?: { schema?: string; table: string; columns: string[] }[]; // Used for SELECT
+    whereClauses?: string[];
+    joins?: string[];
+    data?: { [key: string]: any };
+    limit?: number;
+    offset?: number | null;
+    orderBy?: string;
+    returning?: string[];
+    asClass?: any;
+    groupBy?: string;
 }
 
 export interface OuterbaseType {
-  queryBuilder: QueryBuilder;
-  selectFrom: (
-    columnsArray: { schema?: string; table: string; columns: string[] }[]
-  ) => OuterbaseType;
-  insert: (data: { [key: string]: any }) => OuterbaseType;
-  update: (data: { [key: string]: any }) => OuterbaseType;
-  deleteFrom: (table: string) => OuterbaseType;
-  where: (condition: any) => OuterbaseType;
-  limit: (limit: number) => OuterbaseType;
-  offset: (offset: number) => OuterbaseType;
-  orderBy: (column: string, direction?: "ASC" | "DESC") => OuterbaseType;
-  innerJoin: (table: string, condition: string, options?: any) => OuterbaseType;
-  leftJoin: (table: string, condition: string, options?: any) => OuterbaseType;
-  rightJoin: (table: string, condition: string, options?: any) => OuterbaseType;
-  outerJoin: (table: string, condition: string, options?: any) => OuterbaseType;
-  in: (table: string) => OuterbaseType;
-  returning: (columns: string[]) => OuterbaseType;
-  asClass: (classType: any) => OuterbaseType;
-  query: () => Promise<any>;
-  queryRaw: (query: string, parameters?: Record<string, any>[]) => Promise<any>;
-  groupBy: (column: string) => OuterbaseType;
+    queryBuilder: QueryBuilder;
+    selectFrom: (
+        columnsArray: { schema?: string; table: string; columns: string[] }[]
+    ) => OuterbaseType;
+    insert: (data: { [key: string]: any }) => OuterbaseType;
+    update: (data: { [key: string]: any }) => OuterbaseType;
+    deleteFrom: (table: string) => OuterbaseType;
+    where: (condition: any) => OuterbaseType;
+    limit: (limit: number) => OuterbaseType;
+    offset: (offset: number) => OuterbaseType;
+    orderBy: (column: string, direction?: "ASC" | "DESC") => OuterbaseType;
+    innerJoin: (table: string, condition: string, options?: any) => OuterbaseType;
+    leftJoin: (table: string, condition: string, options?: any) => OuterbaseType;
+    rightJoin: (table: string, condition: string, options?: any) => OuterbaseType;
+    outerJoin: (table: string, condition: string, options?: any) => OuterbaseType;
+    in: (table: string) => OuterbaseType;
+    returning: (columns: string[]) => OuterbaseType;
+    asClass: (classType: any) => OuterbaseType;
+    query: () => Promise<any>;
+    queryRaw: (query: string, parameters?: Record<string, any>[]) => Promise<any>;
+    groupBy: (column: string) => OuterbaseType;
 }
 
 export function Outerbase(connection: Connection): OuterbaseType {
@@ -180,118 +180,103 @@ export function Outerbase(connection: Connection): OuterbaseType {
 
         switch (this.queryBuilder.action) {
             case "select":
-            const joinClauses = this.queryBuilder.joins?.join(" ") || "";
-            let selectColumns = "";
-            let fromTable = "";
+                const joinClauses = this.queryBuilder.joins?.join(" ") || "";
+                let selectColumns = "";
+                let fromTable = "";
 
-            this.queryBuilder.columnsWithTable.forEach((set, index) => {
-                if (index > 0) {
-                selectColumns += ", ";
-                }
+                this.queryBuilder.columnsWithTable.forEach((set, index) => {
+                    if (index > 0) {
+                        selectColumns += ", ";
+                    }
 
-                const schema = set.schema ? `"${set.schema}".` : "";
-                let useTable = isReservedKeyword(set.table)
-                ? `"${set.table}"`
-                : set.table;
+                    const schema = set.schema ? `"${set.schema}".` : "";
+                    let useTable = isReservedKeyword(set.table)
+                        ? `"${set.table}"`
+                        : set.table;
 
-                // const columns = set.columns.map(column => {
-                //     let useSchema = schema
-                //     let useColumn = column
+                    const columns = set.columns.map((column) => {
+                        let useColumn = column;
 
-                //     if (isReservedKeyword(schema)) {
-                //         useSchema = `"${schema}"`;
-                //     }
+                        if (isReservedKeyword(column)) {
+                            useColumn = `"${column}"`;
+                        }
 
-                //     if (isReservedKeyword(column)) {
-                //         useColumn = `"${column}"`;
-                //     }
+                        return `${schema ?? ""}${useTable}.${useColumn}`;
+                    });
 
-                //     return `${useSchema ?? ''}.${useColumn}`
-                // });
+                    selectColumns += columns.join(", ");
 
-                const columns = set.columns.map((column) => {
-                let useColumn = column;
-
-                if (isReservedKeyword(column)) {
-                    useColumn = `"${column}"`;
-                }
-
-                return `${schema ?? ""}${useTable}.${useColumn}`;
+                    if (index === 0) {
+                        fromTable = `${schema}${useTable}`;
+                    }
                 });
 
-                selectColumns += columns.join(", ");
+                query = `SELECT ${selectColumns} FROM ${fromTable} ${joinClauses}`;
 
-                if (index === 0) {
-                fromTable = `${schema}${useTable}`;
+                if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
+                    return;
                 }
-            });
 
-            query = `SELECT ${selectColumns} FROM ${fromTable} ${joinClauses}`;
-
-            if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
-                return;
-            }
-
-            if (this.queryBuilder?.whereClauses?.length > 0) {
-                query += ` WHERE ${this.queryBuilder?.whereClauses.join(" AND ")}`;
-            }
-
-            if (this.queryBuilder.orderBy !== undefined) {
-                query += ` ORDER BY ${this.queryBuilder.orderBy}`;
-            }
-
-            if (this.queryBuilder.limit !== undefined) {
-                query += ` LIMIT ${this.queryBuilder.limit}`;
-                if (this.queryBuilder.offset) {
-                query += ` OFFSET ${this.queryBuilder.offset}`;
+                if (this.queryBuilder?.whereClauses?.length > 0) {
+                    query += ` WHERE ${this.queryBuilder?.whereClauses.join(" AND ")}`;
                 }
-            }
 
-            if (this.queryBuilder.groupBy !== undefined) {
-                query += ` GROUP BY ${this.queryBuilder.groupBy}`;
-            }
+                if (this.queryBuilder.orderBy !== undefined) {
+                    query += ` ORDER BY ${this.queryBuilder.orderBy}`;
+                }
 
-            break;
+                if (this.queryBuilder.limit !== undefined) {
+                    query += ` LIMIT ${this.queryBuilder.limit}`;
+                    if (this.queryBuilder.offset) {
+                        query += ` OFFSET ${this.queryBuilder.offset}`;
+                    }
+                }
+
+                if (this.queryBuilder.groupBy !== undefined) {
+                    query += ` GROUP BY ${this.queryBuilder.groupBy}`;
+                }
+
+                break;
             case "insert":
-            const columns = Object.keys(this.queryBuilder.data || {});
-            const placeholders = columns.map((column) => `:${column}`).join(", ");
-            query = `INSERT INTO ${this.queryBuilder.table || ""} (${columns.join(
-                ", "
-            )}) VALUES (${placeholders})`;
-            queryParams.push(this.queryBuilder.data);
+                const columns = Object.keys(this.queryBuilder.data || {});
+                const placeholders = columns.map((column) => `:${column}`).join(", ");
+                query = `INSERT INTO ${this.queryBuilder.table || ""} (${columns.join(
+                    ", "
+                )}) VALUES (${placeholders})`;
+                queryParams.push(this.queryBuilder.data);
 
-            if (this.queryBuilder.returning?.length > 0) {
-                query += ` RETURNING ${this.queryBuilder.returning.join(", ")}`;
-            }
+                if (this.queryBuilder.returning?.length > 0) {
+                    query += ` RETURNING ${this.queryBuilder.returning.join(", ")}`;
+                }
 
-            break;
+                break;
             case "update":
-            if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
-                return;
-            }
+                if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
+                    return;
+                }
 
-            const columnsToUpdate = Object.keys(this.queryBuilder.data || {});
-            const setClauses = columnsToUpdate
-                .map((column) => `${column} = :${column}`)
-                .join(", ");
-            query = `UPDATE ${this.queryBuilder.table || ""} SET ${setClauses}`;
-            if (this.queryBuilder.whereClauses?.length > 0) {
-                query += ` WHERE ${this.queryBuilder.whereClauses.join(" AND ")}`;
-            }
-            queryParams.push(this.queryBuilder.data);
-            break;
+                const columnsToUpdate = Object.keys(this.queryBuilder.data || {});
+                const setClauses = columnsToUpdate
+                    .map((column) => `${column} = :${column}`)
+                    .join(", ");
+                query = `UPDATE ${this.queryBuilder.table || ""} SET ${setClauses}`;
+                if (this.queryBuilder.whereClauses?.length > 0) {
+                    query += ` WHERE ${this.queryBuilder.whereClauses.join(" AND ")}`;
+                }
+                queryParams.push(this.queryBuilder.data);
+                break;
             case "delete":
-            if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
-                return;
-            }
+                if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
+                    return;
+                }
 
-            query = `DELETE FROM ${this.queryBuilder.table || ""}`;
-            if (this.queryBuilder.whereClauses?.length > 0) {
-                query += ` WHERE ${this.queryBuilder.whereClauses.join(" AND ")}`;
-            }
-            break;
+                query = `DELETE FROM ${this.queryBuilder.table || ""}`;
+                if (this.queryBuilder.whereClauses?.length > 0) {
+                    query += ` WHERE ${this.queryBuilder.whereClauses.join(" AND ")}`;
+                }
+                break;
             default:
-            throw new Error("Invalid action");
+                throw new Error("Invalid action");
         }
 
         // If asClass is set, map the response to the class
@@ -299,8 +284,8 @@ export function Outerbase(connection: Connection): OuterbaseType {
             const response = await connection.query(query, queryParams);
             let result = mapToClass(response?.data, this.queryBuilder.asClass);
             return {
-            data: result,
-            error: response.error,
+                data: result,
+                error: response.error,
             };
         }
 
@@ -313,8 +298,8 @@ export function Outerbase(connection: Connection): OuterbaseType {
             const response = await connection.query(query, parameters);
             let result = mapToClass(response?.data, this.queryBuilder.asClass);
             return {
-            data: result,
-            error: response.error,
+                data: result,
+                error: response.error,
             };
         }
 
