@@ -13,7 +13,7 @@ export class BaseTable {
         this._schema = _._schema;
     }
 
-    async create(connection: OuterbaseType) {
+    async insert(connection: OuterbaseType) {
         const metadata = metadataRegistry.get(this.constructor);
         if (!metadata) {
             throw new Error('Metadata not found for class');

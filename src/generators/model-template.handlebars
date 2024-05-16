@@ -1,18 +1,8 @@
-{{!-- export interface {{ capitalize (camelCase name) }}Type {
-    {{#each columns}}
-    {{ camelCase name }}{{#if is_nullable}}?{{/if}}: {{{ type }}};
-    {{/each}}
-} --}}
-
 import { BaseTable, Column } from '@outerbase/query-builder';
 
 export class {{ capitalize (camelCase name) }} extends BaseTable {
     {{#each columns}}
-    {{#if is_nullable}}
-    @Column({ nullable: true, name: "{{name}}" })
-    {{else}}
-    @Column({ name: "{{name}}" })
-    {{/if}}
+    @Column({ name: "{{name}}"{{#if is_nullable}}, nullable: true{{/if}}{{#if primary}}, primary: true{{/if}}{{#if unique}}, unique: true{{/if}}{{#if reference}}, reference: true{{/if}} })
     {{ camelCase name }}{{#if is_nullable}}?{{/if}}: {{{ type }}};
 
     {{/each}}

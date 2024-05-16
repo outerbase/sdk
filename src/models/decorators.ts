@@ -8,7 +8,13 @@
  */
 export const metadataRegistry = new Map<Function, any>();
 
-export function Column(options?: { unique?: boolean, primary?: boolean, nullable?: boolean, columnName?: string }): PropertyDecorator {
+export function Column(options?: { 
+    unique?: boolean, 
+    primary?: boolean, 
+    nullable?: boolean, 
+    name?: string,
+    reference?: any
+}): PropertyDecorator {
     return function(target: any, propertyKey: string | symbol): void {
         const constructor = target.constructor;
         if (!metadataRegistry.has(constructor)) {
@@ -18,7 +24,7 @@ export function Column(options?: { unique?: boolean, primary?: boolean, nullable
         const classMetadata = metadataRegistry.get(constructor);
 
         // Use the provided column name or default to the property name if not provided
-        const columnName = options?.columnName || propertyKey.toString();
+        const columnName = options?.name || propertyKey.toString();
 
         // Initialize the column metadata if it doesn't exist
         if (!classMetadata.columns[propertyKey]) {
@@ -29,7 +35,7 @@ export function Column(options?: { unique?: boolean, primary?: boolean, nullable
         classMetadata.columns[propertyKey] = {
             ...classMetadata.columns[propertyKey],
             ...options,
-            columnName: columnName
+            name: columnName
         };
 
         // Handle primary key setting

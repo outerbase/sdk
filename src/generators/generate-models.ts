@@ -61,7 +61,14 @@ async function main() {
 
                     // Loop through all columns in the table
                     for (let column of table.columns) {
-                        console.log('Column:', column);
+                        const isPrimaryKey = table.constraints?.find(constraint => constraint.type?.toUpperCase() === 'PRIMARY KEY' && constraint.column === column.name);
+                        column.primary = isPrimaryKey ? true : false;
+
+                        const isUnique = table.constraints?.find(constraint => constraint.type?.toUpperCase() === 'UNIQUE' && constraint.column === column.name);
+                        column.unique = isUnique ? true : false;
+
+                        const foreignKey = table.constraints?.find(constraint => constraint.type?.toUpperCase() === 'FOREIGN KEY' && constraint.column === column.name);
+                        column.reference = foreignKey ? foreignKey : null;
                         
                         let currentType = column.type?.toLowerCase();
 
