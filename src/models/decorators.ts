@@ -13,7 +13,7 @@ export function Column(options?: {
     primary?: boolean, 
     nullable?: boolean, 
     name?: string,
-    reference?: any
+    relation?: any
 }): PropertyDecorator {
     return function(target: any, propertyKey: string | symbol): void {
         const constructor = target.constructor;
@@ -23,8 +23,8 @@ export function Column(options?: {
 
         const classMetadata = metadataRegistry.get(constructor);
 
-        // Use the provided column name or default to the property name if not provided
         const columnName = options?.name || propertyKey.toString();
+        const relationName = options?.relation || propertyKey.toString();
 
         // Initialize the column metadata if it doesn't exist
         if (!classMetadata.columns[propertyKey]) {
@@ -35,10 +35,10 @@ export function Column(options?: {
         classMetadata.columns[propertyKey] = {
             ...classMetadata.columns[propertyKey],
             ...options,
-            name: columnName
+            name: columnName,
+            relation: relationName
         };
 
-        // Handle primary key setting
         if (options?.primary) {
             if (classMetadata.primaryKey) {
                 throw new Error(`Multiple primary keys are not allowed: ${constructor.name} already has a primary key on property '${String(classMetadata.primaryKey)}'.`);

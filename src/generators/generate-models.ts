@@ -7,12 +7,14 @@ const path = require('path');
 const handlebars = require('handlebars');
 
 handlebars.registerHelper('capitalize', function(str: string) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
+    return str?.charAt(0).toUpperCase() + str?.slice(1);
 });
 
 handlebars.registerHelper('camelCase', function(str: string) {
-    return str.replace(/[-_](.)/g, (_, c) => c.toUpperCase());
+    return str?.replace(/[-_](.)/g, (_, c) => c?.toUpperCase());
 });
+
+handlebars.registerHelper('neq', (a, b) => a !== b);
 
 function parseArgs(args): { API_KEY?: string, PATH?: string } {
     const argsMap = {};
@@ -59,6 +61,9 @@ async function main() {
                 for (let table of schemaResponse[key]) {
                     if (table.type !== 'table') continue;
 
+                    // References will capture all columns that have foreign key constraints in this table
+                    table.references = [];
+
                     // Loop through all columns in the table
                     for (let column of table.columns) {
                         const isPrimaryKey = table.constraints?.find(constraint => constraint.type?.toUpperCase() === 'PRIMARY KEY' && constraint.column === column.name);
@@ -67,8 +72,20 @@ async function main() {
                         const isUnique = table.constraints?.find(constraint => constraint.type?.toUpperCase() === 'UNIQUE' && constraint.column === column.name);
                         column.unique = isUnique ? true : false;
 
-                        const foreignKey = table.constraints?.find(constraint => constraint.type?.toUpperCase() === 'FOREIGN KEY' && constraint.column === column.name);
-                        column.reference = foreignKey ? foreignKey : null;
+                        const foreignKey = table.constraints?.find(constraint => {
+                            if (constraint.type?.toUpperCase() === 'FOREIGN KEY' && constraint.column === column.name && constraint.columns?.length > 0) {
+                                const firstColumn = constraint.columns[0];
+                                
+                                table.references.push({
+                                    name: firstColumn.name,
+                                    table: firstColumn.table,
+                                    schema: firstColumn.schema,
+                                });
+                            }
+
+                            return constraint.type?.toUpperCase() === 'FOREIGN KEY' && constraint.column === column.name
+                        });
+                        column.reference = foreignKey?.columns[0]?.table ? foreignKey?.columns[0]?.table : undefined;
                         
                         let currentType = column.type?.toLowerCase();
 
@@ -156,6 +173,8 @@ async function main() {
                 }
             }
         }
+
+        console.log('Generated models for tables:', tables);
 
         // Generate index file
         const index = indexTemplate({ tables: tables });

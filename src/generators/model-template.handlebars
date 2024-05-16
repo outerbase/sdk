@@ -1,8 +1,11 @@
 import { BaseTable, Column } from '@outerbase/query-builder';
+{{#each references}}
+import { {{ capitalize (camelCase table) }} } from './{{#if (neq schema "public")}}{{schema}}/{{/if}}{{ camelCase table }}';
+{{/each}}
 
 export class {{ capitalize (camelCase name) }} extends BaseTable {
     {{#each columns}}
-    @Column({ name: "{{name}}"{{#if is_nullable}}, nullable: true{{/if}}{{#if primary}}, primary: true{{/if}}{{#if unique}}, unique: true{{/if}}{{#if reference}}, reference: true{{/if}} })
+    @Column({ name: "{{name}}"{{#if is_nullable}}, nullable: true{{/if}}{{#if primary}}, primary: true{{/if}}{{#if unique}}, unique: true{{/if}}{{#if reference}}, relation: {{capitalize (camelCase reference)}}{{/if}} })
     {{ camelCase name }}{{#if is_nullable}}?{{/if}}: {{{ type }}};
 
     {{/each}}
