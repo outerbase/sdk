@@ -1,5 +1,4 @@
 import { Connection } from "./connections";
-import { BaseTable } from "./models";
 
 interface QueryBuilder {
     action: "select" | "insert" | "update" | "delete";
