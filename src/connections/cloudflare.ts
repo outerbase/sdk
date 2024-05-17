@@ -62,11 +62,9 @@ export class CloudflareD1Connection implements Connection {
         if (!this.databaseId) throw new Error('Cloudflare database ID is not set');
         if (!query) throw new Error('A SQL query was not provided');
 
-        let params = {}
+        let params = []
         parameters?.forEach((param) => {
-            Object.keys(param).forEach((key) => {
-                params[key] = param[key]
-            })
+            // TODO: This still needs implemented.
         })
 
         const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`, {
@@ -77,14 +75,11 @@ export class CloudflareD1Connection implements Connection {
             },
             body: JSON.stringify({
                 sql: query,
-                params: []
+                params: params
             })
         });
         
         let json = await response.json()  
-        
-        console.log('Ran Query: ', query)
-        console.log('Response: ', json)
         
         let error = null
         let resultArray = await json?.result ?? []
