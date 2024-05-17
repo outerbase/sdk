@@ -29,7 +29,7 @@ export interface OuterbaseType {
     leftJoin: (table: string, condition: string, options?: any) => OuterbaseType;
     rightJoin: (table: string, condition: string, options?: any) => OuterbaseType;
     outerJoin: (table: string, condition: string, options?: any) => OuterbaseType;
-    in: (table: string) => OuterbaseType;
+    into: (table: string) => OuterbaseType;
     returning: (columns: string[]) => OuterbaseType;
     asClass: (classType: any) => OuterbaseType;
     query: () => Promise<any>;
@@ -147,7 +147,7 @@ export function Outerbase(connection: Connection): OuterbaseType {
             };
             return this;
         },
-        in(table) {
+        into(table) {
             this.queryBuilder.table = table;
             return this;
         },

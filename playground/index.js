@@ -12,13 +12,20 @@ app.get('/', async (req, res) => {
     );
     const db = Outerbase(d1);
     
-    let { data } = await db.selectFrom([
-        { table: 'table_name', columns: ['id'] }
-    ])
-    .where(equalsNumber('id', 1))
-    .query()
+    // SELECT:
+    // let { data } = await db.selectFrom([
+    //     { table: 'table_name', columns: ['id'] }
+    // ])
+    // .where(equalsNumber('id', 1))
+    // .query()
 
-    res.json(data);
+    // INSERT:
+    // let { data } = await db
+    //     .insert({ something: 'hello', another: 'world', id: 3 })
+    //     .into('table_name')
+    //     .query()
+// 
+    // res.json(data);
 });
 
 app.listen(port, () => {

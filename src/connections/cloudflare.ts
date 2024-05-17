@@ -62,9 +62,22 @@ export class CloudflareD1Connection implements Connection {
         if (!this.databaseId) throw new Error('Cloudflare database ID is not set');
         if (!query) throw new Error('A SQL query was not provided');
 
-        let params = []
-        parameters?.forEach((param) => {
-            // TODO: This still needs implemented.
+        /**
+         * The Cloudflare API requires the query to be in the following format:
+         * SELECT * FROM table WHERE property = ?
+         * 
+         * The parameters object should be an array of values that will replace
+         * the `?` in the query in the order they appear. We need to manipulate
+         * the query string to replace `:property` with `?` and extract the
+         * property names to be used as keys in the parameters object.
+         */
+        let queryParameters = query.match(/:[a-zA-Z0-9]+/g) ?? []
+        query = query.replace(/:[a-zA-Z0-9]+/g, '?')
+        let params = queryParameters
+        
+        params.forEach((param, index) => {
+            let key = param.replace(':', '')
+            params[index] = parameters[0][key]
         })
 
         const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`, {
