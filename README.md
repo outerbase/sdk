@@ -39,7 +39,7 @@ With a connection object instantiated we can create a new database instance to i
 
 ```
 const connection: OuterbaseConnection = new OuterbaseConnection('INSERT_API_TOKEN');
-const db = outerbase(connection);
+const db = Outerbase(connection);
 ```
 
 #### How to create an Outerbase Connection token
