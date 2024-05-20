@@ -1,4 +1,5 @@
 import { Connection } from './index';
+export const API_URL = process.env.OUTERBASE_API_URL ?? 'https://app.outerbase.com'
 
 export class OuterbaseConnection implements Connection {
     // The API key used for Outerbase authentication
@@ -62,7 +63,7 @@ export class OuterbaseConnection implements Connection {
             })
         })
 
-        const response = await fetch('https://app.outerbase.com/api/v1/ezql/raw', {
+        const response = await fetch(`${API_URL}/api/v1/ezql/raw`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -101,7 +102,7 @@ export class OuterbaseConnection implements Connection {
         if (!this.api_key) throw new Error('Outerbase API key is not set');
         if (!queryId) throw new Error('Query ID is not set');
 
-        const response = await fetch(`https://app.outerbase.com/api/v1/ezql/query/${queryId}`, {
+        const response = await fetch(`${API_URL}/api/v1/ezql/query/${queryId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

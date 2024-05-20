@@ -2,6 +2,7 @@
 import pkg from 'handlebars';
 const { compile } = pkg;
 import { promises as fs } from 'fs';
+import { API_URL } from '../connections/outerbase';
 
 const path = require('path');
 const handlebars = require('handlebars');
@@ -42,7 +43,7 @@ async function main() {
         const modelTemplate = compile(modelTemplateSource);
         const indexTemplate = compile(indexTemplateSource);
 
-        const response = await fetch(`https://app.outerbase.com/api/v1/ezql/schema`, {
+        const response = await fetch(`${API_URL}/api/v1/ezql/schema`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
