@@ -9,6 +9,8 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist",                                  /* Redirect output structure to the directory. */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
   },
   "include": [
     "./src/**/*",

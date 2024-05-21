@@ -1,5 +1,5 @@
 <div align="center">
-    <h1>Outerbase Query Builder</h1>
+    <h1>Outerbase SDK</h1>
     <a href="https://www.npmjs.com/package/@outerbase/query-builder"><img src="https://img.shields.io/npm/v/@outerbase/query-builder.svg?style=flat" /></a>
     <a href="https://github.com/outerbase/query-builder/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" /></a>
     <a href="https://github.com/"><img src="https://img.shields.io/badge/license-MIT-blue" /></a>
@@ -8,7 +8,7 @@
     <br />
     <a href="https://www.outerbase.com/">Website</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-    <a href="https://www.docs.outerbase.com/">Docs</a>
+    <a href="https://docs.outerbase.com/">Docs</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href="https://www.outerbase.com/blog/">Blog</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
@@ -39,7 +39,7 @@ With a connection object instantiated we can create a new database instance to i
 
 ```
 const connection: OuterbaseConnection = new OuterbaseConnection('INSERT_API_TOKEN');
-const db = outerbase(connection);
+const db = Outerbase(connection);
 ```
 
 #### How to create an Outerbase Connection token
