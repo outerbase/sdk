@@ -31,7 +31,7 @@ export interface OuterbaseType {
     leftJoin: (table: string, condition: string, options?: any) => OuterbaseType;
     rightJoin: (table: string, condition: string, options?: any) => OuterbaseType;
     outerJoin: (table: string, condition: string, options?: any) => OuterbaseType;
-    in: (table: string) => OuterbaseType;
+    into: (table: string) => OuterbaseType;
     returning: (columns: string[]) => OuterbaseType;
     asClass: (classType: any) => OuterbaseType;
     query: () => Promise<any>;
@@ -40,152 +40,176 @@ export interface OuterbaseType {
 }
 
 export function Outerbase(connection: Connection): OuterbaseType {
-  const outerbase: OuterbaseType = {
-    queryBuilder: { action: "select" },
-    selectFrom(columnsArray) {
-        this.queryBuilder = {
-            action: "select",
-            columnsWithTable: [],
-            whereClauses: [],
-            joins: [],
-        };
+    const outerbase: OuterbaseType = {
+        queryBuilder: { action: 'select' },
+        selectFrom(columnsArray) {
+            this.queryBuilder = {
+                action: 'select',
+                columnsWithTable: [],
+                whereClauses: [],
+                joins: []
+            };
 
-        this.queryBuilder.columnsWithTable = columnsArray;
+            this.queryBuilder.columnsWithTable = columnsArray;
 
-        return this;
-    },
-    where(condition) {
-        if (this.queryBuilder.whereClauses)
-            this.queryBuilder.whereClauses.push(condition);
-        return this;
-    },
-    limit(limit) {
-        this.queryBuilder.limit = limit;
-        return this;
-    },
-    offset(offset) {
-        this.queryBuilder.offset = offset;
-        return this;
-    },
-    orderBy(value) {
-        this.queryBuilder.orderBy = value;
-        return this;
-    },
-    innerJoin(table, condition, options) {
-        let skipEscape = false;
-        if (options && options.escape_single_quotes !== undefined) {
-            if (options.escape_single_quotes === false) {
-            skipEscape = true;
+            return this;
+        },
+        where(condition) {
+            if (this.queryBuilder.whereClauses)
+                this.queryBuilder.whereClauses.push(condition);
+            return this;
+        },
+        limit(limit) {
+            this.queryBuilder.limit = limit;
+            return this;
+        },
+        offset(offset) {
+            this.queryBuilder.offset = offset;
+            return this;
+        },
+        orderBy(value) {
+            this.queryBuilder.orderBy = value;
+            return this;
+        },
+        innerJoin(table, condition, options) {
+            let skipEscape = false;
+            if (options && options.escape_single_quotes !== undefined) {
+                if (options.escape_single_quotes === false) {
+                    skipEscape = true;
+                }
             }
-        }
-        if (!skipEscape) {
-            condition = condition.replace(/'/g, "");
-        }
-
-        if (this.queryBuilder.joins)
-            this.queryBuilder.joins.push(`INNER JOIN ${table} ON ${condition}`);
-        return this;
-    },
-    leftJoin(table, condition, options) {
-        let skipEscape = false;
-        if (options && options.escape_single_quotes !== undefined) {
-            if (options.escape_single_quotes === false) {
-            skipEscape = true;
+            if (!skipEscape) {
+                condition = condition.replace(/'/g, '');
             }
-        }
-        if (!skipEscape) {
-            condition = condition.replace(/'/g, "");
-        }
 
-        if (this.queryBuilder.joins)
-            this.queryBuilder.joins.push(`LEFT JOIN ${table} ON ${condition}`);
-        return this;
-    },
-    rightJoin(table, condition, options) {
-        let skipEscape = false;
-        if (options && options.escape_single_quotes !== undefined) {
-            if (options.escape_single_quotes === false) {
-            skipEscape = true;
+            if (this.queryBuilder.joins)
+                this.queryBuilder.joins.push(`INNER JOIN ${table} ON ${condition}`);
+            return this;
+        },
+        leftJoin(table, condition, options) {
+            let skipEscape = false;
+            if (options && options.escape_single_quotes !== undefined) {
+                if (options.escape_single_quotes === false) {
+                    skipEscape = true;
+                }
             }
-        }
-        if (!skipEscape) {
-            condition = condition.replace(/'/g, "");
-        }
-
-        condition = condition.replace(/'/g, "");
-        if (this.queryBuilder.joins)
-            this.queryBuilder.joins.push(`RIGHT JOIN ${table} ON ${condition}`);
-        return this;
-    },
-    outerJoin(table, condition, options) {
-        let skipEscape = false;
-        if (options && options.escape_single_quotes !== undefined) {
-            if (options.escape_single_quotes === false) {
-            skipEscape = true;
+            if (!skipEscape) {
+                condition = condition.replace(/'/g, '');
             }
-        }
-        if (!skipEscape) {
-            condition = condition.replace(/'/g, "");
-        }
 
-        if (this.queryBuilder.joins)
-            this.queryBuilder.joins.push(`OUTER JOIN ${table} ON ${condition}`);
-        return this;
-    },
-    insert(data) {
-        this.queryBuilder = {
-            action: "insert",
-            data: data,
-            table: null,
-        };
-        return this;
-    },
-    update(data) {
-        this.queryBuilder = {
-            action: "update",
-            data: data,
-            table: null,
-            whereClauses: [],
-        };
-        return this;
-    },
-    in(table) {
-        this.queryBuilder.table = table;
-        return this;
-    },
-    deleteFrom(table) {
-        this.queryBuilder = {
-            action: "delete",
-            table: table,
-            whereClauses: [],
-        };
-        return this;
-    },
-    returning(columns: string[]) {
-        this.queryBuilder.returning = columns;
-        return this;
-    },
-    groupBy(column: string) {
-        this.queryBuilder.groupBy = column;
-        return this;
-    },
-    asClass(classType) {
-        this.queryBuilder.asClass = classType;
-        return this;
-    },
-    async query() {
-        let query = "";
-        let queryParams: any[] = [];
+            if (this.queryBuilder.joins)
+                this.queryBuilder.joins.push(`LEFT JOIN ${table} ON ${condition}`);
+            return this;
+        },
+        rightJoin(table, condition, options) {
+            let skipEscape = false;
+            if (options && options.escape_single_quotes !== undefined) {
+                if (options.escape_single_quotes === false) {
+                    skipEscape = true;
+                }
+            }
+            if (!skipEscape) {
+                condition = condition.replace(/'/g, '');
+            }
 
-        switch (this.queryBuilder.action) {
-            case "select":
-                const joinClauses = this.queryBuilder.joins?.join(" ") || "";
-                let selectColumns = "";
-                let fromTable = "";
+            condition = condition.replace(/'/g, '');
+            if (this.queryBuilder.joins)
+                this.queryBuilder.joins.push(`RIGHT JOIN ${table} ON ${condition}`);
+            return this;
+        },
+        outerJoin(table, condition, options) {
+            let skipEscape = false;
+            if (options && options.escape_single_quotes !== undefined) {
+                if (options.escape_single_quotes === false) {
+                    skipEscape = true;
+                }
+            }
+            if (!skipEscape) {
+                condition = condition.replace(/'/g, '');
+            }
 
-                this.queryBuilder.columnsWithTable.forEach((set, index) => {
-                    if (index > 0) {
-                        selectColumns += ", ";
+            if (this.queryBuilder.joins)
+                this.queryBuilder.joins.push(`OUTER JOIN ${table} ON ${condition}`);
+            return this;
+        },
+        insert(data) {
+            this.queryBuilder = {
+                action: 'insert',
+                data: data,
+                table: null
+            };
+            return this;
+        },
+        update(data) {
+            this.queryBuilder = {
+                action: 'update',
+                data: data,
+                table: null,
+                whereClauses: []
+            };
+            return this;
+        },
+        into(table) {
+            this.queryBuilder.table = table;
+            return this;
+        },
+        deleteFrom(table) {
+            this.queryBuilder = {
+                action: 'delete',
+                table: table,
+                whereClauses: []
+            };
+            return this;
+        },
+        returning(columns: string[]) {
+            this.queryBuilder.returning = columns;
+            return this;
+        },
+        groupBy(column: string) {
+            this.queryBuilder.groupBy = column;
+            return this;
+        },
+        asClass(classType) {
+            this.queryBuilder.asClass = classType;
+            return this;
+        },
+        async query() {
+            let query = '';
+            let queryParams: any[] = [];
+
+            switch (this.queryBuilder.action) {
+                case 'select':
+                    const joinClauses = this.queryBuilder.joins?.join(' ') || '';
+                    let selectColumns = '';
+                    let fromTable = '';
+
+                    this.queryBuilder.columnsWithTable.forEach((set, index) => {
+                        if (index > 0) {
+                            selectColumns += ', ';
+                        }
+
+                        const schema = set.schema ? `"${set.schema}".` : '';
+                        const columns = set.columns.map(column => `${schema ?? ''}${set.table}.${column}`);
+
+                        selectColumns += columns.join(', ');
+
+                        if (index === 0) {
+                            fromTable = `${schema}${set.table}`;
+                        }
+                    });
+
+                    query = `SELECT ${selectColumns} FROM ${fromTable} ${joinClauses}`;
+
+                    if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
+                        return;
+                    }
+
+                    if (this.queryBuilder?.whereClauses?.length > 0) {
+                        query += ` WHERE ${this.queryBuilder?.whereClauses.join(' AND ')}`;
+                    }
+
+                    if (this.queryBuilder.orderBy !== undefined) {
+                        query += ` ORDER BY ${this.queryBuilder.orderBy}`;
                     }
 
                     const schema = set.schema ? `"${set.schema}".` : "";
