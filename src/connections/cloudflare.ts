@@ -56,7 +56,7 @@ export class CloudflareD1Connection implements Connection {
      * @param parameters - An object containing the parameters to be used in the query.
      * @returns Promise<{ data: any, error: Error | null }>
      */
-    async query(query: string, parameters: Record<string, any>[]): Promise<{ data: any, error: Error | null }> {
+    async query(query: string, parameters: Record<string, any>[] | undefined): Promise<{ data: any, error: Error | null }> {
         if (!this.apiKey) throw new Error('Cloudflare API key is not set');
         if (!this.accountId) throw new Error('Cloudflare account ID is not set');
         if (!this.databaseId) throw new Error('Cloudflare database ID is not set');
@@ -77,7 +77,10 @@ export class CloudflareD1Connection implements Connection {
 
         params.forEach((param, index) => {
             let key = param.replace(':', '')
-            params[index] = parameters[0][key]
+
+            if (parameters && parameters.length > 0 && parameters[0].hasOwnProperty(key)) {
+                params[index] = parameters[0][key]
+            }
         })
 
         const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`, {

@@ -1,7 +1,7 @@
 <div align="center">
     <h1>Outerbase SDK</h1>
-    <a href="https://www.npmjs.com/package/@outerbase/query-builder"><img src="https://img.shields.io/npm/v/@outerbase/query-builder.svg?style=flat" /></a>
-    <a href="https://github.com/outerbase/query-builder/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" /></a>
+    <a href="https://www.npmjs.com/package/@outerbase/sdk"><img src="https://img.shields.io/npm/v/@outerbase/sdk.svg?style=flat" /></a>
+    <a href="https://github.com/outerbase/sdk/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" /></a>
     <a href="https://github.com/"><img src="https://img.shields.io/badge/license-MIT-blue" /></a>
     <a href="https://discord.gg/4M6AXzGG84"><img alt="Discord" src="https://img.shields.io/discord/1123612147704934400?label=Discord"></a>
     <br />
@@ -19,9 +19,9 @@
     <hr />
 </div>
 
-## What is Query Builder?
+## What is Outerbase SDK?
 
-Outerbase Query Builder is a way to interact with your database in a SQL-like manner. This library contains the following primary features:
+Outerbase SDK is a way to interact with your database in a SQL-like manner. This library contains the following primary features:
 
 - [**Query Builder**](#chaining-query-operations): Execute queries on your database easily.
 - [**Saved Queries**](#run-saved-outerbase-queries): Run any saved queries from Outerbase in one line.
@@ -84,7 +84,7 @@ let { data, error } = await db
 ```
 let { data } = await db
     .insert({ first_name: 'John', last_name: 'Doe', position: 'Developer', avatar: 0 })
-    .in('person')
+    .into('person')
     .returning(['id'])
     .query();
 ```
@@ -93,7 +93,7 @@ let { data } = await db
 ```
 let { data } = await db
     .update({ first_name: 'Johnny' })
-    .in('person')
+    .into('person')
     .where(equals('last_name', 'Doe'))
     .query();
 ```
@@ -206,4 +206,4 @@ This project is licensed under the MIT license. See the [LICENSE](./LICENSE.txt)
 
 ## Our Contributors
 
-<img align="left" src="https://contributors-img.web.app/image?repo=outerbase/query-builder"/>
+<img align="left" src="https://contributors-img.web.app/image?repo=outerbase/sdk"/>
