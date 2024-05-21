@@ -74,7 +74,7 @@ export class CloudflareD1Connection implements Connection {
         let queryParameters = query.match(/:[a-zA-Z0-9]+/g) ?? []
         query = query.replace(/:[a-zA-Z0-9]+/g, '?')
         let params = queryParameters
-        
+
         params.forEach((param, index) => {
             let key = param.replace(':', '')
             params[index] = parameters[0][key]
@@ -95,8 +95,8 @@ export class CloudflareD1Connection implements Connection {
         let json = await response.json()  
         
         let error = null
-        let resultArray = await json?.result ?? []
-        let items = await resultArray[0]?.results ?? []
+        const resultArray = await json?.result ?? []
+        const items = await resultArray[0]?.results ?? []
 
         return {
             data: items,
