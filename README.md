@@ -84,7 +84,7 @@ let { data, error } = await db
 ```
 let { data } = await db
     .insert({ first_name: 'John', last_name: 'Doe', position: 'Developer', avatar: 0 })
-    .in('person')
+    .into('person')
     .returning(['id'])
     .query();
 ```
@@ -93,7 +93,7 @@ let { data } = await db
 ```
 let { data } = await db
     .update({ first_name: 'Johnny' })
-    .in('person')
+    .into('person')
     .where(equals('last_name', 'Doe'))
     .query();
 ```
