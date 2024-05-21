@@ -1,6 +1,6 @@
 {
-  "name": "@outerbase/query-builder",
-  "version": "1.0.9",
+  "name": "@outerbase/sdk",
+  "version": "1.0.10",
   "description": "",
   "main": "dist/index.js",
   "module": "dist/index.js",
