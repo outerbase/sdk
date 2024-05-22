@@ -1,15 +1,21 @@
-export interface {{ capitalize (camelCase name) }}Type {
-    {{#each columns}}
-    {{ camelCase name }}{{#if is_nullable}}?{{/if}}: {{{ type }}};
-    {{/each}}
-}
+import { BaseTable, Column } from '@outerbase/sdk';
+{{#each references}}
+import { {{ capitalize (camelCase table) }} } from './{{#if (neq schema "public")}}{{schema}}/{{/if}}{{ camelCase table }}';
+{{/each}}
 
-export class {{ capitalize (camelCase name) }} implements {{ capitalize (camelCase name) }}Type {
+export class {{ capitalize (camelCase name) }} extends BaseTable {
     {{#each columns}}
-    {{ camelCase name }}: {{{ type }}};
+    @Column({ name: "{{name}}"{{#if is_nullable}}, nullable: true{{/if}}{{#if primary}}, primary: true{{/if}}{{#if unique}}, unique: true{{/if}}{{#if reference}}, relation: {{capitalize (camelCase reference)}}{{/if}} })
+    {{ camelCase name }}{{#if is_nullable}}?{{/if}}: {{{ type }}};
+
     {{/each}}
     
     constructor(data: any) {
+        super({
+            _name: "{{name}}",
+            _schema: "{{schema}}"
+        });
+
         {{#each columns}}
         this.{{ camelCase name }} = data.{{ name }};
         {{/each}}

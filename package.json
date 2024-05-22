@@ -1,6 +1,6 @@
 {
-  "name": "@outerbase/query-builder",
-  "version": "1.0.11",
+  "name": "@outerbase/sdk",
+  "version": "1.0.13",
   "description": "",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -27,7 +27,7 @@
     "handlebars": "^4.7.8"
   },
   "devDependencies": {
-    "@types/node": "^20.12.7",
+    "@types/node": "^20.12.12",
     "typescript": "^5.4.3"
   }
 }

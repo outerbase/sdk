@@ -6,9 +6,11 @@
     "esModuleInterop": true,                             /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
     "forceConsistentCasingInFileNames": true,            /* Ensure that casing is correct in imports. */
     "skipLibCheck": true,                                /* Skip type checking all .d.ts files. */
-    "outDir": "./dist",                                  /* Redirect output structure to the directory. */
     "declaration": true,
     "declarationMap": true,
+    "outDir": "./dist",                                  /* Redirect output structure to the directory. */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
   },
   "include": [
     "./src/**/*",
