@@ -1,5 +1,5 @@
 import { Connection } from './index';
-export const API_URL = process.env.OUTERBASE_API_URL ?? 'https://app.outerbase.com'
+export const API_URL = 'https://app.outerbase.com'
 
 export class OuterbaseConnection implements Connection {
     // The API key used for Outerbase authentication
