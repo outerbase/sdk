@@ -19,7 +19,7 @@ To quote the famous William and Theodore:
 
 ## Questions
 
-If you have any questions feel free to utilize our [Discord Community](https://discord.gg/4M6AXzGG84) or the [GitHub Discussions](https://github.com/Outerbase/query-builder/discussions) board.
+If you have any questions feel free to utilize our [Discord Community](https://discord.gg/4M6AXzGG84) or the [GitHub Discussions](https://github.com/Outerbase/sdk/discussions) board.
 <br /><br />
 
 ## Feature Requests
@@ -35,8 +35,8 @@ Small Changes can directly be crafted and submitted to the GitHub Repository as 
 
 **If you find a security vulnerability, do NOT open an issue. Email security@outerbase.com instead.**
 
-Before you submit your issue, please [search the issue archive](https://github.com/Outerbase/query-builder/issues?q=is%3Aissue+is%3Aclosed) - maybe your question or issue has already been identified or addressed.
+Before you submit your issue, please [search the issue archive](https://github.com/Outerbase/sdk/issues?q=is%3Aissue+is%3Aclosed) - maybe your question or issue has already been identified or addressed.
 
-If you find a bug in the source code, you can help us by [submitting an issue to our GitHub issue tracker](https://github.com/Outerbase/query-builder/issues). Even better, you can submit a Pull Request with a fix!
+If you find a bug in the source code, you can help us by [submitting an issue to our GitHub issue tracker](https://github.com/Outerbase/sdk/issues). Even better, you can submit a Pull Request with a fix!
 
 _More contribution guidelines around code contribution and PR guidelines coming soon._

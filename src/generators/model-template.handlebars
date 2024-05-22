@@ -1,4 +1,4 @@
-import { BaseTable, Column } from '@outerbase/query-builder';
+import { BaseTable, Column } from '@outerbase/sdk';
 {{#each references}}
 import { {{ capitalize (camelCase table) }} } from './{{#if (neq schema "public")}}{{schema}}/{{/if}}{{ camelCase table }}';
 {{/each}}
