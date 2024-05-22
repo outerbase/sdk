@@ -24,7 +24,9 @@
   "author": "Outerbase",
   "license": "MIT",
   "dependencies": {
-    "handlebars": "^4.7.8"
+    "@neondatabase/serverless": "^0.9.3",
+    "handlebars": "^4.7.8",
+    "ws": "^8.17.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
