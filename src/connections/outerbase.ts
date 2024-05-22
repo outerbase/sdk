@@ -52,7 +52,7 @@ export class OuterbaseConnection implements Connection {
      * @param parameters - An object containing the parameters to be used in the query.
      * @returns Promise<{ data: any, error: Error | null }>
      */
-    async query(query: string, parameters: Record<string, any>[]): Promise<{ data: any, error: Error | null }> {
+    async query(query: string, parameters: Record<string, any>[] | undefined): Promise<{ data: any, error: Error | null }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set');
         if (!query) throw new Error('Query was not provided');
 
