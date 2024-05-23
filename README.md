@@ -33,12 +33,12 @@ Outerbase SDK is a way to interact with your database in a SQL-like manner. This
 
 **npm**
 ```
-npm i @outerbase/query-builder
+npm i @outerbase/sdk
 ```
 
 **pnpm**
 ```
-pnpm add @outerbase/query-builder
+pnpm add @outerbase/sdk
 ```
 
 ### Initialize a connection to your database
@@ -50,7 +50,7 @@ First we start by creating a connection object which is intended to be extensibl
 With a connection object instantiated we can create a new database instance to interact with that connection interface.
 
 ```ts
-import { Outerbase, OuterbaseConnection } from '@outerbase/query-builder'
+import { Outerbase, OuterbaseConnection } from '@outerbase/sdk'
 
 // ...
 
