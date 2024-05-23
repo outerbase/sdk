@@ -56,8 +56,8 @@ export class OuterbaseConnection implements Connection {
         if (!this.api_key) throw new Error('Outerbase API key is not set');
         if (!query) throw new Error('Query was not provided');
 
-        let params = {}
-        parameters.forEach((param) => {
+        let params: Record<string, any> = {}
+        parameters?.forEach((param) => {
             Object.keys(param).forEach((key) => {
                 params[key] = param[key]
             })

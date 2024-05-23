@@ -15,11 +15,11 @@ handlebars.registerHelper('camelCase', function(str: string) {
     return str?.replace(/[-_](.)/g, (_, c) => c?.toUpperCase());
 });
 
-handlebars.registerHelper('neq', (a, b) => a !== b);
+handlebars.registerHelper('neq', (a: any, b: any) => a !== b);
 
-function parseArgs(args): { API_KEY?: string, PATH?: string } {
-    const argsMap = {};
-    args.slice(2).forEach(arg => {
+function parseArgs(args: any[]): { API_KEY?: string, PATH?: string } {
+    const argsMap: Record<string, any> = {};
+    args.slice(2).forEach((arg: { split: (arg0: string) => [any, any]; }) => {
         const [key, value] = arg.split('=');
         argsMap[key] = value;
     });
@@ -67,13 +67,13 @@ async function main() {
 
                     // Loop through all columns in the table
                     for (let column of table.columns) {
-                        const isPrimaryKey = table.constraints?.find(constraint => constraint.type?.toUpperCase() === 'PRIMARY KEY' && constraint.column === column.name);
+                        const isPrimaryKey = table.constraints?.find((constraint: { type: string; column: any; }) => constraint.type?.toUpperCase() === 'PRIMARY KEY' && constraint.column === column.name);
                         column.primary = isPrimaryKey ? true : false;
 
-                        const isUnique = table.constraints?.find(constraint => constraint.type?.toUpperCase() === 'UNIQUE' && constraint.column === column.name);
+                        const isUnique = table.constraints?.find((constraint: { type: string; column: any; }) => constraint.type?.toUpperCase() === 'UNIQUE' && constraint.column === column.name);
                         column.unique = isUnique ? true : false;
 
-                        const foreignKey = table.constraints?.find(constraint => {
+                        const foreignKey = table.constraints?.find((constraint: { type: string; column: any; columns: string | any[]; }) => {
                             if (constraint.type?.toUpperCase() === 'FOREIGN KEY' && constraint.column === column.name && constraint.columns?.length > 0) {
                                 const firstColumn = constraint.columns[0];
                                 
