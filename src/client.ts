@@ -37,6 +37,7 @@ export interface OuterbaseType {
     query: () => Promise<any>;
     queryRaw: (query: string, parameters?: Record<string, any>[]) => Promise<any>;
     groupBy: (column: string) => OuterbaseType;
+    toString: () => string;
 }
 
 export function Outerbase(connection: Connection): OuterbaseType {
@@ -173,110 +174,13 @@ export function Outerbase(connection: Connection): OuterbaseType {
         this.queryBuilder.asClass = classType;
         return this;
     },
+    toString() {
+        const { query, queryParams } = buildQueryString(this.queryBuilder);
+        // TODO: Convert to fully qualified SQL string
+        return query;
+    },
     async query() {
-        let query = "";
-        let queryParams: any[] = [];
-
-        switch (this.queryBuilder.action) {
-            case "select":
-                const joinClauses = this.queryBuilder.joins?.join(" ") || "";
-                let selectColumns = "";
-                let fromTable = "";
-
-                this.queryBuilder.columnsWithTable.forEach((set, index) => {
-                    if (index > 0) {
-                        selectColumns += ", ";
-                    }
-
-                    const schema = set.schema ? `"${set.schema}".` : "";
-                    let useTable = isReservedKeyword(set.table)
-                        ? `"${set.table}"`
-                        : set.table;
-
-                    const columns = set.columns.map((column) => {
-                        let useColumn = column;
-
-                        if (isReservedKeyword(column)) {
-                            useColumn = `"${column}"`;
-                        }
-
-                        return `${schema ?? ""}${useTable}.${useColumn}`;
-                    });
-
-                    selectColumns += columns.join(", ");
-
-                    if (index === 0) {
-                        fromTable = `${schema}${useTable}`;
-                    }
-                });
-
-                query = `SELECT ${selectColumns} FROM ${fromTable} ${joinClauses}`;
-
-                if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
-                    return;
-                }
-
-                if (this.queryBuilder?.whereClauses?.length > 0) {
-                    query += ` WHERE ${this.queryBuilder?.whereClauses.join(" AND ")}`;
-                }
-
-                if (this.queryBuilder.orderBy !== undefined) {
-                    query += ` ORDER BY ${this.queryBuilder.orderBy}`;
-                }
-
-                if (this.queryBuilder.limit !== undefined) {
-                    query += ` LIMIT ${this.queryBuilder.limit}`;
-                    if (this.queryBuilder.offset) {
-                        query += ` OFFSET ${this.queryBuilder.offset}`;
-                    }
-                }
-
-                if (this.queryBuilder.groupBy !== undefined) {
-                    query += ` GROUP BY ${this.queryBuilder.groupBy}`;
-                }
-
-                break;
-            case "insert":
-                const columns = Object.keys(this.queryBuilder.data || {});
-                const placeholders = columns.map((column) => `:${column}`).join(", ");
-                query = `INSERT INTO ${this.queryBuilder.table || ""} (${columns.join(
-                    ", "
-                )}) VALUES (${placeholders})`;
-                queryParams.push(this.queryBuilder.data);
-
-                if (this.queryBuilder.returning?.length > 0) {
-                    query += ` RETURNING ${this.queryBuilder.returning.join(", ")}`;
-                }
-
-                break;
-            case "update":
-                if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
-                    return;
-                }
-
-                const columnsToUpdate = Object.keys(this.queryBuilder.data || {});
-                const setClauses = columnsToUpdate
-                    .map((column) => `${column} = :${column}`)
-                    .join(", ");
-                query = `UPDATE ${this.queryBuilder.table || ""} SET ${setClauses}`;
-                if (this.queryBuilder.whereClauses?.length > 0) {
-                    query += ` WHERE ${this.queryBuilder.whereClauses.join(" AND ")}`;
-                }
-                queryParams.push(this.queryBuilder.data);
-                break;
-            case "delete":
-                if (!this || !this.queryBuilder || !this.queryBuilder.whereClauses) {
-                    return;
-                }
-
-                query = `DELETE FROM ${this.queryBuilder.table || ""}`;
-                if (this.queryBuilder.whereClauses?.length > 0) {
-                    query += ` WHERE ${this.queryBuilder.whereClauses.join(" AND ")}`;
-                }
-                break;
-            default:
-                throw new Error("Invalid action");
-        }
+        const { query, queryParams } = buildQueryString(this.queryBuilder);
 
         // If asClass is set, map the response to the class
         if (this.queryBuilder.asClass) {
@@ -285,11 +189,16 @@ export function Outerbase(connection: Connection): OuterbaseType {
             return {
                 data: result,
                 error: response.error,
+                query
             };
         }
 
         // Otherwise, if asClass is not set, return the raw response
-        return await connection.query(query, queryParams);
+        let response = await connection.query(query, queryParams);
+        return {
+            ...response,
+            query
+        }
     },
     async queryRaw(query, parameters) {
         // If asClass is set, map the response to the class
@@ -299,15 +208,156 @@ export function Outerbase(connection: Connection): OuterbaseType {
             return {
                 data: result,
                 error: response.error,
+                query
             };
         }
 
         // Otherwise, if asClass is not set, return the raw response
-        return await connection.query(query, parameters);
+        let response = await connection.query(query, parameters);
+        return {
+            ...response,
+            query
+        }
     },
   };
 
   return outerbase;
+}
+
+export function constructPositionalQuery(query: string, parameters: Record<string, any>[]): { query: string; params: any[] } {
+    let queryParameters = query.match(/:[a-zA-Z0-9]+/g) ?? [];
+    query = query.replace(/:[a-zA-Z0-9]+/g, "?");
+    let params = queryParameters;
+
+    params.forEach((param, index) => {
+        let key = param.replace(":", "");
+
+        if (parameters && parameters.length > 0 && parameters[0].hasOwnProperty(key)) {
+            params[index] = parameters[0][key];
+        }
+    });
+
+    return { query, params };
+}
+
+// TODO:
+// Do we want to fill in the blanks for users, or are we okay providing them with
+// a string such as:
+// INSERT INTO person (id, first_name, last_name) VALUES (:id, :first_name, :last_name)
+function constructRawQuery(query: string, parameters: Record<string, any>[], method: 'named' | 'positional') {
+    if (method === 'named') {
+        // TODO: If we want to return the query as a fully qualified SQL statement to run, we need to replace the named parameters with the actual values
+    } else if (method === 'positional') {
+        // TODO: If we want to return the query as a fully qualified SQL statement to run, we need to replace the positional parameters with the actual values
+    }
+}
+
+function buildQueryString(queryBuilder: QueryBuilder): { query: string; queryParams: any[] } {
+    let query = "";
+    let queryParams: any[] = [];
+
+    switch (queryBuilder.action) {
+        case "select":
+            const joinClauses = queryBuilder.joins?.join(" ") || "";
+            let selectColumns = "";
+            let fromTable = "";
+
+            queryBuilder.columnsWithTable.forEach((set, index) => {
+                if (index > 0) {
+                    selectColumns += ", ";
+                }
+
+                const schema = set.schema ? `"${set.schema}".` : "";
+                let useTable = isReservedKeyword(set.table)
+                    ? `"${set.table}"`
+                    : set.table;
+
+                const columns = set.columns.map((column) => {
+                    let useColumn = column;
+
+                    if (isReservedKeyword(column)) {
+                        useColumn = `"${column}"`;
+                    }
+
+                    return `${schema ?? ""}${useTable}.${useColumn}`;
+                });
+
+                selectColumns += columns.join(", ");
+
+                if (index === 0) {
+                    fromTable = `${schema}${useTable}`;
+                }
+            });
+
+            query = `SELECT ${selectColumns} FROM ${fromTable} ${joinClauses}`;
+
+            if (!queryBuilder || !queryBuilder.whereClauses) {
+                return;
+            }
+
+            if (queryBuilder?.whereClauses?.length > 0) {
+                query += ` WHERE ${queryBuilder?.whereClauses.join(" AND ")}`;
+            }
+
+            if (queryBuilder.orderBy !== undefined) {
+                query += ` ORDER BY ${queryBuilder.orderBy}`;
+            }
+
+            if (queryBuilder.limit !== undefined) {
+                query += ` LIMIT ${queryBuilder.limit}`;
+                if (queryBuilder.offset) {
+                    query += ` OFFSET ${queryBuilder.offset}`;
+                }
+            }
+
+            if (queryBuilder.groupBy !== undefined) {
+                query += ` GROUP BY ${queryBuilder.groupBy}`;
+            }
+
+            break;
+        case "insert":
+            const columns = Object.keys(queryBuilder.data || {});
+            const placeholders = columns.map((column) => `:${column}`).join(", ");
+            query = `INSERT INTO ${queryBuilder.table || ""} (${columns.join(
+                ", "
+            )}) VALUES (${placeholders})`;
+            queryParams.push(queryBuilder.data);
+
+            if (queryBuilder.returning?.length > 0) {
+                query += ` RETURNING ${queryBuilder.returning.join(", ")}`;
+            }
+
+            break;
+        case "update":
+            if (!queryBuilder || !queryBuilder.whereClauses) {
+                return;
+            }
+
+            const columnsToUpdate = Object.keys(queryBuilder.data || {});
+            const setClauses = columnsToUpdate
+                .map((column) => `${column} = :${column}`)
+                .join(", ");
+            query = `UPDATE ${queryBuilder.table || ""} SET ${setClauses}`;
+            if (queryBuilder.whereClauses?.length > 0) {
+                query += ` WHERE ${queryBuilder.whereClauses.join(" AND ")}`;
+            }
+            queryParams.push(queryBuilder.data);
+            break;
+        case "delete":
+            if (!queryBuilder || !queryBuilder.whereClauses) {
+                return;
+            }
+
+            query = `DELETE FROM ${queryBuilder.table || ""}`;
+            if (queryBuilder.whereClauses?.length > 0) {
+                query += ` WHERE ${queryBuilder.whereClauses.join(" AND ")}`;
+            }
+            break;
+        default:
+            throw new Error("Invalid action");
+    }
+
+    return { query, queryParams };
 }
 
 function mapToClass<T>(data: any | any[], ctor: new (data: any) => T): T | T[] {

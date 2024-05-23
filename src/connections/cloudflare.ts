@@ -56,7 +56,7 @@ export class CloudflareD1Connection implements Connection {
      * @param parameters - An object containing the parameters to be used in the query.
      * @returns Promise<{ data: any, error: Error | null }>
      */
-    async query(query: string, parameters?: Record<string, any>[]): Promise<{ data: any, error: Error | null }> {
+    async query(query: string, parameters?: Record<string, any>[]): Promise<{ data: any, error: Error | null, query: string }> {
         if (!this.apiKey) throw new Error('Cloudflare API key is not set');
         if (!this.accountId) throw new Error('Cloudflare account ID is not set');
         if (!this.databaseId) throw new Error('Cloudflare database ID is not set');
@@ -103,7 +103,8 @@ export class CloudflareD1Connection implements Connection {
 
         return {
             data: items,
-            error: error
+            error: error,
+            query
         };
     }
 };
