@@ -5,11 +5,11 @@ const app = express();
 const port = 4000;
 
 app.get('/', async (req, res) => {
-    const d1 = new CloudflareD1Connection(
-        'API_KEY',
-        'ACCOUNT_ID',
-        'DATABASE_ID'
-    );
+    const d1 = new CloudflareD1Connection({
+        apiKey: 'API_KEY',
+        accountId: 'ACCOUNT_ID',
+        databaseId: 'DATABASE_ID'
+    })
     const db = Outerbase(d1);
     
     // SELECT:

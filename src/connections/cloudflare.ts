@@ -1,5 +1,11 @@
 import { Connection } from './index';
 
+export type CloudflareD1ConnectionDetails = {
+    apiKey: string,
+    accountId: string,
+    databaseId: string
+};
+
 export class CloudflareD1Connection implements Connection {
     // The Cloudflare API key with D1 access
     apiKey: string | undefined;
@@ -11,11 +17,13 @@ export class CloudflareD1Connection implements Connection {
      * account ID, and database ID.
      * 
      * @param apiKey - The API key to be used for authentication.
+     * @param accountId - The account ID to be used for authentication.
+     * @param databaseId - The database ID to be used for querying.
      */
-    constructor(apiKey: string, accountId: string, databaseId: string) {
-        this.apiKey = apiKey;
-        this.accountId = accountId;
-        this.databaseId = databaseId;
+    constructor(private _: CloudflareD1ConnectionDetails) {
+        this.apiKey = _.apiKey;
+        this.accountId = _.accountId;
+        this.databaseId = _.databaseId;
     }
 
     /**
