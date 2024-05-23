@@ -14,7 +14,13 @@
     "compile": "tsc --project ./tsconfig.json",
     "build": "npm run compile && ./copy-handlebars.sh",
     "publish-npm-module": "npm publish --access public",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "**/*.{ts,tsx,js,json,css,scss,md}": [
+      "prettier --write"
+    ]
   },
   "keywords": [
     "query-builder",
@@ -28,6 +34,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.4",
     "typescript": "^5.4.3"
   }
 }
