@@ -136,7 +136,6 @@ export function Outerbase(connection: Connection): OuterbaseType {
         this.queryBuilder = {
             action: "insert",
             data: data,
-            table: null,
         };
         return this;
     },
@@ -144,7 +143,6 @@ export function Outerbase(connection: Connection): OuterbaseType {
         this.queryBuilder = {
             action: "update",
             data: data,
-            table: null,
             whereClauses: [],
         };
         return this;
@@ -183,7 +181,7 @@ export function Outerbase(connection: Connection): OuterbaseType {
                 let selectColumns = "";
                 let fromTable = "";
 
-                this.queryBuilder.columnsWithTable.forEach((set, index) => {
+                this.queryBuilder.columnsWithTable?.forEach((set, index) => {
                     if (index > 0) {
                         selectColumns += ", ";
                     }
@@ -243,9 +241,8 @@ export function Outerbase(connection: Connection): OuterbaseType {
                     ", "
                 )}) VALUES (${placeholders})`;
                 queryParams.push(this.queryBuilder.data);
-
-                if (this.queryBuilder.returning?.length > 0) {
-                    query += ` RETURNING ${this.queryBuilder.returning.join(", ")}`;
+                if (this.queryBuilder.returning?.length ?? 0 > 0) {
+                    query += ` RETURNING ${this.queryBuilder.returning?.join(", ")}`;
                 }
 
                 break;
@@ -479,146 +476,146 @@ function isReservedKeyword(keyword: string) {
   return reservedWords.includes(keyword?.toUpperCase());
 }
 
-export function equals(a, b) {
+export function equals(a: any, b: string) {
     return `${a} = '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function equalsNumber(a, b) {
+export function equalsNumber(a: any, b: any) {
     return `${a} = ${b}`;
 }
 
-export function equalsColumn(a, b) {
+export function equalsColumn(a: any, b: any) {
     return `${a} = ${b}`;
 }
 
-export function notEquals(a, b) {
+export function notEquals(a: any, b: string) {
     return `${a} != '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function notEqualsNumber(a, b) {
+export function notEqualsNumber(a: any, b: any) {
     return `${a} != ${b}`;
 }
 
-export function notEqualsColumn(a, b) {
+export function notEqualsColumn(a: any, b: any) {
     return `${a} != ${b}`;
 }
 
-export function greaterThan(a, b) {
+export function greaterThan(a: any, b: string) {
     return `${a} > '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function greaterThanNumber(a, b) {
+export function greaterThanNumber(a: any, b: any) {
     return `${a} > ${b}`;
 }
 
-export function lessThan(a, b) {
+export function lessThan(a: any, b: string) {
     return `${a} < '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function lessThanNumber(a, b) {
+export function lessThanNumber(a: any, b: any) {
     return `${a} < ${b}`;
 }
 
-export function greaterThanOrEqual(a, b) {
+export function greaterThanOrEqual(a: any, b: string) {
     return `${a} >= '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function greaterThanOrEqualNumber(a, b) {
+export function greaterThanOrEqualNumber(a: any, b: any) {
     return `${a} >= ${b}`;
 }
 
-export function lessThanOrEqual(a, b) {
+export function lessThanOrEqual(a: any, b: string) {
     return `${a} <= '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function lessThanOrEqualNumber(a, b) {
+export function lessThanOrEqualNumber(a: any, b: any) {
     return `${a} <= ${b}`;
 }
 
-export function inValues(a, b) {
+export function inValues(a: any, b: any[]) {
     return `${a} IN ('${b.join("', '").replace(/'/g, "\\'")}')`;
 }
 
-export function inNumbers(a, b) {
+export function inNumbers(a: any, b: any[]) {
     return `${a} IN (${b.join(", ")})`;
 }
 
-export function notInValues(a, b) {
+export function notInValues(a: any, b: any[]) {
     return `${a} NOT IN ('${b.join("', '").replace(/'/g, "\\'")}')`;
 }
 
-export function notInNumbers(a, b) {
+export function notInNumbers(a: any, b: any[]) {
     return `${a} NOT IN (${b.join(", ")})`;
 }
 
-export function is(a, b) {
+export function is(this: any, a: any, b: string | null) {
     if (b === null) return `${this} IS NULL`;
     return `${a} IS '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function isNumber(a, b) {
+export function isNumber(a: any, b: any) {
     return `${a} IS ${b}`;
 }
 
-export function isNot(a, b) {
+export function isNot(this: any, a: any, b: null) {
     if (b === null) return `${this} IS NOT NULL`;
     return `${a} IS NOT ${b}`;
 }
 
-export function isNotNumber(a, b) {
+export function isNotNumber(a: any, b: any) {
     return `${a} IS NOT ${b}`;
 }
 
-export function like(a, b) {
+export function like(a: any, b: string) {
     return `${a} LIKE '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function notLike(a, b) {
+export function notLike(a: any, b: string) {
     return `${a} NOT LIKE '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function ilike(a, b) {
+export function ilike(a: any, b: string) {
     return `${a} ILIKE '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function notILike(a, b) {
+export function notILike(a: any, b: string) {
     return `${a} NOT ILIKE '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function isNull(a) {
+export function isNull(a: any) {
     return `${a} IS NULL`;
 }
 
-export function isNotNull(a) {
+export function isNotNull(a: any) {
     return `${a} IS NOT NULL`;
 }
 
-export function between(a, b, c) {
+export function between(a: any, b: string, c: string) {
     return `${a} BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(
         /'/g,
         "\\'"
     )}'`;
 }
 
-export function betweenNumbers(a, b, c) {
+export function betweenNumbers(a: any, b: any, c: any) {
     return `${a} BETWEEN ${b} AND ${c}`;
 }
 
-export function notBetween(a, b, c) {
+export function notBetween(a: any, b: string, c: string) {
     return `${a} NOT BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(
         /'/g,
         "\\'"
     )}'`;
 }
 
-export function notBetweenNumbers(a, b, c) {
+export function notBetweenNumbers(a: any, b: any, c: any) {
     return `${a} NOT BETWEEN ${b} AND ${c}`;
 }
 
-export function ascending(a) {
+export function ascending(a: any) {
     return `${a} ASC`;
 }
 
-export function descending(a) {
+export function descending(a: any) {
     return `${a} DESC`;
 }
