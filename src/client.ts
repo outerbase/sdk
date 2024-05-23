@@ -55,8 +55,17 @@ export function Outerbase(connection: Connection): OuterbaseType {
         return this;
     },
     where(condition) {
-        if (this.queryBuilder.whereClauses)
-            this.queryBuilder.whereClauses.push(condition);
+        // Check if `condition` is an array of conditions
+        if (Array.isArray(condition)) {
+            if (this.queryBuilder.whereClauses) {
+                this.queryBuilder.whereClauses.push(`(${condition.join(" AND ")})`);
+            }
+        } else {
+            if (this.queryBuilder.whereClauses) {
+                this.queryBuilder.whereClauses.push(condition);
+            }
+        }
+        
         return this;
     },
     limit(limit) {

@@ -66,10 +66,26 @@ export function isColumnNullable(targetClass: Function, propertyName: string): b
     return false;
 }
 
-export function getPrimaryKey(targetClass: Function): string | symbol | undefined {
+export function getPrimaryKeys(targetClass: Function): string[] {
     const metadata = metadataRegistry.get(targetClass);
     if (metadata) {
-        return metadata.primaryKey;
+        // Get all the keys of the metadata object that are primary keys
+        const keys = Object.keys(metadata.columns).filter((key) => metadata.columns[key].primary);
+
+        // Return the actual column name as it is stored in the database
+        return keys.map((key) => metadata.columns[key].name);
     }
-    return undefined;
+    return [];
+}
+
+export function getColumnValueFromName(targetClass: Function, columnName: string): string {
+    const metadata = metadataRegistry.get(targetClass);
+    if (metadata) {
+        for (const key in metadata.columns) {
+            if (metadata.columns[key].name === columnName) {
+                return key;
+            }
+        }
+    }
+    return '';
 }
