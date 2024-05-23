@@ -22,7 +22,7 @@ export class OuterbaseConnection implements Connection {
      * @param details - Unused in the Outerbase scenario.
      * @returns Promise<any>
      */
-    async connect(details: Record<string, any>): Promise<any> {
+    async connect(): Promise<any> {
         return Promise.resolve();
     }
 

@@ -26,7 +26,7 @@ export class CloudflareD1Connection implements Connection {
      * @param details - Unused in the Cloudflare scenario.
      * @returns Promise<any>
      */
-    async connect(details: Record<string, any>): Promise<any> {
+    async connect(): Promise<any> {
         return Promise.resolve();
     }
 
