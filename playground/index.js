@@ -6,14 +6,14 @@ const port = 4000;
 
 app.get('/', async (req, res) => {
     const d1 = new CloudflareD1Connection(
-        'A2ZyF52-ZnWHbtzd0kTZS-iLaEOxaIA2_Vg6UN13',
-        'b8b1ee31dbdb02db8f4d02fbbb0bc748',
-        'a97f776c-ec41-47e5-ab12-6309ae47d566'
+        'API_KEY',
+        'ACCOUNT_ID',
+        'DATABASE_ID'
     );
     const db = Outerbase(d1);
 
     // const d1 = new OuterbaseConnection(
-    //     'A2ZyF52-ZnWHbtzd0kTZS-iLaEOxaIA2_Vg6UN13'
+    //     'API_TOKEN'
     // );
     // const db = Outerbase(d1);
     
