@@ -334,8 +334,6 @@ function buildQueryString(
                 ', '
             )}) VALUES (${placeholders})`
 
-            // queryParams.push(queryBuilder.data)
-
             if (queryType === QueryType.named) {
                 query.parameters = queryBuilder.data ?? {}
             } else {
@@ -367,9 +365,6 @@ function buildQueryString(
                 query.query += ` WHERE ${queryBuilder.whereClauses.join(' AND ')}`
             }
 
-            // queryParams.push(queryBuilder.data)
-            // query.parameters = queryBuilder.data ?? {}
-
             if (queryType === QueryType.named) {
                 query.parameters = queryBuilder.data ?? {}
             } else {
@@ -380,7 +375,10 @@ function buildQueryString(
         case 'delete':
             // For `DELETE` operations we want to enforce a `WHERE` clause to ensure
             // that we are not deleting all records in a table.
-            if (!queryBuilder.whereClauses) {
+            if (
+                !queryBuilder.whereClauses ||
+                queryBuilder.whereClauses?.length === 0
+            ) {
                 break
             }
 
@@ -393,7 +391,6 @@ function buildQueryString(
             throw new Error('Invalid action')
     }
 
-    // return { query, queryParams }
     return query
 }
 

@@ -5,7 +5,7 @@ const app = express();
 const port = 4000;
 
 app.get('/', async (req, res) => {
-    let data = {}
+    const data = {}
     res.json(data);
 });
 
