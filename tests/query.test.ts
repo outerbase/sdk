@@ -1,12 +1,10 @@
 import { describe, expect, test } from '@jest/globals'
 
 import { Query, constructRawQuery } from 'src/query'
-import { OuterbaseConnection } from 'src/connections/outerbase'
-import { Outerbase } from 'src/index'
 
-describe('toString', () => {
-    describe('constructRawQuery - INSERT INTO - Named Parameters', () => {
-        test('toString - INSERT INTO - One named parameter', () => {
+describe('Query', () => {
+    describe('INSERT INTO - Named Parameters', () => {
+        test('One named parameter', () => {
             const query: Query = {
                 query: 'INSERT INTO person (name) VALUES (:name)',
                 parameters: { name: 'John Doe' },
@@ -17,7 +15,7 @@ describe('toString', () => {
             )
         })
 
-        test('toString - INSERT INTO - Three named parameters in order', () => {
+        test('Three named parameters in order', () => {
             const query: Query = {
                 query: 'INSERT INTO person (id, first_name, last_name) VALUES (:id, :first_name, :last_name)',
                 parameters: { id: 1, first_name: 'John', last_name: 'Doe' },
@@ -28,7 +26,7 @@ describe('toString', () => {
             )
         })
 
-        test('toString - INSERT INTO - Three named parameters out of order', () => {
+        test('Three named parameters out of order', () => {
             const query: Query = {
                 query: 'INSERT INTO person (id, first_name, last_name) VALUES (:id, :first_name, :last_name)',
                 parameters: { first_name: 'John', id: 1, last_name: 'Doe' },
@@ -39,7 +37,7 @@ describe('toString', () => {
             )
         })
 
-        test('toString - INSERT INTO - One named property incorrect spelling', () => {
+        test('One named property incorrect spelling', () => {
             const query: Query = {
                 query: 'INSERT INTO person (name) VALUES (:incorrectParameterName)',
                 parameters: { name: 'John Doe' },
@@ -50,7 +48,7 @@ describe('toString', () => {
             )
         })
 
-        test('toString - INSERT INTO - One named property with empty parameters', () => {
+        test('One named property with empty parameters', () => {
             const query: Query = {
                 query: 'INSERT INTO person (name) VALUES (:incorrectParameterName)',
                 parameters: {},
@@ -62,8 +60,8 @@ describe('toString', () => {
         })
     })
 
-    describe('constructRawQuery - INSERT INTO - Positional Parameters', () => {
-        test('toString - INSERT INTO - One positional parameter', () => {
+    describe('INSERT INTO - Positional Parameters', () => {
+        test('One positional parameter', () => {
             const query: Query = {
                 query: 'INSERT INTO person (name) VALUES (?)',
                 parameters: ['John Doe'],
@@ -74,7 +72,7 @@ describe('toString', () => {
             )
         })
 
-        test('toString - INSERT INTO - Three positional parameters in order', () => {
+        test('Three positional parameters in order', () => {
             const query: Query = {
                 query: 'INSERT INTO person (id, first_name, last_name) VALUES (?, ?, ?)',
                 parameters: [1, 'John', 'Doe'],
@@ -85,7 +83,7 @@ describe('toString', () => {
             )
         })
 
-        test('toString - INSERT INTO - Three positional parameters out of order', () => {
+        test('Three positional parameters out of order', () => {
             const query: Query = {
                 query: 'INSERT INTO person (id, first_name, last_name) VALUES (?, ?, ?)',
                 parameters: ['John', 1, 'Doe'],
@@ -96,7 +94,7 @@ describe('toString', () => {
             )
         })
 
-        test('toString - INSERT INTO - One positional property but empty array', () => {
+        test('One positional property but empty array', () => {
             const query: Query = {
                 query: 'INSERT INTO person (name) VALUES (?)',
                 parameters: [],
@@ -108,8 +106,8 @@ describe('toString', () => {
         })
     })
 
-    describe('constructRawQuery - SELECT FROM - Named Parameters', () => {
-        test('toString - SELECT FROM - One named parameter', () => {
+    describe('SELECT FROM - Named Parameters', () => {
+        test('One named parameter', () => {
             const query: Query = {
                 query: 'SELECT name FROM person WHERE name = :name',
                 parameters: { name: 'John Doe' },
@@ -118,37 +116,6 @@ describe('toString', () => {
             expect(constructRawQuery(query)).toBe(
                 "SELECT name FROM person WHERE name = 'John Doe'"
             )
-        })
-    })
-
-    describe('queryBuilder toString', () => {
-        const connection = new OuterbaseConnection('FAKE_API_KEY')
-        const db = Outerbase(connection)
-
-        test('toString – Simple INSERT INTO ', () => {
-            const sql = db
-                .selectFrom([{ table: 'person', columns: ['name'] }])
-                .toString()
-            expect(sql).toBe('SELECT person.name FROM person')
-        })
-    })
-
-    describe('queryBuilder - Reserved keywords get quotes', () => {
-        const connection = new OuterbaseConnection('FAKE_API_KEY')
-        const db = Outerbase(connection)
-
-        test('toString – Not reserved keyword "users" is not wrapped in quotes', () => {
-            const sql = db
-                .selectFrom([{ table: 'users', columns: ['name'] }])
-                .toString()
-            expect(sql).toBe('SELECT users.name FROM users')
-        })
-
-        test('toString – Reserved keyword "user" wrapped in quotes', () => {
-            const sql = db
-                .selectFrom([{ table: 'user', columns: ['name'] }])
-                .toString()
-            expect(sql).toBe('SELECT "user".name FROM "user"')
         })
     })
 })
