@@ -1,4 +1,4 @@
-import { constructPositionalQuery, constructRawQuery } from '../client'
+import { Query, constructPositionalQuery, constructRawQuery } from '../query'
 import { Connection, QueryType } from './index'
 
 export class CloudflareD1Connection implements Connection {
@@ -61,8 +61,7 @@ export class CloudflareD1Connection implements Connection {
      * @returns Promise<{ data: any, error: Error | null }>
      */
     async query(
-        query: string,
-        parameters?: Record<string, any>[]
+        query: Query
     ): Promise<{ data: any; error: Error | null; query: string }> {
         if (!this.apiKey) throw new Error('Cloudflare API key is not set')
         if (!this.accountId) throw new Error('Cloudflare account ID is not set')
@@ -70,16 +69,12 @@ export class CloudflareD1Connection implements Connection {
             throw new Error('Cloudflare database ID is not set')
         if (!query) throw new Error('A SQL query was not provided')
 
-        const { query: positionalQuery, params } = constructPositionalQuery(
-            query,
-            parameters
-        )
+        // const positionalQuery = constructPositionalQuery(
+        //     query.query,
+        //     query.parameters
+        // )
 
-        const sql = constructRawQuery(
-            positionalQuery,
-            params,
-            QueryType.positional
-        )
+        const rawSQL = constructRawQuery(query)
 
         const response = await fetch(
             `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
@@ -90,8 +85,10 @@ export class CloudflareD1Connection implements Connection {
                     Authorization: `Bearer ${this.apiKey}`,
                 },
                 body: JSON.stringify({
-                    sql: positionalQuery,
-                    params: params,
+                    sql: query.query,
+                    params: query.parameters,
+                    // sql: positionalQuery,
+                    // params: positionalQuery.parameters,
                 }),
             }
         )
@@ -105,7 +102,7 @@ export class CloudflareD1Connection implements Connection {
         return {
             data: items,
             error: error,
-            query: sql,
+            query: rawSQL,
         }
     }
 }

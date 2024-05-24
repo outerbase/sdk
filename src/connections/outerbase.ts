@@ -1,10 +1,13 @@
-import { constructRawQuery } from '../client'
+import { Query, constructRawQuery } from '../query'
+import { QueryParamsNamed } from '../query-params'
 import { Connection, QueryType } from './index'
 export const API_URL = 'https://app.outerbase.com'
 
 export class OuterbaseConnection implements Connection {
     // The API key used for Outerbase authentication
     api_key: string | undefined
+
+    queryType = QueryType.named
 
     /**
      * Creates a new OuterbaseConnection object with the provided API key.
@@ -54,20 +57,19 @@ export class OuterbaseConnection implements Connection {
      * @returns Promise<{ data: any, error: Error | null }>
      */
     async query(
-        query: string,
-        parameters?: Record<string, any>[]
+        query: Query
     ): Promise<{ data: any; error: Error | null; query: string }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set')
         if (!query) throw new Error('Query was not provided')
 
-        let params: Record<string, any> = {}
-        parameters?.forEach((param) => {
-            Object.keys(param).forEach((key) => {
-                params[key] = param[key]
-            })
-        })
+        // let params: Record<string, any> = {}
+        // parameters?.forEach((param) => {
+        //     Object.keys(param).forEach((key) => {
+        //         params[key] = param[key]
+        //     })
+        // })
 
-        const sql = constructRawQuery(query, params, QueryType.named)
+        const rawSQL = constructRawQuery(query)
 
         const response = await fetch(`${API_URL}/api/v1/ezql/raw`, {
             method: 'POST',
@@ -76,8 +78,8 @@ export class OuterbaseConnection implements Connection {
                 'X-Source-Token': this.api_key,
             },
             body: JSON.stringify({
-                query: query,
-                params: params,
+                query: query.query,
+                params: query.parameters,
                 run: true,
             }),
         })
@@ -89,7 +91,7 @@ export class OuterbaseConnection implements Connection {
         return {
             data: items,
             error: error,
-            query: sql,
+            query: rawSQL,
         }
     }
 

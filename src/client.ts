@@ -1,7 +1,6 @@
 import { Connection, QueryType } from './connections'
-
-type QueryParamsNamed = Record<string, any>
-type QueryParamsPositional = any[]
+import { Query, constructRawQuery } from './query'
+import { QueryParams } from './query-params'
 
 interface QueryBuilder {
     action: 'select' | 'insert' | 'update' | 'delete'
@@ -50,10 +49,7 @@ export interface OuterbaseType {
     returning: (columns: string[]) => OuterbaseType
     asClass: (classType: any) => OuterbaseType
     query: () => Promise<any>
-    queryRaw: (
-        query: string,
-        parameters?: Record<string, any>[]
-    ) => Promise<any>
+    queryRaw: (query: string, parameters?: QueryParams) => Promise<any>
     groupBy: (column: string) => OuterbaseType
     toString: () => string
 }
@@ -199,15 +195,21 @@ export function Outerbase(connection: Connection): OuterbaseType {
             return this
         },
         toString() {
-            const { query, queryParams } = buildQueryString(this.queryBuilder)
-            return constructRawQuery(query, queryParams[0], QueryType.named)
+            const query = buildQueryString(
+                this.queryBuilder,
+                connection.queryType
+            )
+            return constructRawQuery(query)
         },
         async query() {
-            const { query, queryParams } = buildQueryString(this.queryBuilder)
+            const query = buildQueryString(
+                this.queryBuilder,
+                connection.queryType
+            )
 
             // If asClass is set, map the response to the class
             if (this.queryBuilder.asClass) {
-                const response = await connection.query(query, queryParams)
+                const response = await connection.query(query)
                 let result = mapToClass(
                     response?.data,
                     this.queryBuilder.asClass
@@ -220,7 +222,7 @@ export function Outerbase(connection: Connection): OuterbaseType {
             }
 
             // Otherwise, if asClass is not set, return the raw response
-            let response = await connection.query(query, queryParams)
+            let response = await connection.query(query)
             return {
                 ...response,
                 query,
@@ -229,7 +231,7 @@ export function Outerbase(connection: Connection): OuterbaseType {
         async queryRaw(query, parameters) {
             // If asClass is set, map the response to the class
             if (this.queryBuilder.asClass) {
-                const response = await connection.query(query, parameters)
+                const response = await connection.query({ query, parameters })
                 let result = mapToClass(
                     response?.data,
                     this.queryBuilder.asClass
@@ -242,7 +244,7 @@ export function Outerbase(connection: Connection): OuterbaseType {
             }
 
             // Otherwise, if asClass is not set, return the raw response
-            let response = await connection.query(query, parameters)
+            let response = await connection.query({ query, parameters })
             return {
                 ...response,
                 query,
@@ -253,75 +255,14 @@ export function Outerbase(connection: Connection): OuterbaseType {
     return outerbase
 }
 
-export function constructPositionalQuery(
-    query: string,
-    parameters?: Record<string, any>[]
-): { query: string; params: QueryParamsPositional } {
-    let queryParameters = query.match(/:[\w]+/g) ?? []
-    query = query.replace(/:[\w]+/g, '?')
-    let params = queryParameters
-
-    params.forEach((param, index) => {
-        let key = param.replace(':', '')
-
-        if (
-            parameters &&
-            parameters.length > 0 &&
-            parameters[0].hasOwnProperty(key)
-        ) {
-            params[index] = parameters[0][key]
-        }
-    })
-
-    return { query, params }
-}
-
-export function constructRawQuery(
-    query: string,
-    parameters: QueryParamsNamed | QueryParamsPositional,
-    method: QueryType
-) {
-    if (method === QueryType.named) {
-        // Replace named parameters with the actual values
-        let queryWithParams = query
-        for (const [key, value] of Object.entries(parameters)) {
-            if (typeof value === 'string') {
-                queryWithParams = queryWithParams.replace(
-                    `:${key}`,
-                    `'${value}'`
-                )
-            } else {
-                queryWithParams = queryWithParams.replace(`:${key}`, value)
-            }
-        }
-
-        return queryWithParams
-    } else if (method === QueryType.positional) {
-        // Replace question marks with the actual values in order from the parameters array
-        const params = parameters as QueryParamsPositional
-        let queryWithParams = query
-        for (let i = 0; i < params.length; i++) {
-            const currentParam = params[i]
-
-            if (typeof currentParam === 'string') {
-                queryWithParams = queryWithParams.replace('?', `'${params[i]}'`)
-            } else {
-                queryWithParams = queryWithParams.replace('?', params[i])
-            }
-        }
-
-        return queryWithParams
+function buildQueryString(
+    queryBuilder: QueryBuilder,
+    queryType?: QueryType
+): Query {
+    const query: Query = {
+        query: '',
+        parameters: queryType === QueryType.named ? {} : [],
     }
-
-    return ''
-}
-
-function buildQueryString(queryBuilder: QueryBuilder): {
-    query: string
-    queryParams: any[]
-} {
-    let query = ''
-    let queryParams: any[] = []
 
     switch (queryBuilder.action) {
         case 'select':
@@ -356,40 +297,53 @@ function buildQueryString(queryBuilder: QueryBuilder): {
                 }
             })
 
-            query = `SELECT ${selectColumns} FROM ${fromTable} ${joinClauses}`
+            query.query = `SELECT ${selectColumns} FROM ${fromTable}`
+
+            if (joinClauses) {
+                query.query += ` ${joinClauses}`
+            }
 
             if (queryBuilder.whereClauses?.length ?? 0 > 0) {
-                query += ` WHERE ${queryBuilder?.whereClauses?.join(' AND ')}`
+                query.query += ` WHERE ${queryBuilder?.whereClauses?.join(' AND ')}`
             }
 
             if (queryBuilder.orderBy !== undefined) {
-                query += ` ORDER BY ${queryBuilder.orderBy}`
+                query.query += ` ORDER BY ${queryBuilder.orderBy}`
             }
 
             if (queryBuilder.limit !== undefined) {
-                query += ` LIMIT ${queryBuilder.limit}`
+                query.query += ` LIMIT ${queryBuilder.limit}`
                 if (queryBuilder.offset) {
-                    query += ` OFFSET ${queryBuilder.offset}`
+                    query.query += ` OFFSET ${queryBuilder.offset}`
                 }
             }
 
             if (queryBuilder.groupBy !== undefined) {
-                query += ` GROUP BY ${queryBuilder.groupBy}`
+                query.query += ` GROUP BY ${queryBuilder.groupBy}`
             }
 
             break
         case 'insert':
             const columns = Object.keys(queryBuilder.data || {})
-            const placeholders = columns
-                .map((column) => `:${column}`)
-                .join(', ')
-            query = `INSERT INTO ${queryBuilder.table || ''} (${columns.join(
+            const placeholders =
+                queryType === QueryType.named
+                    ? columns.map((column) => `:${column}`).join(', ')
+                    : columns.map(() => '?').join(', ')
+
+            query.query = `INSERT INTO ${queryBuilder.table || ''} (${columns.join(
                 ', '
             )}) VALUES (${placeholders})`
-            queryParams.push(queryBuilder.data)
+
+            // queryParams.push(queryBuilder.data)
+
+            if (queryType === QueryType.named) {
+                query.parameters = queryBuilder.data ?? {}
+            } else {
+                query.parameters = Object.values(queryBuilder.data ?? {})
+            }
 
             if (queryBuilder.returning?.length ?? 0 > 0) {
-                query += ` RETURNING ${queryBuilder.returning?.join(', ')}`
+                query.query += ` RETURNING ${queryBuilder.returning?.join(', ')}`
             }
 
             break
@@ -399,14 +353,29 @@ function buildQueryString(queryBuilder: QueryBuilder): {
             }
 
             const columnsToUpdate = Object.keys(queryBuilder.data || {})
-            const setClauses = columnsToUpdate
-                .map((column) => `${column} = :${column}`)
-                .join(', ')
-            query = `UPDATE ${queryBuilder.table || ''} SET ${setClauses}`
+            const setClauses =
+                queryType === QueryType.named
+                    ? columnsToUpdate
+                          .map((column) => `${column} = :${column}`)
+                          .join(', ')
+                    : columnsToUpdate
+                          .map((column) => `${column} = ?`)
+                          .join(', ')
+
+            query.query = `UPDATE ${queryBuilder.table || ''} SET ${setClauses}`
             if (queryBuilder.whereClauses?.length > 0) {
-                query += ` WHERE ${queryBuilder.whereClauses.join(' AND ')}`
+                query.query += ` WHERE ${queryBuilder.whereClauses.join(' AND ')}`
             }
-            queryParams.push(queryBuilder.data)
+
+            // queryParams.push(queryBuilder.data)
+            // query.parameters = queryBuilder.data ?? {}
+
+            if (queryType === QueryType.named) {
+                query.parameters = queryBuilder.data ?? {}
+            } else {
+                query.parameters = Object.values(queryBuilder.data ?? {})
+            }
+
             break
         case 'delete':
             // For `DELETE` operations we want to enforce a `WHERE` clause to ensure
@@ -415,16 +384,17 @@ function buildQueryString(queryBuilder: QueryBuilder): {
                 break
             }
 
-            query = `DELETE FROM ${queryBuilder.table || ''}`
+            query.query = `DELETE FROM ${queryBuilder.table || ''}`
             if (queryBuilder.whereClauses?.length > 0) {
-                query += ` WHERE ${queryBuilder.whereClauses.join(' AND ')}`
+                query.query += ` WHERE ${queryBuilder.whereClauses.join(' AND ')}`
             }
             break
         default:
             throw new Error('Invalid action')
     }
 
-    return { query, queryParams }
+    // return { query, queryParams }
+    return query
 }
 
 function mapToClass<T>(data: any | any[], ctor: new (data: any) => T): T | T[] {

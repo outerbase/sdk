@@ -1,3 +1,5 @@
+import { Query } from '../query'
+
 /**
  * Database queries are constructed either by named or positional parameters.
  * Named parameters are used to identify the parameter by name in the query
@@ -7,13 +9,15 @@
  */
 export enum QueryType {
     named = 'named',
-    positional = 'positional'
-};
+    positional = 'positional',
+}
 
 export interface Connection {
-    queryType?: QueryType; // Default: `QueryType.named`
+    queryType?: QueryType
 
-    connect: (details: Record<string, any>) => Promise<any>;
-    disconnect: () => Promise<any>;
-    query: (query: string, parameters?: Record<string, any>[]) => Promise<{ data: any, error: Error | null, query: string }>;
+    connect: (details: Record<string, any>) => Promise<any>
+    disconnect: () => Promise<any>
+    query: (
+        query: Query
+    ) => Promise<{ data: any; error: Error | null; query: string }>
 }
