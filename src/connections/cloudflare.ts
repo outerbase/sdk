@@ -1,10 +1,14 @@
-import { Connection } from './index';
+import { constructPositionalQuery, constructRawQuery } from '../client';
+import { Connection, QueryType } from './index';
 
 export class CloudflareD1Connection implements Connection {
     // The Cloudflare API key with D1 access
     apiKey: string | undefined;
     accountId: string | undefined;
     databaseId: string | undefined;
+
+    // Default query type to positional for Cloudflare
+    queryType = QueryType.positional;
 
     /**
      * Creates a new CloudflareD1Connection object with the provided API key,
@@ -71,17 +75,22 @@ export class CloudflareD1Connection implements Connection {
          * the query string to replace `:property` with `?` and extract the
          * property names to be used as keys in the parameters object.
          */
-        let queryParameters = query.match(/:[a-zA-Z0-9]+/g) ?? []
-        query = query.replace(/:[a-zA-Z0-9]+/g, '?')
-        let params = queryParameters
+        // let queryParameters = query.match(/:[a-zA-Z0-9]+/g) ?? []
+        // query = query.replace(/:[a-zA-Z0-9]+/g, '?')
+        // let params = queryParameters
 
-        params.forEach((param, index) => {
-            let key = param.replace(':', '')
+        // params.forEach((param, index) => {
+        //     let key = param.replace(':', '')
 
-            if (parameters && parameters.length > 0 && parameters[0].hasOwnProperty(key)) {
-                params[index] = parameters[0][key]
-            }
-        })
+        //     if (parameters && parameters.length > 0 && parameters[0].hasOwnProperty(key)) {
+        //         params[index] = parameters[0][key]
+        //     }
+        // })
+
+        const { query: positionalQuery , params } = constructPositionalQuery(query, parameters)
+
+        const sql = constructRawQuery(positionalQuery, params, QueryType.positional)
+        console.log('Full SQL: ', sql)
 
         const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`, {
             method: 'POST',
@@ -90,7 +99,7 @@ export class CloudflareD1Connection implements Connection {
                 'Authorization': `Bearer ${this.apiKey}`
             },
             body: JSON.stringify({
-                sql: query,
+                sql: positionalQuery,
                 params: params
             })
         });

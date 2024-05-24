@@ -1,4 +1,7 @@
-import { Connection } from "./connections";
+import { Connection, QueryType } from "./connections";
+
+type QueryParamsNamed = Record<string, any>;
+type QueryParamsPositional = any[];
 
 interface QueryBuilder {
     action: "select" | "insert" | "update" | "delete";
@@ -137,7 +140,6 @@ export function Outerbase(connection: Connection): OuterbaseType {
         this.queryBuilder = {
             action: "insert",
             data: data,
-            table: null,
         };
         return this;
     },
@@ -145,7 +147,6 @@ export function Outerbase(connection: Connection): OuterbaseType {
         this.queryBuilder = {
             action: "update",
             data: data,
-            table: null,
             whereClauses: [],
         };
         return this;
@@ -176,8 +177,9 @@ export function Outerbase(connection: Connection): OuterbaseType {
     },
     toString() {
         const { query, queryParams } = buildQueryString(this.queryBuilder);
-        // TODO: Convert to fully qualified SQL string
-        return query;
+        const sql = constructRawQuery(query, queryParams[0], connection.queryType || QueryType.named);
+        
+        return sql ?? '';
     },
     async query() {
         const { query, queryParams } = buildQueryString(this.queryBuilder);
@@ -224,15 +226,15 @@ export function Outerbase(connection: Connection): OuterbaseType {
   return outerbase;
 }
 
-export function constructPositionalQuery(query: string, parameters: Record<string, any>[]): { query: string; params: any[] } {
-    let queryParameters = query.match(/:[a-zA-Z0-9]+/g) ?? [];
-    query = query.replace(/:[a-zA-Z0-9]+/g, "?");
+export function constructPositionalQuery(query: string, parameters?: Record<string, any>[]): { query: string; params: QueryParamsPositional } {
+    let queryParameters = query.match(/:[\w]+/g) ?? [];
+    query = query.replace(/:[\w]+/g, "?");
     let params = queryParameters;
 
     params.forEach((param, index) => {
         let key = param.replace(":", "");
 
-        if (parameters && parameters.length > 0 && parameters[0].hasOwnProperty(key)) {
+        if (parameters && parameters.length > 0 && parameters[0].hasOwnProperty(key)) {            
             params[index] = parameters[0][key];
         }
     });
@@ -240,15 +242,34 @@ export function constructPositionalQuery(query: string, parameters: Record<strin
     return { query, params };
 }
 
-// TODO:
-// Do we want to fill in the blanks for users, or are we okay providing them with
-// a string such as:
-// INSERT INTO person (id, first_name, last_name) VALUES (:id, :first_name, :last_name)
-function constructRawQuery(query: string, parameters: Record<string, any>[], method: 'named' | 'positional') {
-    if (method === 'named') {
-        // TODO: If we want to return the query as a fully qualified SQL statement to run, we need to replace the named parameters with the actual values
-    } else if (method === 'positional') {
-        // TODO: If we want to return the query as a fully qualified SQL statement to run, we need to replace the positional parameters with the actual values
+export function constructRawQuery(query: string, parameters: QueryParamsNamed | QueryParamsPositional, method: QueryType) {
+    if (method === QueryType.named) {
+        // Replace named parameters with the actual values
+        let queryWithParams = query;
+        for (const [key, value] of Object.entries(parameters)) {
+            if (typeof value === 'string') {
+                queryWithParams = queryWithParams.replace(`:${key}`, `'${value}'`);
+            } else {
+                queryWithParams = queryWithParams.replace(`:${key}`, value);
+            }
+        }
+
+        return queryWithParams
+    } else if (method === QueryType.positional) {
+        // Replace question marks with the actual values in order from the parameters array
+        const params = parameters as QueryParamsPositional;
+        let queryWithParams = query;
+        for (let i = 0; i < params.length; i++) {
+            const currentParam = params[i]
+
+            if (typeof currentParam === 'string') {
+                queryWithParams = queryWithParams.replace("?", `'${params[i]}'`);
+            } else {
+                queryWithParams = queryWithParams.replace("?", params[i]);
+            }
+        }
+
+        return  queryWithParams
     }
 }
 
@@ -262,7 +283,7 @@ function buildQueryString(queryBuilder: QueryBuilder): { query: string; queryPar
             let selectColumns = "";
             let fromTable = "";
 
-            queryBuilder.columnsWithTable.forEach((set, index) => {
+            queryBuilder.columnsWithTable?.forEach((set, index) => {
                 if (index > 0) {
                     selectColumns += ", ";
                 }
@@ -291,12 +312,8 @@ function buildQueryString(queryBuilder: QueryBuilder): { query: string; queryPar
 
             query = `SELECT ${selectColumns} FROM ${fromTable} ${joinClauses}`;
 
-            if (!queryBuilder || !queryBuilder.whereClauses) {
-                return;
-            }
-
-            if (queryBuilder?.whereClauses?.length > 0) {
-                query += ` WHERE ${queryBuilder?.whereClauses.join(" AND ")}`;
+            if (queryBuilder.whereClauses?.length ?? 0 > 0) {
+                query += ` WHERE ${queryBuilder?.whereClauses?.join(" AND ")}`;
             }
 
             if (queryBuilder.orderBy !== undefined) {
@@ -323,14 +340,14 @@ function buildQueryString(queryBuilder: QueryBuilder): { query: string; queryPar
             )}) VALUES (${placeholders})`;
             queryParams.push(queryBuilder.data);
 
-            if (queryBuilder.returning?.length > 0) {
-                query += ` RETURNING ${queryBuilder.returning.join(", ")}`;
+            if (queryBuilder.returning?.length ?? 0 > 0) {
+                query += ` RETURNING ${queryBuilder.returning?.join(", ")}`;
             }
 
             break;
         case "update":
             if (!queryBuilder || !queryBuilder.whereClauses) {
-                return;
+                break;
             }
 
             const columnsToUpdate = Object.keys(queryBuilder.data || {});
@@ -344,8 +361,10 @@ function buildQueryString(queryBuilder: QueryBuilder): { query: string; queryPar
             queryParams.push(queryBuilder.data);
             break;
         case "delete":
-            if (!queryBuilder || !queryBuilder.whereClauses) {
-                return;
+            // For `DELETE` operations we want to enforce a `WHERE` clause to ensure
+            // that we are not deleting all records in a table.
+            if (!queryBuilder.whereClauses) {
+                break;
             }
 
             query = `DELETE FROM ${queryBuilder.table || ""}`;
@@ -529,146 +548,146 @@ function isReservedKeyword(keyword: string) {
   return reservedWords.includes(keyword?.toUpperCase());
 }
 
-export function equals(a, b) {
+export function equals(a: any, b: string) {
     return `${a} = '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function equalsNumber(a, b) {
+export function equalsNumber(a: any, b: any) {
     return `${a} = ${b}`;
 }
 
-export function equalsColumn(a, b) {
+export function equalsColumn(a: any, b: any) {
     return `${a} = ${b}`;
 }
 
-export function notEquals(a, b) {
+export function notEquals(a: any, b: string) {
     return `${a} != '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function notEqualsNumber(a, b) {
+export function notEqualsNumber(a: any, b: any) {
     return `${a} != ${b}`;
 }
 
-export function notEqualsColumn(a, b) {
+export function notEqualsColumn(a: any, b: any) {
     return `${a} != ${b}`;
 }
 
-export function greaterThan(a, b) {
+export function greaterThan(a: any, b: string) {
     return `${a} > '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function greaterThanNumber(a, b) {
+export function greaterThanNumber(a: any, b: any) {
     return `${a} > ${b}`;
 }
 
-export function lessThan(a, b) {
+export function lessThan(a: any, b: string) {
     return `${a} < '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function lessThanNumber(a, b) {
+export function lessThanNumber(a: any, b: any) {
     return `${a} < ${b}`;
 }
 
-export function greaterThanOrEqual(a, b) {
+export function greaterThanOrEqual(a: any, b: string) {
     return `${a} >= '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function greaterThanOrEqualNumber(a, b) {
+export function greaterThanOrEqualNumber(a: any, b: any) {
     return `${a} >= ${b}`;
 }
 
-export function lessThanOrEqual(a, b) {
+export function lessThanOrEqual(a: any, b: string) {
     return `${a} <= '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function lessThanOrEqualNumber(a, b) {
+export function lessThanOrEqualNumber(a: any, b: any) {
     return `${a} <= ${b}`;
 }
 
-export function inValues(a, b) {
+export function inValues(a: any, b: any[]) {
     return `${a} IN ('${b.join("', '").replace(/'/g, "\\'")}')`;
 }
 
-export function inNumbers(a, b) {
+export function inNumbers(a: any, b: any[]) {
     return `${a} IN (${b.join(", ")})`;
 }
 
-export function notInValues(a, b) {
+export function notInValues(a: any, b: any[]) {
     return `${a} NOT IN ('${b.join("', '").replace(/'/g, "\\'")}')`;
 }
 
-export function notInNumbers(a, b) {
+export function notInNumbers(a: any, b: any[]) {
     return `${a} NOT IN (${b.join(", ")})`;
 }
 
-export function is(a, b) {
+export function is(this: any, a: any, b: string | null) {
     if (b === null) return `${this} IS NULL`;
     return `${a} IS '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function isNumber(a, b) {
+export function isNumber(a: any, b: any) {
     return `${a} IS ${b}`;
 }
 
-export function isNot(a, b) {
+export function isNot(this: any, a: any, b: null) {
     if (b === null) return `${this} IS NOT NULL`;
     return `${a} IS NOT ${b}`;
 }
 
-export function isNotNumber(a, b) {
+export function isNotNumber(a: any, b: any) {
     return `${a} IS NOT ${b}`;
 }
 
-export function like(a, b) {
+export function like(a: any, b: string) {
     return `${a} LIKE '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function notLike(a, b) {
+export function notLike(a: any, b: string) {
     return `${a} NOT LIKE '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function ilike(a, b) {
+export function ilike(a: any, b: string) {
     return `${a} ILIKE '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function notILike(a, b) {
+export function notILike(a: any, b: string) {
     return `${a} NOT ILIKE '${b.replace(/'/g, "\\'")}'`;
 }
 
-export function isNull(a) {
+export function isNull(a: any) {
     return `${a} IS NULL`;
 }
 
-export function isNotNull(a) {
+export function isNotNull(a: any) {
     return `${a} IS NOT NULL`;
 }
 
-export function between(a, b, c) {
+export function between(a: any, b: string, c: string) {
     return `${a} BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(
         /'/g,
         "\\'"
     )}'`;
 }
 
-export function betweenNumbers(a, b, c) {
+export function betweenNumbers(a: any, b: any, c: any) {
     return `${a} BETWEEN ${b} AND ${c}`;
 }
 
-export function notBetween(a, b, c) {
+export function notBetween(a: any, b: string, c: string) {
     return `${a} NOT BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(
         /'/g,
         "\\'"
     )}'`;
 }
 
-export function notBetweenNumbers(a, b, c) {
+export function notBetweenNumbers(a: any, b: any, c: any) {
     return `${a} NOT BETWEEN ${b} AND ${c}`;
 }
 
-export function ascending(a) {
+export function ascending(a: any) {
     return `${a} ASC`;
 }
 
-export function descending(a) {
+export function descending(a: any) {
     return `${a} DESC`;
 }
