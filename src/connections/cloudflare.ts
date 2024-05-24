@@ -63,33 +63,12 @@ export class CloudflareD1Connection implements Connection {
     async query(
         query: string,
         parameters?: Record<string, any>[]
-    ): Promise<{ data: any; error: Error | null }> {
+    ): Promise<{ data: any; error: Error | null; query: string }> {
         if (!this.apiKey) throw new Error('Cloudflare API key is not set')
         if (!this.accountId) throw new Error('Cloudflare account ID is not set')
         if (!this.databaseId)
             throw new Error('Cloudflare database ID is not set')
         if (!query) throw new Error('A SQL query was not provided')
-
-        /**
-         * The Cloudflare API requires the query to be in the following format:
-         * SELECT * FROM table WHERE property = ?
-         *
-         * The parameters object should be an array of values that will replace
-         * the `?` in the query in the order they appear. We need to manipulate
-         * the query string to replace `:property` with `?` and extract the
-         * property names to be used as keys in the parameters object.
-         */
-        // let queryParameters = query.match(/:[a-zA-Z0-9]+/g) ?? []
-        // query = query.replace(/:[a-zA-Z0-9]+/g, '?')
-        // let params = queryParameters
-
-        // params.forEach((param, index) => {
-        //     let key = param.replace(':', '')
-
-        //     if (parameters && parameters.length > 0 && parameters[0].hasOwnProperty(key)) {
-        //         params[index] = parameters[0][key]
-        //     }
-        // })
 
         const { query: positionalQuery, params } = constructPositionalQuery(
             query,
@@ -101,7 +80,6 @@ export class CloudflareD1Connection implements Connection {
             params,
             QueryType.positional
         )
-        console.log('Full SQL: ', sql)
 
         const response = await fetch(
             `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
@@ -127,7 +105,7 @@ export class CloudflareD1Connection implements Connection {
         return {
             data: items,
             error: error,
-            query,
+            query: sql,
         }
     }
 }

@@ -56,7 +56,7 @@ export class OuterbaseConnection implements Connection {
     async query(
         query: string,
         parameters?: Record<string, any>[]
-    ): Promise<{ data: any; error: Error | null }> {
+    ): Promise<{ data: any; error: Error | null; query: string }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set')
         if (!query) throw new Error('Query was not provided')
 
@@ -68,7 +68,6 @@ export class OuterbaseConnection implements Connection {
         })
 
         const sql = constructRawQuery(query, params, QueryType.named)
-        console.log('Full SQL: ', sql)
 
         const response = await fetch(`${API_URL}/api/v1/ezql/raw`, {
             method: 'POST',
@@ -90,7 +89,7 @@ export class OuterbaseConnection implements Connection {
         return {
             data: items,
             error: error,
-            query,
+            query: sql,
         }
     }
 
