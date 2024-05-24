@@ -1,4 +1,4 @@
-import { Query, constructPositionalQuery, constructRawQuery } from '../query'
+import { Query, constructRawQuery } from '../query'
 import { Connection, QueryType } from './index'
 
 export class CloudflareD1Connection implements Connection {
@@ -69,13 +69,7 @@ export class CloudflareD1Connection implements Connection {
             throw new Error('Cloudflare database ID is not set')
         if (!query) throw new Error('A SQL query was not provided')
 
-        // const positionalQuery = constructPositionalQuery(
-        //     query.query,
-        //     query.parameters
-        // )
-
         const rawSQL = constructRawQuery(query)
-
         const response = await fetch(
             `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
             {
@@ -87,14 +81,11 @@ export class CloudflareD1Connection implements Connection {
                 body: JSON.stringify({
                     sql: query.query,
                     params: query.parameters,
-                    // sql: positionalQuery,
-                    // params: positionalQuery.parameters,
                 }),
             }
         )
 
         let json = await response.json()
-
         let error = null
         const resultArray = (await json?.result) ?? []
         const items = (await resultArray[0]?.results) ?? []
