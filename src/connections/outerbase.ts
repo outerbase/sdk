@@ -1,9 +1,14 @@
+import { QueryType } from '../query-params'
+import { Query, constructRawQuery } from '../query'
 import { Connection } from './index'
 export const API_URL = 'https://app.outerbase.com'
 
 export class OuterbaseConnection implements Connection {
     // The API key used for Outerbase authentication
     api_key: string | undefined
+
+    // Default query type to named for Outerbase
+    queryType = QueryType.named
 
     /**
      * Creates a new OuterbaseConnection object with the provided API key.
@@ -53,18 +58,10 @@ export class OuterbaseConnection implements Connection {
      * @returns Promise<{ data: any, error: Error | null }>
      */
     async query(
-        query: string,
-        parameters?: Record<string, any>[]
-    ): Promise<{ data: any; error: Error | null }> {
+        query: Query
+    ): Promise<{ data: any; error: Error | null; query: string }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set')
         if (!query) throw new Error('Query was not provided')
-
-        let params: Record<string, any> = {}
-        parameters?.forEach((param) => {
-            Object.keys(param).forEach((key) => {
-                params[key] = param[key]
-            })
-        })
 
         const response = await fetch(`${API_URL}/api/v1/ezql/raw`, {
             method: 'POST',
@@ -73,8 +70,8 @@ export class OuterbaseConnection implements Connection {
                 'X-Source-Token': this.api_key,
             },
             body: JSON.stringify({
-                query: query,
-                params: params,
+                query: query.query,
+                params: query.parameters,
                 run: true,
             }),
         })
@@ -82,10 +79,12 @@ export class OuterbaseConnection implements Connection {
         let json = await response.json()
         let error = null
         let items = (await json.response?.results?.items) ?? []
+        const rawSQL = constructRawQuery(query)
 
         return {
             data: items,
             error: error,
+            query: rawSQL,
         }
     }
 
