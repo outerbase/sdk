@@ -10,39 +10,45 @@ export type Query = {
     parameters?: QueryParams
 }
 
+function rawQueryFromNamedParams(query: Query): string {
+    let queryWithParams = query.query
+
+    for (const [key, value] of Object.entries(query.parameters ?? {})) {
+        if (typeof value === 'string') {
+            queryWithParams = queryWithParams.replace(
+                `:${key}`,
+                `'${value}'`
+            )
+        } else {
+            queryWithParams = queryWithParams.replace(`:${key}`, value)
+        }
+    }
+
+    return queryWithParams
+}
+
+function rawQueryFromPositionalParams(query: Query): string {
+    const params = query.parameters as QueryParamsPositional
+    let queryWithParams = query.query
+
+    for (let i = 0; i < params.length; i++) {
+        const currentParam = params[i]
+
+        if (typeof currentParam === 'string') {
+            queryWithParams = queryWithParams.replace('?', `'${params[i]}'`)
+        } else {
+            queryWithParams = queryWithParams.replace('?', params[i])
+        }
+    }
+
+    return queryWithParams
+}
+
 export function constructRawQuery(query: Query) {
-    if (isQueryParamsNamed(query.parameters)) {
-        // Replace named parameters with the actual values
-        let queryWithParams = query.query
-
-        for (const [key, value] of Object.entries(query.parameters)) {
-            if (typeof value === 'string') {
-                queryWithParams = queryWithParams.replace(
-                    `:${key}`,
-                    `'${value}'`
-                )
-            } else {
-                queryWithParams = queryWithParams.replace(`:${key}`, value)
-            }
-        }
-
-        return queryWithParams
+    if (isQueryParamsNamed(query.parameters) || !query.parameters) {
+        return rawQueryFromNamedParams(query)
     } else if (isQueryParamsPositional(query.parameters)) {
-        // Replace question marks with the actual values in order from the parameters array
-        const params = query.parameters as QueryParamsPositional
-        let queryWithParams = query.query
-
-        for (let i = 0; i < params.length; i++) {
-            const currentParam = params[i]
-
-            if (typeof currentParam === 'string') {
-                queryWithParams = queryWithParams.replace('?', `'${params[i]}'`)
-            } else {
-                queryWithParams = queryWithParams.replace('?', params[i])
-            }
-        }
-
-        return queryWithParams
+        return rawQueryFromPositionalParams(query)
     }
 
     return ''

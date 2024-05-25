@@ -1,4 +1,4 @@
-import { QueryType } from 'src/query-params'
+import { QueryType } from '../query-params'
 import { Query, constructRawQuery } from '../query'
 import { Connection } from './index'
 
@@ -70,7 +70,6 @@ export class CloudflareD1Connection implements Connection {
             throw new Error('Cloudflare database ID is not set')
         if (!query) throw new Error('A SQL query was not provided')
 
-        const rawSQL = constructRawQuery(query)
         const response = await fetch(
             `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
             {
@@ -90,6 +89,7 @@ export class CloudflareD1Connection implements Connection {
         let error = null
         const resultArray = (await json?.result) ?? []
         const items = (await resultArray[0]?.results) ?? []
+        const rawSQL = constructRawQuery(query)
 
         return {
             data: items,

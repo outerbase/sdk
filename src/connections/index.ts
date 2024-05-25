@@ -1,4 +1,4 @@
-import { QueryType } from 'src/query-params'
+import { QueryType } from '../query-params'
 import { Query } from '../query'
 
 export interface Connection {
