@@ -1,12 +1,13 @@
+import { QueryType } from 'src/query-params'
 import { Query, constructRawQuery } from '../query'
-import { QueryParamsNamed } from '../query-params'
-import { Connection, QueryType } from './index'
+import { Connection } from './index'
 export const API_URL = 'https://app.outerbase.com'
 
 export class OuterbaseConnection implements Connection {
     // The API key used for Outerbase authentication
     api_key: string | undefined
 
+    // Default query type to named for Outerbase
     queryType = QueryType.named
 
     /**

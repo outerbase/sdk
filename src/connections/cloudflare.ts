@@ -1,5 +1,6 @@
+import { QueryType } from 'src/query-params'
 import { Query, constructRawQuery } from '../query'
-import { Connection, QueryType } from './index'
+import { Connection } from './index'
 
 export class CloudflareD1Connection implements Connection {
     // The Cloudflare API key with D1 access

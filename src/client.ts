@@ -1,6 +1,6 @@
-import { Connection, QueryType } from './connections'
+import { Connection } from './connections'
 import { Query, constructRawQuery } from './query'
-import { QueryParams } from './query-params'
+import { QueryParams, QueryType } from './query-params'
 
 interface QueryBuilder {
     action: 'select' | 'insert' | 'update' | 'delete'

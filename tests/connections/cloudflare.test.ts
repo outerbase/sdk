@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals'
 
 import { CloudflareD1Connection } from 'src/connections/cloudflare'
-import { QueryType } from 'src/index'
+import { QueryType } from 'src/query-params'
 
 describe('CloudflareD1Connection', () => {
     describe('Query Type', () => {
