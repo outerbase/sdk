@@ -61,7 +61,6 @@ export class OuterbaseConnection implements Connection {
         query: Query
     ): Promise<{ data: any; error: Error | null; query: string }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set')
-        if (!query) throw new Error('Query was not provided')
 
         const response = await fetch(`${API_URL}/api/v1/ezql/raw`, {
             method: 'POST',
@@ -104,7 +103,6 @@ export class OuterbaseConnection implements Connection {
         queryId: string
     ): Promise<{ data: any; error: Error | null }> {
         if (!this.api_key) throw new Error('Outerbase API key is not set')
-        if (!queryId) throw new Error('Query ID is not set')
 
         const response = await fetch(
             `${API_URL}/api/v1/ezql/query/${queryId}`,
