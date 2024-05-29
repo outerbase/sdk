@@ -619,16 +619,18 @@ export function lessThanOrEqualNumber(a: any, b: any) {
     return `${a} <= ${b}`
 }
 
-export function inValues(a: any, b: any[]) {
-    return `${a} IN ('${b.join("', '").replace(/'/g, "\\'")}')`
+export function inValues(a: any, b: any[]): string {
+    const sanitizedValues = b.map(val => val.replace(/'/g, "\\'"));
+    return `${a} IN ('${sanitizedValues.join("', '")}')`
 }
 
 export function inNumbers(a: any, b: any[]) {
     return `${a} IN (${b.join(', ')})`
 }
 
-export function notInValues(a: any, b: any[]) {
-    return `${a} NOT IN ('${b.join("', '").replace(/'/g, "\\'")}')`
+export function notInValues(a: any, b: any[]): string {
+    const sanitizedValues = b.map(val => val.replace(/'/g, "\\'"));
+    return `${a} NOT IN ('${sanitizedValues.join("', '")}')`
 }
 
 export function notInNumbers(a: any, b: any[]) {
@@ -644,7 +646,7 @@ export function isNumber(a: any, b: any) {
     return `${a} IS ${b}`
 }
 
-export function isNot(this: any, a: any, b: null) {
+export function isNot(this: any, a: any, b: string | null) {
     if (b === null) return `${this} IS NOT NULL`
     return `${a} IS NOT ${b}`
 }

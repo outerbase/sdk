@@ -27,11 +27,8 @@ export class CloudflareD1Connection implements Connection {
      * Performs a connect action on the current Connection object.
      * In this particular use case Cloudflare is a REST API and
      * requires an API key for authentication.
-     *
-     * @param details - Unused in the Cloudflare scenario.
-     * @returns Promise<any>
      */
-    async connect(details: Record<string, any>): Promise<any> {
+    async connect(): Promise<any> {
         return Promise.resolve()
     }
 
@@ -68,7 +65,6 @@ export class CloudflareD1Connection implements Connection {
         if (!this.accountId) throw new Error('Cloudflare account ID is not set')
         if (!this.databaseId)
             throw new Error('Cloudflare database ID is not set')
-        if (!query) throw new Error('A SQL query was not provided')
 
         const response = await fetch(
             `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
@@ -87,8 +83,8 @@ export class CloudflareD1Connection implements Connection {
 
         let json = await response.json()
         let error = null
-        const resultArray = (await json?.result) ?? []
-        const items = (await resultArray[0]?.results) ?? []
+        const resultArray = json?.result ?? []
+        const items = resultArray[0]?.results ?? []
         const rawSQL = constructRawQuery(query)
 
         return {
