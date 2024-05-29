@@ -11,6 +11,13 @@ module.exports = {
     moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, {
         prefix: '<rootDir>/',
     }),
+    coverageThreshold: {
+        global: {
+            branches: 100,
+            functions: 100,
+            lines: 100,
+        },
+    },
     moduleDirectories: ['node_modules', 'src'],
     modulePaths: ['<rootDir>'],
     setupFiles: ['<rootDir>/jest.setup.js'],
