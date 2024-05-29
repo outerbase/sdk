@@ -15,10 +15,7 @@ function rawQueryFromNamedParams(query: Query): string {
 
     for (const [key, value] of Object.entries(query.parameters ?? {})) {
         if (typeof value === 'string') {
-            queryWithParams = queryWithParams.replace(
-                `:${key}`,
-                `'${value}'`
-            )
+            queryWithParams = queryWithParams.replace(`:${key}`, `'${value}'`)
         } else {
             queryWithParams = queryWithParams.replace(`:${key}`, value)
         }
@@ -47,9 +44,9 @@ function rawQueryFromPositionalParams(query: Query): string {
 export function constructRawQuery(query: Query) {
     if (isQueryParamsNamed(query.parameters) || !query.parameters) {
         return rawQueryFromNamedParams(query)
-    } else if (isQueryParamsPositional(query.parameters)) {
-        return rawQueryFromPositionalParams(query)
     }
 
-    return ''
+    // This isnt needed. Keeping it for posterity in case something changes
+    // if (isQueryParamsPositional(query.parameters)) {
+    return rawQueryFromPositionalParams(query)
 }

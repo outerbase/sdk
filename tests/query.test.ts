@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals'
 
-import { Query, constructRawQuery } from 'src/query'
+import { Query, constructRawQuery } from '../src/query'
 
 describe('Query', () => {
     describe('INSERT INTO - Named Parameters', () => {
@@ -61,6 +61,15 @@ describe('Query', () => {
     })
 
     describe('INSERT INTO - Positional Parameters', () => {
+        test('No positional parameter', () => {
+            const query: Query = {
+                query: 'INSERT INTO person (name) VALUES (?)',
+            }
+
+            expect(constructRawQuery(query)).toBe(
+                'INSERT INTO person (name) VALUES (?)'
+            )
+        })
         test('One positional parameter', () => {
             const query: Query = {
                 query: 'INSERT INTO person (name) VALUES (?)',
