@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals'
 
-import { OuterbaseConnection } from 'src/connections/outerbase'
-import { QueryType } from 'src/query-params'
+import { OuterbaseConnection } from '../../src/connections/outerbase'
+import { QueryType } from '../../src/query-params'
 
 describe('OuterbaseConnection', () => {
     describe('Query Type', () => {
