@@ -78,6 +78,13 @@ export function getPrimaryKeys(targetClass: Function): string[] {
     return [];
 }
 
+/**
+ * Based on the column name value, however it is stored in the database, get the actual
+ * key name of the property in the class.
+ * @param targetClass 
+ * @param columnName 
+ * @returns String – the property name
+ */
 export function getColumnValueFromName(targetClass: Function, columnName: string): string {
     const metadata = metadataRegistry.get(targetClass);
     if (metadata) {
@@ -86,6 +93,21 @@ export function getColumnValueFromName(targetClass: Function, columnName: string
                 return key;
             }
         }
+    }
+    return '';
+}
+
+/**
+ * Based on the actual property name, usually camel cased, get the column name value
+ * that is stored in the database.
+ * @param targetClass 
+ * @param propertyName 
+ * @returns String – the column name
+ */
+export function getColumnValueFromProperty(targetClass: Function, propertyName: string): string {
+    const metadata = metadataRegistry.get(targetClass);
+    if (metadata) {
+        return metadata.columns[propertyName].name;
     }
     return '';
 }

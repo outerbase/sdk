@@ -1,6 +1,8 @@
 import { Connection } from "src/connections";
-import { Outerbase, OuterbaseType, equals } from "../client";
-import { getColumnValueFromName, getPrimaryKeys } from "./decorators";
+import { Outerbase, equals } from "../client";
+import { getColumnValueFromName, getColumnValueFromProperty, getPrimaryKeys } from "./decorators";
+
+const RESERVED_PROPERTIES = ['_name', '_schema', '_original', '_connection'];
 
 export class BaseTable {
     _name: string;
@@ -38,6 +40,39 @@ export class BaseTable {
         });
     }
 
+    getCurrentValues(_: { omitPrimaryKeys: boolean }): Record<string, any> {
+        if (!this._original) {
+            throw new Error('Original data not found');
+        }
+
+        const columns = Object.keys(this).filter((key) => {
+            if (RESERVED_PROPERTIES.includes(key)) {
+                return false;
+            }
+
+            if (_.omitPrimaryKeys) {
+                const primaryKeys = getPrimaryKeys(this.constructor);
+                if (primaryKeys?.length > 0) {
+                    return !primaryKeys.includes(key);
+                }
+            }
+
+            return true;
+        });
+
+        let object: Record<string, any> = {};
+        columns.forEach((key) => {
+            const columnName = getColumnValueFromProperty(this.constructor, key);
+
+            if (columnName) {
+                object[columnName] = this._original?.[columnName];
+                console.log(columnName + ' = ' + this._original?.[columnName])
+            }
+        });
+
+        return object;
+    }
+
     stringToCamelCase(str: string) {
         return str?.replace(/[-_](.)/g, (_, c) => c?.toUpperCase())
     }
@@ -49,7 +84,7 @@ export class BaseTable {
      * 
      * @returns Promise<any>
      */
-    async sync(): Promise<void> {
+    async pull(): Promise<void> {
         if (!this._connection) {
             throw new Error('Connection not attached');
         }
@@ -64,44 +99,33 @@ export class BaseTable {
             .where(conditions)
             .limit(1)
             .query()
-        
-        data = data[0]
 
-        // Set the `data` object to the `_original` property
-        this._original = data;
+        // The response from the query builder call above is an array of results
+        // that match the query. We only want the first result.
+        this._original = data[0];
 
-        // TODO: Set all the properties of the `data` object to the current instance
-        // Set all the properties of the `data` object to the current instance
-        // Object.assign(this, data);
-
-        // Iterate through all properties of this class
-        for (let key in this) {
-            // If the property is a function, skip
-            if (typeof this[key] === 'function') {
+        for (let key in this._original) {
+            if (typeof this._original[key] === 'function') {
                 continue;
             }
 
-            if (key === '_name' || key === '_schema' || key === '_original' || key === '_connection') {
+            // If `key` is any of the reserved properties, we skip it.
+            if (RESERVED_PROPERTIES.includes(key)) {
                 continue;
             }
 
-            // If the property is not in the data object, skip
-            // if (!data[key]) {
-            //     continue;
-            // }
-
-            // Set the property to the value from the data object
-            // console.log('Data: ', data)
-            // console.log('Setting', key, 'to', data[this.stringToCamelCase(key)])
-            this[key] = data[this.stringToCamelCase(key)];
+            const preparedKey = this.stringToCamelCase(key) ?? '';
+            for (let prop in this) {
+                if (prop === preparedKey) {
+                    this[prop] = this._original[key];
+                }
+            }
         }
-
-        console.log('This: ', this)
 
         return;
     }
 
-    async delete() {
+    async delete(): Promise<any> {
         if (!this._connection) {
             throw new Error('Connection not attached');
         }
@@ -113,5 +137,47 @@ export class BaseTable {
             .deleteFrom(this._name)
             .where(conditions)
             .query()
+
+        return data;
+    }
+
+    async update(): Promise<any> {
+        if (!this._connection) {
+            throw new Error('Connection not attached');
+        }
+
+        const conditions = this.getCurrentWhereClause();
+        const db = Outerbase(this._connection)
+        const currentValues = this.getCurrentValues({ omitPrimaryKeys: true });
+
+        let { data } = await db
+            .update(currentValues)
+            .into(this._name)
+            .where(conditions)
+            .query();
+
+        // Update the original data with the new data
+        this._original = {
+            ...this._original,
+            ...currentValues
+        };
+
+        return data;
+    }
+
+    async insert(): Promise<any> {
+        if (!this._connection) {
+            throw new Error('Connection not attached');
+        }
+
+        const db = Outerbase(this._connection)
+
+        let { data } = await db
+            .insert(this.getCurrentValues({ omitPrimaryKeys: true }))
+            .into(this._name)
+            .returning(['*'])
+            .query();
+
+        return data;
     }
 }
