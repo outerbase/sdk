@@ -4,6 +4,7 @@
  * the value is an object with the following properties:
  * - columns: an object where the keys are property keys and the values are objects with column options
  * - primaryKey: the property key of the primary key column
+ * 
  * @type {Map<Function, any>}
  */
 export const metadataRegistry = new Map<Function, any>();
@@ -81,6 +82,7 @@ export function getPrimaryKeys(targetClass: Function): string[] {
 /**
  * Based on the column name value, however it is stored in the database, get the actual
  * key name of the property in the class.
+ * 
  * @param targetClass 
  * @param columnName 
  * @returns String – the property name
@@ -100,6 +102,7 @@ export function getColumnValueFromName(targetClass: Function, columnName: string
 /**
  * Based on the actual property name, usually camel cased, get the column name value
  * that is stored in the database.
+ * 
  * @param targetClass 
  * @param propertyName 
  * @returns String – the column name
