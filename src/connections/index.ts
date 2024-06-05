@@ -1,5 +1,12 @@
+import { QueryType } from '../query-params'
+import { Query } from '../query'
+
 export interface Connection {
-    connect: () => Promise<any>;
-    disconnect: () => Promise<any>;
-    query: (query: string, parameters?: Record<string, any>[]) => Promise<{ data: any, error: Error | null }>;
+    queryType: QueryType
+
+    connect: () => Promise<any>
+    disconnect: () => Promise<any>
+    query: (
+        query: Query
+    ) => Promise<{ data: any; error: Error | null; query: string }>
 }
