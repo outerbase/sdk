@@ -1,3 +1,4 @@
+import { BaseTable } from 'src/models'
 import { Connection } from './connections'
 import { Query, constructRawQuery } from './query'
 import { QueryParams, QueryType } from './query-params'
@@ -70,8 +71,16 @@ export function Outerbase(connection: Connection): OuterbaseType {
             return this
         },
         where(condition) {
-            if (this.queryBuilder.whereClauses)
-                this.queryBuilder.whereClauses.push(condition)
+            // Check if `condition` is an array of conditions
+            if (Array.isArray(condition)) {
+                if (this.queryBuilder.whereClauses) {
+                    this.queryBuilder.whereClauses.push(`(${condition.join(" AND ")})`);
+                }
+            } else {
+                if (this.queryBuilder.whereClauses) {
+                    this.queryBuilder.whereClauses.push(condition);
+                }
+            }
             return this
         },
         limit(limit) {
@@ -212,7 +221,8 @@ export function Outerbase(connection: Connection): OuterbaseType {
                 const response = await connection.query(query)
                 let result = mapToClass(
                     response?.data,
-                    this.queryBuilder.asClass
+                    this.queryBuilder.asClass,
+                    connection
                 )
                 return {
                     data: result,
@@ -234,7 +244,8 @@ export function Outerbase(connection: Connection): OuterbaseType {
                 const response = await connection.query({ query, parameters })
                 let result = mapToClass(
                     response?.data,
-                    this.queryBuilder.asClass
+                    this.queryBuilder.asClass,
+                    connection
                 )
                 return {
                     data: result,
@@ -394,11 +405,16 @@ function buildQueryString(
     return query
 }
 
-function mapToClass<T>(data: any | any[], ctor: new (data: any) => T): T | T[] {
+function mapToClass<T>(data: any | any[], ctor: new (data: any) => T, connection?: Connection): T | T[] {
     if (Array.isArray(data)) {
-        let array = data.map((item) => new ctor(item))
-        return array
+        return data.map(item => {
+            const model = new ctor(item) as BaseTable;
+            model._connection = connection;
+            return model;
+        }) as T[];
     } else {
+        const model = new ctor(data) as BaseTable
+        model._connection = connection
         return new ctor(data)
     }
 }
