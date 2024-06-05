@@ -11,6 +11,7 @@
         "outDir": "./dist",
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
+        "strictPropertyInitialization": false,
         "strict": true,
         "baseUrl": "./",
         "paths": {

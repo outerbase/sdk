@@ -62,9 +62,12 @@ describe('Query Builder', () => {
     test('Update a table', () => {
         const query = outerbaseD1
             .update({ crab: 'cake' })
+            .where('cheese = thing')
             .into('testTable')
             .toString()
-        expect(query).toBe("UPDATE testTable SET crab = 'cake'")
+        expect(query).toBe(
+            "UPDATE testTable SET crab = 'cake' WHERE cheese = thing"
+        )
     })
     test('Update a table with named', () => {
         const query = outerbase
