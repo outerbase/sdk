@@ -3,6 +3,10 @@ import { Query, constructRawQuery } from '../query'
 import { Connection } from './index'
 export const API_URL = 'https://app.outerbase.com'
 
+export type OuterbaseConnectionDetails = {
+    apiKey: string
+};
+
 export class OuterbaseConnection implements Connection {
     // The API key used for Outerbase authentication
     api_key: string | undefined
@@ -15,8 +19,10 @@ export class OuterbaseConnection implements Connection {
      *
      * @param apiKey - The API key to be used for authentication.
      */
-    constructor(private apiKey: string) {
-        this.api_key = apiKey
+    constructor(private _: {
+        apiKey: string
+    }) {
+        this.api_key = _.apiKey;
     }
 
     /**

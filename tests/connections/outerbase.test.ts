@@ -5,7 +5,9 @@ import { QueryType } from 'src/query-params'
 
 describe('OuterbaseConnection', () => {
     describe('Query Type', () => {
-        const connection = new OuterbaseConnection('FAKE_API_KEY')
+        const connection = new OuterbaseConnection({
+            apiKey: 'FAKE_API_KEY'
+        })
 
         test('Query type is set to named', () => {
             expect(connection.queryType).toBe(QueryType.named)

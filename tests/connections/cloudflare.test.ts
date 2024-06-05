@@ -5,11 +5,11 @@ import { QueryType } from 'src/query-params'
 
 describe('CloudflareD1Connection', () => {
     describe('Query Type', () => {
-        const connection = new CloudflareD1Connection(
-            'API_KEY',
-            'ACCOUNT_ID',
-            'DATABASE_ID'
-        )
+        const connection = new CloudflareD1Connection({
+            apiKey: 'API_KEY',
+            accountId: 'ACCOUNT_ID',
+            databaseId: 'DATABASE_ID'
+        })
 
         test('Query type is set to positional', () => {
             expect(connection.queryType).toBe(QueryType.positional)
