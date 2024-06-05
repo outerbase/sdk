@@ -49,7 +49,10 @@ export class BaseTable {
         }
 
         return primaryKeys.map((key) => {
-            return equals(key, this._original?.[getColumnValueFromName(this.constructor, key)]);
+            const columnValue = getColumnValueFromName(this.constructor, key)
+            if (columnValue === null) return '';
+
+            return equals(key, this._original?.[columnValue]);
         });
     }
 

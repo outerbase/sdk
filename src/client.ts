@@ -407,14 +407,13 @@ function buildQueryString(
 
 function mapToClass<T>(data: any | any[], ctor: new (data: any) => T, connection?: Connection): T | T[] {
     if (Array.isArray(data)) {
-        let array = data.map((item) => {
-            let model = new ctor(item) as BaseTable
-            model._connection = connection
-            return model
-        })
-        return array as T[]
+        return data.map(item => {
+            const model = new ctor(item) as BaseTable;
+            model._connection = connection;
+            return model;
+        }) as T[];
     } else {
-        let model = new ctor(data) as BaseTable
+        const model = new ctor(data) as BaseTable
         model._connection = connection
         return new ctor(data)
     }

@@ -49,16 +49,38 @@ export function Column(options?: {
     };
 }
 
+/**
+ * Indicates that the provided property name is a valid column in the database
+ * for this model class (database table).
+ * 
+ * @param targetClass 
+ * @param propertyName 
+ * @returns Boolean – whether the property is a column
+ */
 export function isColumn(targetClass: Function, propertyName: string): boolean {
     const metadata = metadataRegistry.get(targetClass);
     return metadata && metadata.columns[propertyName];
 }
 
+/**
+ * Indicates whether a column is a unique column in the database.
+ * 
+ * @param targetClass 
+ * @param propertyName 
+ * @returns Boolean – whether the column is a unique column
+ */
 export function isPropertyUnique(targetClass: Function, propertyName: string): boolean {
     const metadata = metadataRegistry.get(targetClass);
     return metadata && metadata[propertyName] && metadata[propertyName].unique
 }
 
+/**
+ * Indicates whether a column can be set as a null value in the database.
+ * 
+ * @param targetClass 
+ * @param propertyName 
+ * @returns Boolean – whether the column can be null
+ */
 export function isColumnNullable(targetClass: Function, propertyName: string): boolean {
     const metadata = metadataRegistry.get(targetClass);
     if (metadata && metadata.columns[propertyName] && metadata.columns[propertyName].hasOwnProperty('nullable')) {
@@ -67,14 +89,22 @@ export function isColumnNullable(targetClass: Function, propertyName: string): b
     return false;
 }
 
+/**
+ * Retrieve the primary key column names for a given model class
+ * based on the metadata stored by the decorators.
+ * 
+ * @param targetClass 
+ * @returns Array of strings – the primary key column names
+ */
 export function getPrimaryKeys(targetClass: Function): string[] {
     const metadata = metadataRegistry.get(targetClass);
     if (metadata) {
-        // Get all the keys of the metadata object that are primary keys
-        const keys = Object.keys(metadata.columns).filter((key) => metadata.columns[key].primary);
-
         // Return the actual column name as it is stored in the database
-        return keys.map((key) => metadata.columns[key].name);
+        const primaryKeyColumnsNames = Object.keys(metadata.columns)
+            .filter((key) => metadata.columns[key].primary)
+            .map((key) => metadata.columns[key].name);
+
+        return primaryKeyColumnsNames;
     }
     return [];
 }
@@ -87,7 +117,7 @@ export function getPrimaryKeys(targetClass: Function): string[] {
  * @param columnName 
  * @returns String – the property name
  */
-export function getColumnValueFromName(targetClass: Function, columnName: string): string {
+export function getColumnValueFromName(targetClass: Function, columnName: string): string | null {
     const metadata = metadataRegistry.get(targetClass);
     if (metadata) {
         for (const key in metadata.columns) {
@@ -96,7 +126,7 @@ export function getColumnValueFromName(targetClass: Function, columnName: string
             }
         }
     }
-    return '';
+    return null;
 }
 
 /**
@@ -107,10 +137,10 @@ export function getColumnValueFromName(targetClass: Function, columnName: string
  * @param propertyName 
  * @returns String – the column name
  */
-export function getColumnValueFromProperty(targetClass: Function, propertyName: string): string {
+export function getColumnValueFromProperty(targetClass: Function, propertyName: string): string | null {
     const metadata = metadataRegistry.get(targetClass);
     if (metadata) {
         return metadata.columns[propertyName].name;
     }
-    return '';
+    return null;
 }
