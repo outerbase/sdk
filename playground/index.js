@@ -1,24 +1,11 @@
-import { CloudflareD1Connection, Outerbase, equalsNumber } from '../dist/index.js';
+import { CloudflareD1Connection, Outerbase, OuterbaseConnection, equalsNumber } from '../dist/index.js';
 import express from 'express';
 
 const app = express();
 const port = 4000;
 
 app.get('/', async (req, res) => {
-    const d1 = new CloudflareD1Connection({
-        apiKey: 'API_KEY',
-        accountId: 'ACCOUNT_ID',
-        databaseId: 'DATABASE_ID'
-    })
-    const db = Outerbase(d1);
-    
-    // SELECT:
-    let { data } = await db.selectFrom([
-        { table: 'table_name', columns: ['id'] }
-    ])
-    .where(equalsNumber('id', 1))
-    .query()
-
+    const data = {}
     res.json(data);
 });
 
