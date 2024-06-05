@@ -5,7 +5,9 @@ import { Outerbase, equals, equalsNumber } from 'src/index'
 
 describe('toString', () => {
     describe('SELECT statements', () => {
-        const connection = new OuterbaseConnection('FAKE_API_KEY')
+        const connection = new OuterbaseConnection({
+            apiKey: 'FAKE_API_KEY'
+        })
         const db = Outerbase(connection)
 
         test('Select from one table, one column', () => {
@@ -62,7 +64,9 @@ describe('toString', () => {
     })
 
     describe('queryBuilder - Reserved keywords get quotes', () => {
-        const connection = new OuterbaseConnection('FAKE_API_KEY')
+        const connection = new OuterbaseConnection({
+            apiKey: 'FAKE_API_KEY'
+        })
         const db = Outerbase(connection)
 
         test('toString – Not reserved keyword "users" is not wrapped in quotes', () => {
