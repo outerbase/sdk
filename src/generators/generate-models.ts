@@ -106,8 +106,8 @@ async function main() {
                                         table.references.some(
                                             (ref: {
                                                 name: string
-                                                table: string
-                                                schema: string
+                                                table: any
+                                                schema: any
                                             }) =>
                                                 ref.name === firstColumn.name &&
                                                 ref.table ===
