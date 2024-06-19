@@ -61,6 +61,8 @@ async function main() {
         let schemaResponse = json.response
         let tables: Array<any> = []
 
+        const deletedPathsMap: Record<string, any> = {}
+
         for (let key in schemaResponse) {
             let isPublic = key.toLowerCase() === 'public'
 
@@ -204,6 +206,14 @@ async function main() {
                         currentFolderPath,
                         `${table.name}.ts`
                     )
+
+                    // Remove the existing models directory and create a new one if it doesn't exist
+                    // but only if it hasn't been deleted already.
+                    if (!deletedPathsMap[currentFolderPath]) {
+                        await fs.rmdir(currentFolderPath, { recursive: true })
+                        deletedPathsMap[currentFolderPath] = true
+                    }
+                    
                     await fs.mkdir(currentFolderPath, { recursive: true })
                     await fs.writeFile(modelPath, model)
 
