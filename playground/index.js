@@ -7,7 +7,7 @@ const port = 4000;
 app.get('/', async (req, res) => {
     // Establish connection to your provider database
     const d1 = new CloudflareD1Connection('API_KEY', 'ACCOUNT_ID', 'DATABASE_ID');
-    const neon = new NeonHttpConnection('postgresql://brayden:Q2kv1fBPDqwN@ep-damp-hill-a59vzq0g.us-east-2.aws.neon.tech/neondb?sslmode=require');
+    const neon = new NeonHttpConnection('postgresql://USER:PASSWORD@ep-damp-hill-a59vzq0g.us-east-2.aws.neon.tech/neondb?sslmode=require');
 
     // Create an Outerbase instance from the data connection
     await neon.connect();
@@ -20,10 +20,7 @@ app.get('/', async (req, res) => {
     // .where(equalsNumber('id', 1))
     // .query()
 
-    let { data, query } = await db.queryRaw('SELECT * FROM playing_with_neon WHERE id = $1', ['1']);
-
-    console.log('Query: ', query)
-
+    let { data } = await db.queryRaw('SELECT * FROM playing_with_neon WHERE id = $1', ['1']);
     res.json(data);
 });
 
