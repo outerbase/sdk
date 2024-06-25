@@ -1,4 +1,4 @@
-import { CloudflareD1Connection, NeonHttpConnection, Outerbase, equalsNumber } from '../dist/index.js';
+import { CloudflareD1Connection, Outerbase, NeonHttpConnection, OuterbaseConnection, equalsNumber } from '../dist/index.js';
 import express from 'express';
 
 const app = express();
@@ -14,11 +14,15 @@ app.get('/', async (req, res) => {
     const db = Outerbase(neon);
     
     // SELECT:
-    let { data } = await db.selectFrom([
-        { table: 'playing_with_neon', columns: ['id', 'name', 'value'] }
-    ])
+    // let { data, query } = await db.selectFrom([
+    //     { table: 'playing_with_neon', columns: ['id', 'name', 'value'] }
+    // ])
     // .where(equalsNumber('id', 1))
-    .query()
+    // .query()
+
+    let { data, query } = await db.queryRaw('SELECT * FROM playing_with_neon WHERE id = $1', ['1']);
+
+    console.log('Query: ', query)
 
     res.json(data);
 });

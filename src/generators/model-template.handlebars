@@ -1,4 +1,4 @@
-import { BaseTable, Column } from '@outerbase/query-builder';
+import { BaseTable, Column } from '@outerbase/sdk';
 {{#each references}}
 import { {{ capitalize (camelCase table) }} } from './{{#if (neq schema "public")}}{{schema}}/{{/if}}{{ camelCase table }}';
 {{/each}}
@@ -13,7 +13,8 @@ export class {{ capitalize (camelCase name) }} extends BaseTable {
     constructor(data: any) {
         super({
             _name: "{{name}}",
-            _schema: "{{schema}}"
+            _schema: "{{schema}}",
+            _original: data
         });
 
         {{#each columns}}

@@ -29,6 +29,18 @@ Outerbase SDK is a way to interact with your database in a SQL-like manner. This
 
 ## Usage
 
+### Install with a package manager
+
+**npm**
+```
+npm i @outerbase/sdk
+```
+
+**pnpm**
+```
+pnpm add @outerbase/sdk
+```
+
 ### Initialize a connection to your database
 
 This library currently supports connecting to Outerbase connections, which supports **Postgres**, **MySQL**, **SQLite**, **SQL Server**, **Clickhouse** and more with direct integrations with platforms such as [DigitalOcean](https://digitalocean.com), [Neon](https://neon.tech), and [Turso](https://turso.tech).
@@ -37,7 +49,11 @@ First we start by creating a connection object which is intended to be extensibl
 
 With a connection object instantiated we can create a new database instance to interact with that connection interface.
 
-```
+```ts
+import { Outerbase, OuterbaseConnection } from '@outerbase/sdk'
+
+// ...
+
 const connection: OuterbaseConnection = new OuterbaseConnection('INSERT_API_TOKEN');
 const db = Outerbase(connection);
 ```
@@ -59,7 +75,7 @@ Instead of writing SQL directly in your code you can chain commands together tha
 After you construct the series of SQL-like operations you intend to execute, you should end it by calling the `.query()` function call which will send the request to the database for exection.
 
 #### Select data from database
-```
+```ts
 let { data, error } = await db
     .selectFrom([
         {
@@ -81,7 +97,7 @@ let { data, error } = await db
 ```
 
 #### Insert data into a table
-```
+```ts
 let { data } = await db
     .insert({ first_name: 'John', last_name: 'Doe', position: 'Developer', avatar: 0 })
     .into('person')
@@ -90,7 +106,7 @@ let { data } = await db
 ```
 
 #### Update data in a table
-```
+```ts
 let { data } = await db
     .update({ first_name: 'Johnny' })
     .into('person')
@@ -99,7 +115,7 @@ let { data } = await db
 ```
 
 #### Delete data from a table
-```
+```ts
 let { data } = await db
     .deleteFrom('person')
     .where(equals('id', '1234'))
@@ -112,13 +128,13 @@ let { data } = await db
 
 Executing raw SQL queries against your database is possible by passing a valid SQL statement into a database instance created by the library.
 
-```
+```ts
 let { data, error } = await db.queryRaw('SELECT * FROM person');
 ```
 
 You can optionally pass in an array of parameters for sanitizing your SQL inputs.
 
-```
+```ts
 let { data, error } = await db.queryRaw('SELECT * FROM person WHERE id=:id', { id: "123" });
 ```
 
@@ -126,7 +142,7 @@ let { data, error } = await db.queryRaw('SELECT * FROM person WHERE id=:id', { i
 
 When you save queries to your Outerbase bases you can then directly execute those queries from this library. This enables you to make modifications to your query without having to alter and redeploy your codebase, and instead just make the modifications via Outerbase directly for convenience.
 
-```
+```ts
 let { data, error } = await connection.runSavedQuery(
     'ea72da5f-5f7a-4bab-9f72-ffffffffffff'
 )
@@ -138,7 +154,7 @@ Note that this is an exported function directly from the `OuterbaseConnection` c
 
 As you construct a SQL statement to be ran you can also pass in a class type you would like the output to attempt to map to by using `.asClass(ClassName)`. In the below example we pass in `Person` as the class type and the query builder will know to respond either as a single `Person` object or a `Person[]` array based on the contents of the response.
 
-```
+```ts
 let { data, error } = await db
     .asClass(Person)
     .queryRaw('SELECT * FROM person');
@@ -155,7 +171,7 @@ If your database is connected to Outerbase, then you can add a command to your `
 To get started first add the following to your `package.json` file:
 
 ##### package.json
-```
+```ts
 "scripts": {
     "sync-models": "sync-database-models PATH=./folder/path/to/add/models API_KEY=outerbase_api_key"
 }
@@ -169,7 +185,7 @@ npm run sync-models
 
 The output produces a series of files, one per database table, that is a Typescript class for your queries to map their results to and you can access programatically easily. A sample output looks like the following where each property maps to a column in your database.
 
-```
+```ts
 export interface PersonType {
     firstName: string;
     lastName: string;

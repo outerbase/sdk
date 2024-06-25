@@ -1,10 +1,16 @@
 import { Client } from '@neondatabase/serverless';
-import { Connection } from './index';
 import ws from 'ws';
+
+import { Connection } from './index';
+import { Query, constructRawQuery } from '../query';
+import { QueryParamsPositional, QueryType } from '../query-params';
 
 export class NeonHttpConnection implements Connection {
     databaseUrl: string;
     client: Client;
+    
+    // Default query type to named for Outerbase
+    queryType = QueryType.positional
 
     /**
      * Creates a new NeonHttpConnection object with the provided API key,
@@ -25,7 +31,7 @@ export class NeonHttpConnection implements Connection {
      * @param details - Unused in the Neon scenario.
      * @returns Promise<any>
      */
-    async connect(details: Record<string, any>): Promise<any> {
+    async connect(): Promise<any> {
         return this.client.connect();
     }
 
@@ -40,34 +46,38 @@ export class NeonHttpConnection implements Connection {
 
     /**
      * Triggers a query action on the current Connection object. The query
-     * is a SQL query that will be executed on a Neon database.
+     * is a SQL query that will be executed on a Neon database. Neon's driver
+     * requires positional parameters to be used in the specific format of `$1`,
+     * `$2`, etc. The query is sent to the Neon database and the response is returned.
      * 
      * @param query - The SQL query to be executed.
      * @param parameters - An object containing the parameters to be used in the query.
      * @returns Promise<{ data: any, error: Error | null }>
      */
-    async query(query: string, parameters: Record<string, any>[] | undefined): Promise<{ data: any, error: Error | null }> {
+    async query(query: Query): Promise<{ data: any; error: Error | null; query: string }> {
         let items = null
         let error = null
 
-        // TODO:
-        // - Support an array of query params as a secondary argument
-        
+        // Replace all `?` with `$1`, `$2`, etc.
+        let index = 0;
+        const formattedQuery = query.query.replace(/\?/g, () => `$${++index}`);
+
         try {
-            // Perform the query in a transaction block
             await this.client.query('BEGIN');
-            const { rows } = await this.client.query(query, []);
+            const { rows } = await this.client.query(formattedQuery, query.parameters as QueryParamsPositional);
             items = rows;
             await this.client.query('COMMIT');
         } catch (error) {
-            // Rollback the transaction if an error occurs
             await this.client.query('ROLLBACK');
             throw error;
         }
 
+        const rawSQL = constructRawQuery(query)
+
         return {
             data: items,
-            error: error
+            error: error,
+            query: rawSQL
         };
     }
 };
