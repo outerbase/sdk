@@ -1,4 +1,4 @@
-import { DatabaseFactory, DatabaseType, Outerbase, greaterThanOrEqualNumber } from '../dist/index.js';
+import { ConnectionFactory, DatabaseType, Outerbase, greaterThanOrEqualNumber } from '../dist/index.js';
 import express from 'express';
 
 const app = express();
