@@ -104,11 +104,26 @@ async function main() {
                                 ) {
                                     const firstColumn = constraint.columns[0]
 
-                                    table.references.push({
-                                        name: firstColumn.name,
-                                        table: firstColumn.table,
-                                        schema: firstColumn.schema,
-                                    })
+                                    const referenceExists =
+                                        table.references.some(
+                                            (ref: {
+                                                name: string
+                                                table: any
+                                                schema: any
+                                            }) =>
+                                                ref.name === firstColumn.name &&
+                                                ref.table ===
+                                                    firstColumn.table &&
+                                                ref.schema ===
+                                                    firstColumn.schema
+                                        )
+                                    if (!referenceExists) {
+                                        table.references.push({
+                                            name: firstColumn.name,
+                                            table: firstColumn.table,
+                                            schema: firstColumn.schema,
+                                        })
+                                    }
                                 }
 
                                 return (
