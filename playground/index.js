@@ -1,4 +1,4 @@
-import { CloudflareD1Connection, Outerbase, OuterbaseConnection, equalsNumber } from '../dist/index.js';
+import { DatabaseFactory, DatabaseType, Outerbase, greaterThanOrEqualNumber } from '../dist/index.js';
 import express from 'express';
 
 const app = express();
