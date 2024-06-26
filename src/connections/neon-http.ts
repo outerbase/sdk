@@ -1,9 +1,12 @@
 import { Client } from '@neondatabase/serverless';
 import ws from 'ws';
-
 import { Connection } from './index';
 import { Query, constructRawQuery } from '../query';
 import { QueryParamsPositional, QueryType } from '../query-params';
+
+export type NeonConnectionDetails = {
+    databaseUrl: string
+};
 
 export class NeonHttpConnection implements Connection {
     databaseUrl: string;
@@ -18,8 +21,8 @@ export class NeonHttpConnection implements Connection {
      * 
      * @param databaseUrl - The URL to the database to be used for the connection.
      */
-    constructor(databaseUrl: string) {
-        this.databaseUrl = databaseUrl;
+    constructor(private _: NeonConnectionDetails) {
+        this.databaseUrl = _.databaseUrl;
 
         this.client = new Client(this.databaseUrl);
         this.client.neonConfig.webSocketConstructor = ws;
