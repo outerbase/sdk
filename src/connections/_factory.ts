@@ -1,4 +1,3 @@
-// DatabaseFactory.ts
 import { Connection } from './index'
 
 export enum ConnectionType {
