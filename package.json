@@ -5,7 +5,8 @@
     "main": "dist/index.js",
     "module": "dist/index.js",
     "bin": {
-        "sync-database-models": "./dist/generators/generate-models.js"
+        "sync-database-models": "./dist/generators/generate-models.js",
+        "sync-remote-queries": "./dist/generators/generate-queries.js"
     },
     "files": [
         "dist/*"

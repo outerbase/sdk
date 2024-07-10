@@ -49,7 +49,7 @@ async function main() {
         const modelTemplate = compile(modelTemplateSource)
         const indexTemplate = compile(indexTemplateSource)
 
-        const response = await fetch(`${API_URL}/api/v1/ezql/schema`, {
+        const response = await fetch(`${API_URL}/ezql/schema`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

@@ -1,0 +1,5 @@
+export enum RemoteQuery {
+    {{#queries}}
+    '{{ name }}' = '{{ id }}',
+    {{/queries}}
+}

@@ -1,7 +1,7 @@
 import { QueryType } from '../query-params'
 import { Query, constructRawQuery } from '../query'
 import { Connection } from './index'
-export const API_URL = 'https://app.outerbase.com'
+export const API_URL = 'https://app.outerbase.com/api/v1'
 
 export type OuterbaseConnectionDetails = {
     apiKey: string
@@ -69,7 +69,7 @@ export class OuterbaseConnection implements Connection {
         if (!this.api_key) throw new Error('Outerbase API key is not set')
         if (!query) throw new Error('Query was not provided')
 
-        const response = await fetch(`${API_URL}/api/v1/ezql/raw`, {
+        const response = await fetch(`${API_URL}/ezql/raw`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ export class OuterbaseConnection implements Connection {
         if (!queryId) throw new Error('Query ID is not set')
 
         const response = await fetch(
-            `${API_URL}/api/v1/ezql/query/${queryId}`,
+            `${API_URL}/ezql/query/${queryId}`,
             {
                 method: 'POST',
                 headers: {
