@@ -12,7 +12,7 @@
     ],
     "scripts": {
         "compile": "tsc --project ./tsconfig.json",
-        "build": "npm run compile && ./copy-handlebars.sh",
+        "build": "npm run compile && node copy-handlebars.js",
         "publish-npm-module": "npm publish --access public",
         "prepack": "npm run build",
         "prepare": "husky install",
