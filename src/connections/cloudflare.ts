@@ -1,6 +1,8 @@
 import { QueryType } from '../query-params'
 import { Query, constructRawQuery } from '../query'
-import { Connection } from './index'
+import { Connection, OperationResponse } from './index'
+import { TableCondition } from 'src/models/database';
+import { equalsNumber, Outerbase } from 'src/client';
 
 export type CloudflareD1ConnectionDetails = {
     apiKey: string,
@@ -103,6 +105,22 @@ export class CloudflareD1Connection implements Connection {
             data: items,
             error: error,
             query: rawSQL,
+        }
+    }
+
+    async read(conditions: TableCondition[], table: string, schema?: string): Promise<OperationResponse> {
+        const db = Outerbase(this);
+
+        let { data } = await db.selectFrom([
+            { schema, table, columns: ['*'] }
+        ])
+        .where([equalsNumber('id', 1)])
+        .query()
+        
+        return {
+            success: true,
+            data: data,
+            error: null
         }
     }
 }
