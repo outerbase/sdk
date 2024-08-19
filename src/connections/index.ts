@@ -1,6 +1,6 @@
 import { QueryType } from '../query-params'
 import { Query } from '../query'
-import { Schema, TableColumn, TableCondition, TableIndex, TableRecord } from 'src/models/database'
+import { Schema, TableColumn, TableCondition, TableIndex, TableRecord } from '../models/database'
 
 export type OperationResponse = {
     success: boolean
@@ -21,10 +21,10 @@ export interface Connection {
     ) => Promise<{ data: any; error: Error | null; query: string }>
 
     // Basic CRUD methods that allow for easy interaction with the connection.
-    insert?: (record: TableRecord, table: string, schema?: string) => Promise<OperationResponse>
-    read?: (conditions: TableCondition[], table: string, schema?: string) => Promise<OperationResponse>
-    update?: (record: TableRecord, conditions: TableCondition[], table: string, schema?: string) => Promise<OperationResponse>
-    delete?: (conditions: TableCondition[], table: string, schema?: string) => Promise<OperationResponse>
+    // insert?: (record: TableRecord, table: string, schema?: string) => Promise<OperationResponse>
+    // read?: (conditions: TableCondition[], table: string, schema?: string) => Promise<OperationResponse>
+    // update?: (record: TableRecord, conditions: TableCondition[], table: string, schema?: string) => Promise<OperationResponse>
+    // delete?: (conditions: TableCondition[], table: string, schema?: string) => Promise<OperationResponse>
 
     // Table operations
     createTable?: (name: string, schema?: string) => Promise<OperationResponse>

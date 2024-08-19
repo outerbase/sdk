@@ -1,8 +1,8 @@
 import { QueryType } from '../query-params'
 import { Query, constructRawQuery } from '../query'
 import { Connection, OperationResponse } from './index'
-import { TableCondition } from 'src/models/database';
-import { equalsNumber, Outerbase } from 'src/client';
+import { Database, Schema, Table, TableColumn, TableCondition, TableIndex, TableIndexType } from '../models/database';
+import { equalsNumber, Outerbase } from '../client';
 
 export type CloudflareD1ConnectionDetails = {
     apiKey: string,
@@ -108,19 +108,84 @@ export class CloudflareD1Connection implements Connection {
         }
     }
 
-    async read(conditions: TableCondition[], table: string, schema?: string): Promise<OperationResponse> {
-        const db = Outerbase(this);
+    public async fetchDatabaseSchema(): Promise<Database> {
+        const exclude_tables = ['_cf_kv']
 
-        let { data } = await db.selectFrom([
-            { schema, table, columns: ['*'] }
-        ])
-        .where([equalsNumber('id', 1)])
-        .query()
-        
-        return {
-            success: true,
-            data: data,
-            error: null
+        let database: Database = []
+        let schema: Schema = {
+            tables: []
         }
+
+        const { data } = await this.query({ query: `SELECT * FROM sqlite_master WHERE type='table' AND name NOT LIKE '_lite%' AND name NOT LIKE 'sqlite_%'` })
+
+        for (const table of data) {
+            // Skip excluded tables
+            if (exclude_tables.includes(table.name?.toLowerCase())) continue;
+
+            // Add tables to the schema
+            if (table.type === 'table') {
+                const { data: tableData } = await this.query({ query: `SELECT * FROM PRAGMA_TABLE_INFO('${table.name}')`})
+
+                // TODO: This is not returning any data. Need to investigate why.
+                const { data: indexData } = await this.query({ query: `PRAGMA index_list('${table.name}')`})
+
+                console.log('Table: ', tableData)
+                console.log('Index: ', indexData)
+
+                let constraints: TableIndex[] = []
+                let columns = tableData.map((column: any) => {
+                    if (column.pk === 1) {
+                        constraints.push({
+                            name: column.name,
+                            type: TableIndexType.PRIMARY,
+                            columns: [column.name]
+                        })
+                    }
+
+                    const currentColumn: TableColumn = {
+                        name: column.name,
+                        type: column.type,
+                        position: column.cid,
+                        nullable: column.notnull === 0,
+                        default: column.dflt_value,
+                        primary: column.pk === 1,
+                        unique: column.pk === 1,
+                        // TODO: Need to support foreign key references
+                        references: []
+                    }
+
+                    return currentColumn
+                })
+
+                let current: Table = {
+                    name: table.name,
+                    columns: columns,
+                    indexes: constraints
+                }
+
+                schema.tables.push(current)
+            }
+        }
+
+        // Add schema to database
+        database.push(schema)
+
+        return database
     }
+
+    // async read(conditions: TableCondition[], table: string, schema?: string): Promise<OperationResponse> {
+    //     const db = Outerbase(this);
+
+    //     let { data, error } = await db.selectFrom([
+    //         { schema, table, columns: ['*'] }
+    //     ])
+    //     // .where([equalsNumber('id', 1)])
+    //     .query()
+        
+    //     return {
+    //         success: error === null,
+    //         data: data,
+    //         error: error
+    //     }
+    // }
 }
