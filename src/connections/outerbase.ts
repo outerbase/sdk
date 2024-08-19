@@ -78,7 +78,6 @@ export class OuterbaseConnection implements Connection {
             body: JSON.stringify({
                 query: query.query,
                 params: query.parameters,
-                run: true,
             }),
         })
 
