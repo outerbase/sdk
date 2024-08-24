@@ -3,6 +3,7 @@ import ws from 'ws';
 import { Connection } from './index';
 import { Query, constructRawQuery } from '../query';
 import { QueryParamsPositional, QueryType } from '../query-params';
+import { PostgresDialect } from '../query-builder/dialects/postgres';
 
 export type NeonConnectionDetails = {
     databaseUrl: string
@@ -14,6 +15,9 @@ export class NeonHttpConnection implements Connection {
     
     // Default query type to named for Outerbase
     queryType = QueryType.positional
+
+    // Default dialect for Cloudflare
+    dialect = new PostgresDialect()
 
     /**
      * Creates a new NeonHttpConnection object with the provided API key,

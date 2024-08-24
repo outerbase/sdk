@@ -3,6 +3,9 @@ import { Query, constructRawQuery } from '../query'
 import { Connection, OperationResponse } from './index'
 import { Database, Schema, Table, TableColumn, TableCondition, TableIndex, TableIndexType } from '../models/database';
 import { equalsNumber, Outerbase } from '../client';
+import { MySQLDialect } from '../query-builder/dialects/mysql';
+import { PostgresDialect } from '../query-builder/dialects/postgres';
+import { DefaultDialect } from '../query-builder/dialects/default';
 
 export type CloudflareD1ConnectionDetails = {
     apiKey: string,
@@ -18,6 +21,10 @@ export class CloudflareD1Connection implements Connection {
 
     // Default query type to positional for Cloudflare
     queryType = QueryType.positional
+
+    // Default dialect for Cloudflare
+    // dialect = new DefaultDialect()
+    dialect = new PostgresDialect()
 
     /**
      * Creates a new CloudflareD1Connection object with the provided API key,
@@ -172,20 +179,4 @@ export class CloudflareD1Connection implements Connection {
 
         return database
     }
-
-    // async read(conditions: TableCondition[], table: string, schema?: string): Promise<OperationResponse> {
-    //     const db = Outerbase(this);
-
-    //     let { data, error } = await db.selectFrom([
-    //         { schema, table, columns: ['*'] }
-    //     ])
-    //     // .where([equalsNumber('id', 1)])
-    //     .query()
-        
-    //     return {
-    //         success: error === null,
-    //         data: data,
-    //         error: error
-    //     }
-    // }
 }

@@ -2,11 +2,33 @@ import { BaseTable } from 'src/models'
 import { Connection } from './connections'
 import { Query, constructRawQuery } from './query'
 import { QueryParams, QueryType } from './query-params'
+import { AbstractDialect, ColumnDataType } from './query-builder'
+import { DefaultDialect } from './query-builder/dialects/default'
 
-interface QueryBuilder {
-    action: 'select' | 'insert' | 'update' | 'delete'
-    table?: string // Used for INSERT, UPDATE, DELETE
-    columnsWithTable?: { schema?: string; table: string; columns: string[] }[] // Used for SELECT
+export enum QueryBuilderAction {
+    SELECT = 'select',
+    INSERT = 'insert',
+    UPDATE = 'update',
+    DELETE = 'delete',
+
+    // Table operations
+    CREATE_TABLE = 'createTable',
+    UPDATE_TABLE = 'updateTable',
+    DELETE_TABLE = 'deleteTable',
+    TRUNCATE_TABLE = 'truncateTable',
+    RENAME_TABLE = 'renameTable',
+}
+
+export interface QueryBuilder {
+    action: QueryBuilderAction
+    // Sets the focused schema name, used for INSERT, UPDATE, DELETE
+    schema?: string
+    // Sets the focused table name, used for INSERT, UPDATE, DELETE
+    table?: string
+    // Used specifically for SELECT statements, useful when joining multiple tables
+    columnsWithTable?: { schema?: string; table: string; columns: string[] }[]
+    // Used when column names and type are required, such as CREATE TABLE
+    columns?: { name: string, type: ColumnDataType }[]
     whereClauses?: string[]
     joins?: string[]
     data?: { [key: string]: any }
@@ -16,6 +38,10 @@ interface QueryBuilder {
     returning?: string[]
     asClass?: any
     groupBy?: string
+
+    // General operation values, such as when renaming tables referencing the old and new name
+    originalValue?: string
+    newValue?: string
 }
 
 export interface OuterbaseType {
@@ -47,20 +73,36 @@ export interface OuterbaseType {
         options?: any
     ) => OuterbaseType
     into: (table: string) => OuterbaseType
+    schema: (schema: string) => OuterbaseType
     returning: (columns: string[]) => OuterbaseType
+    groupBy: (column: string) => OuterbaseType
+    
+    // WORK IN PROGRESS
+    // WORK IN PROGRESS
+    // Table operations
+    createTable?: (table: string) => OuterbaseType
+    renameTable?: (old: string, name: string) => OuterbaseType
+    dropTable?: (table: string) => OuterbaseType
+    columns?: (columns: { name: string, type: ColumnDataType }[]) => OuterbaseType
+    // WORK IN PROGRESS
+    // WORK IN PROGRESS
+    // WORK IN PROGRESS
+
+    // General purpose methods
     asClass: (classType: any) => OuterbaseType
     query: () => Promise<any>
     queryRaw: (query: string, parameters?: QueryParams) => Promise<any>
-    groupBy: (column: string) => OuterbaseType
     toString: () => string
 }
 
 export function Outerbase(connection: Connection): OuterbaseType {
+    const dialect = connection.dialect
+
     const outerbase: OuterbaseType = {
-        queryBuilder: { action: 'select' },
+        queryBuilder: { action: QueryBuilderAction.SELECT },
         selectFrom(columnsArray) {
             this.queryBuilder = {
-                action: 'select',
+                action: QueryBuilderAction.SELECT,
                 columnsWithTable: [],
                 whereClauses: [],
                 joins: [],
@@ -166,14 +208,14 @@ export function Outerbase(connection: Connection): OuterbaseType {
         },
         insert(data) {
             this.queryBuilder = {
-                action: 'insert',
+                action: QueryBuilderAction.INSERT,
                 data: data,
             }
             return this
         },
         update(data) {
             this.queryBuilder = {
-                action: 'update',
+                action: QueryBuilderAction.UPDATE,
                 data: data,
                 whereClauses: [],
             }
@@ -183,9 +225,13 @@ export function Outerbase(connection: Connection): OuterbaseType {
             this.queryBuilder.table = table
             return this
         },
+        schema(schema) {
+            this.queryBuilder.schema = schema
+            return this
+        },
         deleteFrom(table) {
             this.queryBuilder = {
-                action: 'delete',
+                action: QueryBuilderAction.DELETE,
                 table: table,
                 whereClauses: [],
             }
@@ -206,14 +252,16 @@ export function Outerbase(connection: Connection): OuterbaseType {
         toString() {
             const query = buildQueryString(
                 this.queryBuilder,
-                connection.queryType
+                connection.queryType,
+                dialect
             )
             return constructRawQuery(query)
         },
         async query() {
             const query = buildQueryString(
                 this.queryBuilder,
-                connection.queryType
+                connection.queryType,
+                dialect
             )
 
             // If asClass is set, map the response to the class
@@ -261,6 +309,33 @@ export function Outerbase(connection: Connection): OuterbaseType {
                 query,
             }
         },
+
+        createTable(table) {
+            this.queryBuilder = {
+                action: QueryBuilderAction.CREATE_TABLE,
+                table,
+            }
+            return this
+        },
+        dropTable(table) {
+            this.queryBuilder = {
+                action: QueryBuilderAction.DELETE_TABLE,
+                table,
+            }
+            return this
+        },
+        renameTable(old, name) {
+            this.queryBuilder = {
+                action: QueryBuilderAction.RENAME_TABLE,
+                originalValue: old,
+                newValue: name
+            }
+            return this
+        },
+        columns(columns) {
+            this.queryBuilder.columns = columns
+            return this
+        },
     }
 
     return outerbase
@@ -268,7 +343,8 @@ export function Outerbase(connection: Connection): OuterbaseType {
 
 function buildQueryString(
     queryBuilder: QueryBuilder,
-    queryType?: QueryType
+    queryType: QueryType,
+    dialect: AbstractDialect
 ): Query {
     const query: Query = {
         query: '',
@@ -276,127 +352,30 @@ function buildQueryString(
     }
 
     switch (queryBuilder.action) {
-        case 'select':
-            const joinClauses = queryBuilder.joins?.join(' ') || ''
-            let selectColumns = ''
-            let fromTable = ''
-
-            queryBuilder.columnsWithTable?.forEach((set, index) => {
-                if (index > 0) {
-                    selectColumns += ', '
-                }
-
-                const schema = set.schema ? `"${set.schema}".` : ''
-                let useTable = isReservedKeyword(set.table)
-                    ? `"${set.table}"`
-                    : set.table
-
-                const columns = set.columns.map((column) => {
-                    let useColumn = column
-
-                    if (isReservedKeyword(column)) {
-                        useColumn = `"${column}"`
-                    }
-
-                    return `${schema ?? ''}${useTable}.${useColumn}`
-                })
-
-                selectColumns += columns.join(', ')
-
-                if (index === 0) {
-                    fromTable = `${schema}${useTable}`
-                }
-            })
-
-            query.query = `SELECT ${selectColumns} FROM ${fromTable}`
-
-            if (joinClauses) {
-                query.query += ` ${joinClauses}`
-            }
-
-            if (queryBuilder.whereClauses?.length ?? 0 > 0) {
-                query.query += ` WHERE ${queryBuilder?.whereClauses?.join(' AND ')}`
-            }
-
-            if (queryBuilder.orderBy !== undefined) {
-                query.query += ` ORDER BY ${queryBuilder.orderBy}`
-            }
-
-            if (queryBuilder.limit !== undefined) {
-                query.query += ` LIMIT ${queryBuilder.limit}`
-                if (queryBuilder.offset) {
-                    query.query += ` OFFSET ${queryBuilder.offset}`
-                }
-            }
-
-            if (queryBuilder.groupBy !== undefined) {
-                query.query += ` GROUP BY ${queryBuilder.groupBy}`
-            }
-
+        case QueryBuilderAction.SELECT:
+            query.query = dialect.select(queryBuilder, queryType, query).query
+            break;
+        case QueryBuilderAction.INSERT:
+            query.query = dialect.insert(queryBuilder, queryType, query).query
+            query.parameters = dialect.insert(queryBuilder, queryType, query).parameters
             break
-        case 'insert':
-            const columns = Object.keys(queryBuilder.data || {})
-            const placeholders =
-                queryType === QueryType.named
-                    ? columns.map((column) => `:${column}`).join(', ')
-                    : columns.map(() => '?').join(', ')
-
-            query.query = `INSERT INTO ${queryBuilder.table || ''} (${columns.join(
-                ', '
-            )}) VALUES (${placeholders})`
-
-            if (queryType === QueryType.named) {
-                query.parameters = queryBuilder.data ?? {}
-            } else {
-                query.parameters = Object.values(queryBuilder.data ?? {})
-            }
-
-            if (queryBuilder.returning?.length ?? 0 > 0) {
-                query.query += ` RETURNING ${queryBuilder.returning?.join(', ')}`
-            }
-
+        case QueryBuilderAction.UPDATE:
+            query.query = dialect.update(queryBuilder, queryType, query).query
+            query.parameters = dialect.update(queryBuilder, queryType, query).parameters
             break
-        case 'update':
-            if (!queryBuilder || !queryBuilder.whereClauses) {
-                break
-            }
-
-            const columnsToUpdate = Object.keys(queryBuilder.data || {})
-            const setClauses =
-                queryType === QueryType.named
-                    ? columnsToUpdate
-                          .map((column) => `${column} = :${column}`)
-                          .join(', ')
-                    : columnsToUpdate
-                          .map((column) => `${column} = ?`)
-                          .join(', ')
-
-            query.query = `UPDATE ${queryBuilder.table || ''} SET ${setClauses}`
-            if (queryBuilder.whereClauses?.length > 0) {
-                query.query += ` WHERE ${queryBuilder.whereClauses.join(' AND ')}`
-            }
-
-            if (queryType === QueryType.named) {
-                query.parameters = queryBuilder.data ?? {}
-            } else {
-                query.parameters = Object.values(queryBuilder.data ?? {})
-            }
-
+        case QueryBuilderAction.DELETE:
+            query.query = dialect.delete(queryBuilder, queryType, query).query
+            query.parameters = dialect.delete(queryBuilder, queryType, query).parameters
             break
-        case 'delete':
-            // For `DELETE` operations we want to enforce a `WHERE` clause to ensure
-            // that we are not deleting all records in a table.
-            if (
-                !queryBuilder.whereClauses ||
-                queryBuilder.whereClauses?.length === 0
-            ) {
-                break
-            }
-
-            query.query = `DELETE FROM ${queryBuilder.table || ''}`
-            if (queryBuilder.whereClauses?.length > 0) {
-                query.query += ` WHERE ${queryBuilder.whereClauses.join(' AND ')}`
-            }
+        case QueryBuilderAction.CREATE_TABLE:
+            query.query = dialect.createTable(queryBuilder, queryType, query).query
+            query.parameters = dialect.createTable(queryBuilder, queryType, query).parameters
+            break
+        case QueryBuilderAction.DELETE_TABLE:
+            query.query = dialect.dropTable(queryBuilder, queryType, query).query
+            break
+        case QueryBuilderAction.RENAME_TABLE:
+            query.query = dialect.renameTable(queryBuilder, queryType, query).query
             break
         default:
             throw new Error('Invalid action')
@@ -419,306 +398,138 @@ function mapToClass<T>(data: any | any[], ctor: new (data: any) => T, connection
     }
 }
 
-function isReservedKeyword(keyword: string) {
-    const reservedWords = [
-        'ABORT',
-        'DECIMAL',
-        'INTERVAL',
-        'PRESERVE',
-        'ALL',
-        'DECODE',
-        'INTO',
-        'PRIMARY',
-        'ALLOCATE',
-        'DEFAULT',
-        'LEADING',
-        'RESET',
-        'ANALYSE',
-        'DESC',
-        'LEFT',
-        'REUSE',
-        'ANALYZE',
-        'DISTINCT',
-        'LIKE',
-        'RIGHT',
-        'AND',
-        'DISTRIBUTE',
-        'LIMIT',
-        'ROWS',
-        'ANY',
-        'DO',
-        'LOAD',
-        'SELECT',
-        'AS',
-        'ELSE',
-        'LOCAL',
-        'SESSION_USER',
-        'ASC',
-        'END',
-        'LOCK',
-        'SETOF',
-        'BETWEEN',
-        'EXCEPT',
-        'MINUS',
-        'SHOW',
-        'BINARY',
-        'EXCLUDE',
-        'MOVE',
-        'SOME',
-        'BIT',
-        'EXISTS',
-        'NATURAL',
-        'TABLE',
-        'BOTH',
-        'EXPLAIN',
-        'NCHAR',
-        'THEN',
-        'CASE',
-        'EXPRESS',
-        'NEW',
-        'TIES',
-        'CAST',
-        'EXTEND',
-        'NOT',
-        'TIME',
-        'CHAR',
-        'EXTERNAL',
-        'NOTNULL',
-        'TIMESTAMP',
-        'CHARACTER',
-        'EXTRACT',
-        'NULL',
-        'TO',
-        'CHECK',
-        'FALSE',
-        'NULLS',
-        'TRAILING',
-        'CLUSTER',
-        'FIRST',
-        'NUMERIC',
-        'TRANSACTION',
-        'COALESCE',
-        'FLOAT',
-        'NVL',
-        'TRIGGER',
-        'COLLATE',
-        'FOLLOWING',
-        'NVL2',
-        'TRIM',
-        'COLLATION',
-        'FOR',
-        'OFF',
-        'TRUE',
-        'COLUMN',
-        'FOREIGN',
-        'OFFSET',
-        'UNBOUNDED',
-        'CONSTRAINT',
-        'FROM',
-        'OLD',
-        'UNION',
-        'COPY',
-        'FULL',
-        'ON',
-        'UNIQUE',
-        'CROSS',
-        'FUNCTION',
-        'ONLINE',
-        'USER',
-        'CURRENT',
-        'GENSTATS',
-        'ONLY',
-        'USING',
-        'CURRENT_CATALOG',
-        'GLOBAL',
-        'OR',
-        'VACUUM',
-        'CURRENT_DATE',
-        'GROUP',
-        'ORDER',
-        'VARCHAR',
-        'CURRENT_DB',
-        'HAVING',
-        'OTHERS',
-        'VERBOSE',
-        'CURRENT_SCHEMA',
-        'IDENTIFIER_CASE',
-        'OUT',
-        'VERSION',
-        'CURRENT_SID',
-        'ILIKE',
-        'OUTER',
-        'VIEW',
-        'CURRENT_TIME',
-        'IN',
-        'OVER',
-        'WHEN',
-        'CURRENT_TIMESTAMP',
-        'INDEX',
-        'OVERLAPS',
-        'WHERE',
-        'CURRENT_USER',
-        'INITIALLY',
-        'PARTITION',
-        'WITH',
-        'CURRENT_USERID',
-        'INNER',
-        'POSITION',
-        'WRITE',
-        'CURRENT_USEROID',
-        'INOUT',
-        'PRECEDING',
-        'RESET',
-        'DEALLOCATE',
-        'INTERSECT',
-        'PRECISION',
-        'REUSE',
-        'DEC',
-    ]
-
-    return reservedWords.includes(keyword?.toUpperCase())
+export function equals(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.equals(a, b)
 }
 
-export function equals(a: any, b: string) {
-    return `${a} = '${b.replace(/'/g, "\\'")}'`
+export function equalsNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.equalsNumber(a, b)
 }
 
-export function equalsNumber(a: any, b: any) {
-    return `${a} = ${b}`
+export function equalsColumn(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.equalsColumn(a, b)
 }
 
-export function equalsColumn(a: any, b: any) {
-    return `${a} = ${b}`
+export function notEquals(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.notEquals(a, b)
 }
 
-export function notEquals(a: any, b: string) {
-    return `${a} != '${b.replace(/'/g, "\\'")}'`
+export function notEqualsNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.notEqualsNumber(a, b)
 }
 
-export function notEqualsNumber(a: any, b: any) {
-    return `${a} != ${b}`
+export function notEqualsColumn(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.notEqualsColumn(a, b)
 }
 
-export function notEqualsColumn(a: any, b: any) {
-    return `${a} != ${b}`
+export function greaterThan(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.greaterThan(a, b)
 }
 
-export function greaterThan(a: any, b: string) {
-    return `${a} > '${b.replace(/'/g, "\\'")}'`
+export function greaterThanNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.greaterThanNumber(a, b)
 }
 
-export function greaterThanNumber(a: any, b: any) {
-    return `${a} > ${b}`
+export function lessThan(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.lessThan(a, b)
 }
 
-export function lessThan(a: any, b: string) {
-    return `${a} < '${b.replace(/'/g, "\\'")}'`
+export function lessThanNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.lessThanNumber(a, b)
 }
 
-export function lessThanNumber(a: any, b: any) {
-    return `${a} < ${b}`
+export function greaterThanOrEqual(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.greaterThanOrEqual(a, b)
 }
 
-export function greaterThanOrEqual(a: any, b: string) {
-    return `${a} >= '${b.replace(/'/g, "\\'")}'`
+export function greaterThanOrEqualNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.greaterThanOrEqualNumber(a, b)
 }
 
-export function greaterThanOrEqualNumber(a: any, b: any) {
-    return `${a} >= ${b}`
+export function lessThanOrEqual(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.lessThanOrEqual(a, b)
 }
 
-export function lessThanOrEqual(a: any, b: string) {
-    return `${a} <= '${b.replace(/'/g, "\\'")}'`
+export function lessThanOrEqualNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.lessThanOrEqualNumber(a, b)
 }
 
-export function lessThanOrEqualNumber(a: any, b: any) {
-    return `${a} <= ${b}`
+export function inValues(a: any, b: any[], dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.inValues(a, b)
 }
 
-export function inValues(a: any, b: any[]) {
-    return `${a} IN ('${b.join("', '").replace(/'/g, "\\'")}')`
+export function inNumbers(a: any, b: any[], dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.inNumbers(a, b)
 }
 
-export function inNumbers(a: any, b: any[]) {
-    return `${a} IN (${b.join(', ')})`
+export function notInValues(a: any, b: any[], dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.notInValues(a, b)
 }
 
-export function notInValues(a: any, b: any[]) {
-    return `${a} NOT IN ('${b.join("', '").replace(/'/g, "\\'")}')`
+export function notInNumbers(a: any, b: any[], dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.notInNumbers(a, b)
 }
 
-export function notInNumbers(a: any, b: any[]) {
-    return `${a} NOT IN (${b.join(', ')})`
+export function is(this: any, a: any, b: string | null, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.is(this, a, b)
 }
 
-export function is(this: any, a: any, b: string | null) {
-    if (b === null) return `${this} IS NULL`
-    return `${a} IS '${b.replace(/'/g, "\\'")}'`
+export function isNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.isNumber(a, b)
 }
 
-export function isNumber(a: any, b: any) {
-    return `${a} IS ${b}`
+export function isNot(this: any, a: any, b: null, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.isNot(this, a, b)
 }
 
-export function isNot(this: any, a: any, b: null) {
-    if (b === null) return `${this} IS NOT NULL`
-    return `${a} IS NOT ${b}`
+export function isNotNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.isNotNumber(a, b)
 }
 
-export function isNotNumber(a: any, b: any) {
-    return `${a} IS NOT ${b}`
+export function like(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.like(a, b)
 }
 
-export function like(a: any, b: string) {
-    return `${a} LIKE '${b.replace(/'/g, "\\'")}'`
+export function notLike(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.notLike(a, b)
 }
 
-export function notLike(a: any, b: string) {
-    return `${a} NOT LIKE '${b.replace(/'/g, "\\'")}'`
+export function ilike(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.ilike(a, b)
 }
 
-export function ilike(a: any, b: string) {
-    return `${a} ILIKE '${b.replace(/'/g, "\\'")}'`
+export function notILike(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.notILike(a, b)
 }
 
-export function notILike(a: any, b: string) {
-    return `${a} NOT ILIKE '${b.replace(/'/g, "\\'")}'`
+export function isNull(a: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.isNull(a)
 }
 
-export function isNull(a: any) {
-    return `${a} IS NULL`
+export function isNotNull(a: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.isNotNull(a)
 }
 
-export function isNotNull(a: any) {
-    return `${a} IS NOT NULL`
+export function between(a: any, b: string, c: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.between(a, b, c)
 }
 
-export function between(a: any, b: string, c: string) {
-    return `${a} BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(
-        /'/g,
-        "\\'"
-    )}'`
+export function betweenNumbers(a: any, b: any, c: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.betweenNumbers(a, b, c)
 }
 
-export function betweenNumbers(a: any, b: any, c: any) {
-    return `${a} BETWEEN ${b} AND ${c}`
+export function notBetween(a: any, b: string, c: string, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.notBetween(a, b, c)
 }
 
-export function notBetween(a: any, b: string, c: string) {
-    return `${a} NOT BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(
-        /'/g,
-        "\\'"
-    )}'`
+export function notBetweenNumbers(a: any, b: any, c: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.notBetweenNumbers(a, b, c)
 }
 
-export function notBetweenNumbers(a: any, b: any, c: any) {
-    return `${a} NOT BETWEEN ${b} AND ${c}`
+export function ascending(a: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.ascending(a)
 }
 
-export function ascending(a: any) {
-    return `${a} ASC`
-}
-
-export function descending(a: any) {
-    return `${a} DESC`
+export function descending(a: any, dialect: AbstractDialect = new DefaultDialect()) {
+    return dialect.descending(a)
 }
