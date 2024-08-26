@@ -1,28 +1,71 @@
-import { CloudflareD1Connection, Outerbase, NeonHttpConnection, OuterbaseConnection, equalsNumber } from '../dist/index.js';
+import { CloudflareD1Connection, Outerbase, NeonHttpConnection, OuterbaseConnection, equalsNumber, equals } from '../dist/index.js';
 import express from 'express';
+import { ColumnDataType } from '../dist/query-builder/index.js';
 
 const app = express();
 const port = 4000;
 
-app.get('/', async (req, res) => {
+app.get('/test/cloudflare', async (req, res) => {
     // Establish connection to your provider database
-    const d1 = new CloudflareD1Connection('API_KEY', 'ACCOUNT_ID', 'DATABASE_ID');
-    const neon = new NeonHttpConnection({
-        databaseUrl: 'postgresql://USER:PASSWORD@ep-damp-hill-a59vzq0g.us-east-2.aws.neon.tech/neondb?sslmode=require'
+    const d1 = new CloudflareD1Connection({
+        apiKey: '',
+        accountId: '',
+        databaseId: ''
     });
 
-    // Create an Outerbase instance from the data connection
-    await neon.connect();
-    const db = Outerbase(neon);
-    
-    // SELECT:
-    // let { data, query } = await db.selectFrom([
-    //     { table: 'playing_with_neon', columns: ['id', 'name', 'value'] }
-    // ])
-    // .where(equalsNumber('id', 1))
-    // .query()
+    const db = Outerbase(d1);
+    // const dbSchema = await d1.fetchDatabaseSchema()
 
-    let { data } = await db.queryRaw('SELECT * FROM playing_with_neon WHERE id = $1', ['1']);
+    // const { data, query } = await db.selectFrom([
+    //     { table: 'test2', columns: ['*'] }
+    // ]).query()
+
+    // let { data, query } = await db
+    //     .insert({ fname: 'John' })
+    //     .into('test2')
+    //     .returning(['id'])
+    //     .query();
+
+    // let { data, query } = await db
+    //     .update({ fname: 'Johnny' })
+    //     .into('test2')
+    //     .where(equals('id', '3', d1.dialect))
+    //     .query();
+
+    // let { data, query } = await db
+    //     .deleteFrom('test2')
+    //     .where(equals('id', '3'))
+    //     .query();
+
+    let data = {}
+    let query = await db
+        .createTable('test3')
+        .schema('public')
+        .columns([
+            { name: 'id', type: ColumnDataType.NUMBER, primaryKey: true },
+            { name: 'fname', type: ColumnDataType.STRING }
+        ])
+        .toString();
+
+    // let data = {}
+    // let query = await db
+    //     .renameTable('test3', 'test4')
+    //     .toString();
+
+    // let data = {}
+    // let query = await db
+    //     .dropTable('test4')
+    //     .toString();
+
+    console.log('Running Query: ', query)
+
+    // db.
+    // - ACTION
+    // - CONDITIONS
+    // - RETURNING
+    // - query() / toString()
+
+    // let { data } = await db.queryRaw('SELECT * FROM playing_with_neon WHERE id = $1', ['1']);
     res.json(data);
 });
 

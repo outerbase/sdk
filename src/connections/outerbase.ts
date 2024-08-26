@@ -1,6 +1,8 @@
 import { QueryType } from '../query-params'
 import { Query, constructRawQuery } from '../query'
 import { Connection } from './index'
+import { DefaultDialect } from '../query-builder/dialects/default';
+
 export const API_URL = 'https://app.outerbase.com'
 
 export type OuterbaseConnectionDetails = {
@@ -13,6 +15,9 @@ export class OuterbaseConnection implements Connection {
 
     // Default query type to named for Outerbase
     queryType = QueryType.named
+
+    // Default dialect for Cloudflare
+    dialect = new DefaultDialect()
 
     /**
      * Creates a new OuterbaseConnection object with the provided API key.
