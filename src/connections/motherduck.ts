@@ -45,10 +45,8 @@ export class DuckDBConnection implements Connection {
 
     /**
      * Performs a connect action on the current Connection object.
-     * In this particular use case Cloudflare is a REST API and
-     * requires an API key for authentication.
      *
-     * @param details - Unused in the Cloudflare scenario.
+     * @param details - Unused in the Motherduck scenario.
      * @returns Promise<any>
      */
     async connect(): Promise<any> {
@@ -57,8 +55,6 @@ export class DuckDBConnection implements Connection {
 
     /**
      * Performs a disconnect action on the current Connection object.
-     * In this particular use case Cloudflare is a REST API and does
-     * not require a disconnect action.
      *
      * @returns Promise<any>
      */
@@ -67,14 +63,11 @@ export class DuckDBConnection implements Connection {
     }
 
     /**
-     * Triggers a query action on the current Connection object. The query
-     * is a SQL query that will be executed on a D1 database in the Cloudflare
-     * account. The query is sent to the Cloudflare API and the response
-     * is returned.
+     * Triggers a query action on the current Connection object.
      *
      * The parameters object is sent along with the query to be used in the
      * query. By default if the query has parameters the SQL statement will
-     * produce a string with `:property` values that the parameters object
+     * produce a string with `?::[DataType]` values that the parameters object
      * keys should map to, and will be replaced by.
      *
      * @param query - The SQL query to be executed.
@@ -183,7 +176,6 @@ export class DuckDBConnection implements Connection {
             schema.tables.push(currentTable)
         }
 
-        // Add schema to database
         database.push(schema)
 
         return database
