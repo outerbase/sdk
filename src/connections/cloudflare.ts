@@ -23,8 +23,7 @@ export class CloudflareD1Connection implements Connection {
     queryType = QueryType.positional
 
     // Default dialect for Cloudflare
-    // dialect = new DefaultDialect()
-    dialect = new PostgresDialect()
+    dialect = new DefaultDialect()
 
     /**
      * Creates a new CloudflareD1Connection object with the provided API key,

@@ -4,6 +4,7 @@
         "module": "commonjs",
         "moduleResolution": "node",
         "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
         "forceConsistentCasingInFileNames": true,
         "skipLibCheck": true,
         "declaration": true,
