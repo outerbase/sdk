@@ -105,10 +105,10 @@ export class DuckDBConnection implements Connection {
         const connection = this.connection
         if (!connection) throw new Error('Please create a connection.')
 
-        try {
-            let result
-            let statement
+        let result
+        let statement = reconstructQuery(query.query, query.parameters as any[])
 
+        try {
             if (Array.isArray(query.parameters)) {
                 const { res, fullQuery } = await runQuery(
                     connection,
