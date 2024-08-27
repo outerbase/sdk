@@ -12,19 +12,42 @@ import {
 import { DefaultDialect } from '../query-builder/dialects/default'
 import duckDB, { Callback, DuckDbError } from 'duckdb'
 
+const reconstructQuery = (query: string, params: any[]): string => {
+    let i = 0
+    return query.replace(/\?/g, () => {
+        const param = params[i++]
+        if (typeof param === 'string') {
+            return `'${param.replace(/'/g, "''")}'` // Properly escape single quotes in strings
+        }
+        if (param === null) {
+            return 'NULL'
+        }
+        return param
+    })
+}
+
 const runQuery = async (
     connection: duckDB.Connection,
     query: string,
     ...params: any[]
-) => {
+): Promise<{ stmt: duckDB.Statement; res: any[]; fullQuery: string }> => {
     return new Promise((resolve, reject) => {
-        console.log(query, ...params)
-        connection.all(query, ...params, (err, res) => {
+        connection.prepare(query, (err, stmt) => {
             if (err) {
-                reject(err)
-            } else {
-                resolve(res)
+                return reject(err)
             }
+
+            const fullQuery = reconstructQuery(query, params)
+
+            stmt.all(...params, (err, res) => {
+                if (err) {
+                    stmt.finalize()
+                    return reject(err)
+                }
+
+                resolve({ stmt, res, fullQuery })
+                stmt.finalize()
+            })
         })
     })
 }
@@ -80,20 +103,29 @@ export class DuckDBConnection implements Connection {
         const connection = await this.connect()
         try {
             let result
+            let statement
+
             if (Array.isArray(query.parameters)) {
-                result = await runQuery(
+                const { res, fullQuery } = await runQuery(
                     connection,
                     query.query,
                     ...query.parameters
                 )
+                result = res
+                statement = fullQuery
             } else {
-                result = await runQuery(connection, query.query)
+                const { res, fullQuery } = await runQuery(
+                    connection,
+                    query.query
+                )
+                result = res
+                statement = fullQuery
             }
 
             return {
                 data: result,
                 error: null,
-                query: query.query,
+                query: statement,
             }
         } catch (e) {
             const error = e instanceof Error ? e : new Error(String(e))
@@ -106,7 +138,6 @@ export class DuckDBConnection implements Connection {
             await this.disconnect()
         }
     }
-
     public async fetchDatabaseSchema(): Promise<Database> {
         let database: Database = []
         let schema: Schema = {
