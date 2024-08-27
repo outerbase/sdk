@@ -136,7 +136,7 @@ export class DuckDBConnection implements Connection {
             return {
                 data: null,
                 error: error,
-                query: query.query,
+                query: statement,
             }
         }
     }
