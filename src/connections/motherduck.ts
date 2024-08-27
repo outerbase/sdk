@@ -51,19 +51,21 @@ const runQuery = async (
         })
     })
 }
-
+type DuckDBParameters = {
+    path: string
+    options?: Record<string, string>
+    callback?: duckDB.Callback<any>
+}
 export class DuckDBConnection implements Connection {
     queryType = QueryType.positional
 
     dialect = new DefaultDialect()
     duckDB: duckDB.Database | undefined
+    connection: duckDB.Connection | undefined
 
-    constructor(
-        path: string,
-        accessMode?: number | Record<string, string>,
-        callback?: Callback<any>
-    ) {
-        this.duckDB = new duckDB.Database(path, accessMode, callback)
+    constructor(private _: DuckDBParameters) {
+        this.duckDB = new duckDB.Database(_.path, _.options, _.callback)
+        this.connection = this.duckDB.connect()
     }
 
     /**
@@ -100,7 +102,9 @@ export class DuckDBConnection implements Connection {
     async query(
         query: Query
     ): Promise<{ data: any; error: Error | null; query: string }> {
-        const connection = await this.connect()
+        const connection = this.connection
+        if (!connection) throw new Error('Please create a connection.')
+
         try {
             let result
             let statement
@@ -134,8 +138,6 @@ export class DuckDBConnection implements Connection {
                 error: error,
                 query: query.query,
             }
-        } finally {
-            await this.disconnect()
         }
     }
     public async fetchDatabaseSchema(): Promise<Database> {
