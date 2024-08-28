@@ -1,11 +1,10 @@
-import { CloudflareD1Connection, Outerbase, NeonHttpConnection, OuterbaseConnection, equalsNumber, equals } from '../dist/index.js';
+import { CloudflareD1Connection, Outerbase } from '../dist/index.js';
 import express from 'express';
-import { ColumnDataType } from '../dist/query-builder/index.js';
 
 const app = express();
 const port = 4000;
 
-app.get('/test/cloudflare', async (req, res) => {
+app.get('/test', async (req, res) => {
     // Establish connection to your provider database
     const d1 = new CloudflareD1Connection({
         apiKey: '',
@@ -16,9 +15,11 @@ app.get('/test/cloudflare', async (req, res) => {
     const db = Outerbase(d1);
     // const dbSchema = await d1.fetchDatabaseSchema()
 
-    // const { data, query } = await db.selectFrom([
-    //     { table: 'test2', columns: ['*'] }
-    // ]).query()
+    // const { data, query } = await db
+    //     .selectFrom([
+    //         { table: 'test2', columns: ['*'] }
+    //     ])
+    //     .query()
 
     // let { data, query } = await db
     //     .insert({ fname: 'John' })
@@ -37,15 +38,15 @@ app.get('/test/cloudflare', async (req, res) => {
     //     .where(equals('id', '3'))
     //     .query();
 
-    let data = {}
-    let query = await db
-        .createTable('test3')
-        .schema('public')
-        .columns([
-            { name: 'id', type: ColumnDataType.NUMBER, primaryKey: true },
-            { name: 'fname', type: ColumnDataType.STRING }
-        ])
-        .toString();
+    // let data = {}
+    // let query = await db
+    //     .createTable('test3')
+    //     .schema('public')
+    //     .columns([
+    //         { name: 'id', type: ColumnDataType.NUMBER, primaryKey: true },
+    //         { name: 'fname', type: ColumnDataType.STRING }
+    //     ])
+    //     .toString();
 
     // let data = {}
     // let query = await db
@@ -56,14 +57,6 @@ app.get('/test/cloudflare', async (req, res) => {
     // let query = await db
     //     .dropTable('test4')
     //     .toString();
-
-    console.log('Running Query: ', query)
-
-    // db.
-    // - ACTION
-    // - CONDITIONS
-    // - RETURNING
-    // - query() / toString()
 
     // let { data } = await db.queryRaw('SELECT * FROM playing_with_neon WHERE id = $1', ['1']);
     res.json(data);

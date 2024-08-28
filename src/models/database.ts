@@ -2,12 +2,7 @@
 export type Database = Schema[]
 
 // Schema consists of a name and an array of tables
-export type Schema = {
-    // Unique name of the schema, some databases may not support this
-    name?: string
-    // Tables that are part of the schema
-    tables: Table[]
-}
+export type Schema = Record<string, Table[]>
 
 // Table consists of a name, schema, an array of columns, and an array of indexes
 export type Table = {

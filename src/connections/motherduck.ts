@@ -1,70 +1,35 @@
 import { QueryType } from '../query-params'
-import { Query } from '../query'
+import { Query, constructRawQuery } from '../query'
 import { Connection } from './index'
 import {
     Database,
-    Schema,
     Table,
     TableColumn,
     TableIndex,
     TableIndexType,
 } from '../models/database'
 import { DefaultDialect } from '../query-builder/dialects/default'
-import duckDB, { Callback, DuckDbError } from 'duckdb'
+import duckDB from 'duckdb'
 
-const reconstructQuery = (query: string, params: any[]): string => {
-    let i = 0
-    return query.replace(/\?/g, () => {
-        const param = params[i++]
-        if (typeof param === 'string') {
-            return `'${param.replace(/'/g, "''")}'` // Properly escape single quotes in strings
-        }
-        if (param === null) {
-            return 'NULL'
-        }
-        return param
-    })
-}
-
-const runQuery = async (
-    connection: duckDB.Connection,
-    query: string,
-    ...params: any[]
-): Promise<{ stmt: duckDB.Statement; res: any[]; fullQuery: string }> => {
-    return new Promise((resolve, reject) => {
-        connection.prepare(query, (err, stmt) => {
-            if (err) {
-                return reject(err)
-            }
-
-            const fullQuery = reconstructQuery(query, params)
-
-            stmt.all(...params, (err, res) => {
-                if (err) {
-                    stmt.finalize()
-                    return reject(err)
-                }
-
-                resolve({ stmt, res, fullQuery })
-                stmt.finalize()
-            })
-        })
-    })
-}
 type DuckDBParameters = {
     path: string
-    options?: Record<string, string>
-    callback?: duckDB.Callback<any>
+    token: string
 }
-export class DuckDBConnection implements Connection {
-    queryType = QueryType.positional
 
-    dialect = new DefaultDialect()
+export class DuckDBConnection implements Connection {
     duckDB: duckDB.Database | undefined
     connection: duckDB.Connection | undefined
 
+    // Default query type to positional for MotherDuck
+    queryType = QueryType.positional
+
+    // Default dialect for MotherDuck
+    dialect = new DefaultDialect()
+
     constructor(private _: DuckDBParameters) {
-        this.duckDB = new duckDB.Database(_.path, _.options, _.callback)
+        this.duckDB = new duckDB.Database(_.path, {
+            motherduck_token: _.token
+        })
         this.connection = this.duckDB.connect()
     }
 
@@ -103,49 +68,42 @@ export class DuckDBConnection implements Connection {
         query: Query
     ): Promise<{ data: any; error: Error | null; query: string }> {
         const connection = this.connection
-        if (!connection) throw new Error('Please create a connection.')
+        if (!connection) throw new Error('No DuckDB connection was found.')
 
-        let result
-        let statement = reconstructQuery(query.query, query.parameters as any[])
+        let result = null
+        let error = null
 
         try {
             if (Array.isArray(query.parameters)) {
-                const { res, fullQuery } = await runQuery(
+                const { res } = await this.runQuery(
                     connection,
                     query.query,
                     ...query.parameters
                 )
                 result = res
-                statement = fullQuery
             } else {
-                const { res, fullQuery } = await runQuery(
+                const { res } = await this.runQuery(
                     connection,
                     query.query
                 )
                 result = res
-                statement = fullQuery
-            }
-
-            return {
-                data: result,
-                error: null,
-                query: statement,
             }
         } catch (e) {
-            const error = e instanceof Error ? e : new Error(String(e))
-            return {
-                data: null,
-                error: error,
-                query: statement,
-            }
-        }
-    }
-    public async fetchDatabaseSchema(): Promise<Database> {
-        let database: Database = []
-        let schema: Schema = {
-            tables: [],
+            error = e instanceof Error ? e : new Error(String(e))
         }
 
+        const rawSQL = constructRawQuery(query)
+
+        return {
+            data: result,
+            error: error,
+            query: rawSQL,
+        }
+    }
+
+    public async fetchDatabaseSchema(): Promise<Database> {
+        let database: Database = []
+    
         type DuckDBTables = {
             database: string
             schema: string
@@ -154,13 +112,15 @@ export class DuckDBConnection implements Connection {
             column_types: string[]
             temporary: boolean
         }
-
+    
         const result = await this.query({
             query: `PRAGMA show_tables_expanded;`,
         })
-
+    
         const tables = result.data as DuckDBTables[]
-
+    
+        const schemaMap: { [key: string]: Table[] } = {}
+    
         for (const table of tables) {
             type DuckDBTableInfo = {
                 cid: number
@@ -173,9 +133,9 @@ export class DuckDBConnection implements Connection {
             const tableInfoResult = await this.query({
                 query: `PRAGMA table_info('${table.database}.${table.schema}.${table.name}')`,
             })
-
+    
             const tableInfo = tableInfoResult.data as DuckDBTableInfo[]
-
+    
             const constraints: TableIndex[] = []
             const columns = tableInfo.map((column) => {
                 if (column.pk) {
@@ -185,7 +145,7 @@ export class DuckDBConnection implements Connection {
                         columns: [column.name],
                     })
                 }
-
+    
                 const currentColumn: TableColumn = {
                     name: column.name,
                     type: column.type,
@@ -196,21 +156,54 @@ export class DuckDBConnection implements Connection {
                     unique: column.pk,
                     references: [], // DuckDB currently doesn't have a pragma for foreign keys
                 }
-
+    
                 return currentColumn
             })
-
+    
             const currentTable: Table = {
                 name: table.name,
+                schema: table.schema,  // Assign schema name to the table
                 columns: columns,
                 indexes: constraints,
             }
-
-            schema.tables.push(currentTable)
+    
+            if (!schemaMap[table.schema]) {
+                schemaMap[table.schema] = []
+            }
+    
+            schemaMap[table.schema].push(currentTable)
         }
-
-        database.push(schema)
-
+    
+        database = Object.entries(schemaMap).map(([schemaName, tables]) => {
+            return {
+                [schemaName]: tables
+            }
+        })
+    
         return database
+    }    
+
+    runQuery = async (
+        connection: duckDB.Connection,
+        query: string,
+        ...params: any[]
+    ): Promise<{ stmt: duckDB.Statement; res: any[]; }> => {
+        return new Promise((resolve, reject) => {
+            connection.prepare(query, (err, stmt) => {
+                if (err) {
+                    return reject(err)
+                }
+    
+                stmt.all(...params, (err, res) => {
+                    if (err) {
+                        stmt.finalize()
+                        return reject(err)
+                    }
+    
+                    resolve({ stmt, res })
+                    stmt.finalize()
+                })
+            })
+        })
     }
 }
