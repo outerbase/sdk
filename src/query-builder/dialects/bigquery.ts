@@ -4,8 +4,21 @@ import { QueryType } from 'src/query-params';
 import { AbstractDialect } from '../index';
 
 export class BigQueryDialect extends AbstractDialect {
-    escapeCharacter: string = '`'
-
+    /**
+     * BigQuery currently entirely reimplements the `select` method due to the specialized
+     * nature of the BigQuery SQL dialect. When running a SELECT statement via BigQuery,
+     * both the schema and table name must be escaped with backticks. Since we currently do
+     * not have a better proper extraction method for the schema and table name, we manually
+     * re-implement what was already in the AbstractDialect class.
+     * 
+     * In the future we should find a way where this `select` method can be reused from the
+     * AbstractDialect class in a better manner.
+     * 
+     * @param builder 
+     * @param type 
+     * @param query 
+     * @returns Query - The query object with the query string and parameters
+     */
     select(builder: QueryBuilder, type: QueryType, query: Query): Query {
         let selectColumns = ''
         let fromTable = ''
