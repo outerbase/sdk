@@ -116,28 +116,25 @@ export class CloudflareD1Connection implements Connection {
 
     public async fetchDatabaseSchema(): Promise<Database> {
         const exclude_tables = ['_cf_kv']
-
+    
         let database: Database = []
-        let schema: Schema = {
-            tables: []
-        }
-
+        const schemaMap: { [key: string]: Table[] } = {}
+    
         const { data } = await this.query({ query: `SELECT * FROM sqlite_master WHERE type='table' AND name NOT LIKE '_lite%' AND name NOT LIKE 'sqlite_%'` })
-
+    
         for (const table of data) {
             // Skip excluded tables
             if (exclude_tables.includes(table.name?.toLowerCase())) continue;
-
-            // Add tables to the schema
+    
             if (table.type === 'table') {
-                const { data: tableData } = await this.query({ query: `SELECT * FROM PRAGMA_TABLE_INFO('${table.name}')`})
-
+                const { data: tableData } = await this.query({ query: `PRAGMA table_info('${table.name}')` })
+    
                 // TODO: This is not returning any data. Need to investigate why.
-                const { data: indexData } = await this.query({ query: `PRAGMA index_list('${table.name}')`})
-
+                const { data: indexData } = await this.query({ query: `PRAGMA index_list('${table.name}')` })
+    
                 console.log('Table: ', tableData)
                 console.log('Index: ', indexData)
-
+    
                 let constraints: TableIndex[] = []
                 let columns = tableData.map((column: any) => {
                     if (column.pk === 1) {
@@ -147,7 +144,7 @@ export class CloudflareD1Connection implements Connection {
                             columns: [column.name]
                         })
                     }
-
+    
                     const currentColumn: TableColumn = {
                         name: column.name,
                         type: column.type,
@@ -159,23 +156,34 @@ export class CloudflareD1Connection implements Connection {
                         // TODO: Need to support foreign key references
                         references: []
                     }
-
+    
                     return currentColumn
                 })
-
+    
                 let current: Table = {
                     name: table.name,
                     columns: columns,
                     indexes: constraints
                 }
-
-                schema.tables.push(current)
+    
+                // Use the table's schema name (assuming all tables belong to the same schema, e.g., "main")
+                const schemaName = 'main' // Replace with the actual schema name if needed
+    
+                if (!schemaMap[schemaName]) {
+                    schemaMap[schemaName] = []
+                }
+    
+                schemaMap[schemaName].push(current)
             }
         }
-
-        // Add schema to database
-        database.push(schema)
-
+    
+        // Transform schemaMap into the final Database structure
+        database = Object.entries(schemaMap).map(([schemaName, tables]) => {
+            return {
+                [schemaName]: tables
+            }
+        })
+    
         return database
-    }
+    }    
 }
