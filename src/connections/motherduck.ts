@@ -3,7 +3,6 @@ import { Query, constructRawQuery } from '../query'
 import { Connection } from './index'
 import {
     Database,
-    Schema,
     Table,
     TableColumn,
     TableIndex,
@@ -11,21 +10,6 @@ import {
 } from '../models/database'
 import { DefaultDialect } from '../query-builder/dialects/default'
 import duckDB from 'duckdb'
-
-// TODO: Move this to be shared and reusable
-// const reconstructQuery = (query: string, params: any[]): string => {
-//     let i = 0
-//     return query.replace(/\?/g, () => {
-//         const param = params[i++]
-//         if (typeof param === 'string') {
-//             return `'${param.replace(/'/g, "''")}'` // Properly escape single quotes in strings
-//         }
-//         if (param === null) {
-//             return 'NULL'
-//         }
-//         return param
-//     })
-// }
 
 type DuckDBParameters = {
     path: string
@@ -39,7 +23,7 @@ export class DuckDBConnection implements Connection {
     // Default query type to positional for MotherDuck
     queryType = QueryType.positional
 
-    // Default dialect for Cloudflare
+    // Default dialect for MotherDuck
     dialect = new DefaultDialect()
 
     constructor(private _: DuckDBParameters) {
@@ -88,9 +72,6 @@ export class DuckDBConnection implements Connection {
 
         let result = null
         let error = null
-
-        // The `reconstructQuery` function doesn't seem to handle anything but String and NULL values. What about numbers?
-        // let statement = reconstructQuery(query.query, query.parameters as any[])
 
         try {
             if (Array.isArray(query.parameters)) {
