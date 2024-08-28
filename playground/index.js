@@ -21,6 +21,7 @@ app.get('/test', async (req, res) => {
     //     ])
     //     .query()
 
+
     // let { data, query } = await db
     //     .insert({ fname: 'John' })
     //     .into('test2')
