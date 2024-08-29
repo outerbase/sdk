@@ -191,6 +191,14 @@ export abstract class AbstractDialect implements Dialect {
         return table;
     }
 
+    formatFromSchemaAndTable(schema: string | undefined, table: string): string {
+        // Default implementation (can be overridden by specific dialects)
+        if (schema) {
+            return `"${schema}".${table}`;
+        }
+        return table;
+    }
+
     select(builder: QueryBuilder, type: QueryType, query: Query): Query {
         let selectColumns = ''
         let fromTable = ''
@@ -201,12 +209,8 @@ export abstract class AbstractDialect implements Dialect {
                 selectColumns += ', '
             }
 
-            const schema = set.schema ? `"${set.schema}".` : ''
-            let useTable = this.reservedKeywords.includes(set.table)
-                ? `"${set.table}"`
-                : set.table
-
             const formattedTable = this.formatSchemaAndTable(set.schema, set.table);
+            const formattedFromTable = this.formatFromSchemaAndTable(set.schema, set.table);
             const columns = set.columns.map((column) => {
                 let useColumn = column
 
@@ -220,7 +224,7 @@ export abstract class AbstractDialect implements Dialect {
             selectColumns += columns.join(', ')
 
             if (index === 0) {
-                fromTable = formattedTable
+                fromTable = formattedFromTable
             }
         })
 
