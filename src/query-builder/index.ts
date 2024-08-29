@@ -3,6 +3,8 @@ import { QueryBuilder } from "../client";
 import { Query } from "../query";
 
 interface Dialect {
+    formatSchemaAndTable(schema: string | undefined, table: string): string
+
     select(builder: QueryBuilder, type: QueryType, query: Query): Query;
     insert(builder: QueryBuilder, type: QueryType, query: Query): Query;
     update(builder: QueryBuilder, type: QueryType, query: Query): Query;
@@ -175,6 +177,20 @@ export abstract class AbstractDialect implements Dialect {
         'WHERE',
     ];
 
+    /**
+     * Formats the schema and table names according to the specific database dialect.
+     * @param schema The schema name (optional).
+     * @param table The table name.
+     * @returns The formatted schema and table combination.
+     */
+    formatSchemaAndTable(schema: string | undefined, table: string): string {
+        // Default implementation (can be overridden by specific dialects)
+        if (schema) {
+            return `"${schema}".${table}`;
+        }
+        return table;
+    }
+
     select(builder: QueryBuilder, type: QueryType, query: Query): Query {
         let selectColumns = ''
         let fromTable = ''
@@ -190,6 +206,7 @@ export abstract class AbstractDialect implements Dialect {
                 ? `"${set.table}"`
                 : set.table
 
+            const formattedTable = this.formatSchemaAndTable(set.schema, set.table);
             const columns = set.columns.map((column) => {
                 let useColumn = column
 
@@ -197,13 +214,13 @@ export abstract class AbstractDialect implements Dialect {
                     useColumn = `"${column}"`
                 }
 
-                return `${schema ?? ''}${useTable}.${useColumn}`
+                return `${formattedTable}.${useColumn}`
             })
 
             selectColumns += columns.join(', ')
 
             if (index === 0) {
-                fromTable = `${schema}${useTable}`
+                fromTable = formattedTable
             }
         })
 

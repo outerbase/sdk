@@ -4,6 +4,13 @@ import { QueryType } from 'src/query-params';
 import { AbstractDialect } from '../index';
 
 export class BigQueryDialect extends AbstractDialect {
+    formatSchemaAndTable(schema: string | undefined, table: string): string {
+        if (schema) {
+            return `\`${schema}.${table}\``;
+        }
+        return `\`${table}\``;
+    }
+
     /**
      * BigQuery currently entirely reimplements the `select` method due to the specialized
      * nature of the BigQuery SQL dialect. When running a SELECT statement via BigQuery,
@@ -19,63 +26,63 @@ export class BigQueryDialect extends AbstractDialect {
      * @param query 
      * @returns Query - The query object with the query string and parameters
      */
-    select(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        let selectColumns = ''
-        let fromTable = ''
-        const joinClauses = builder.joins?.join(' ') || ''
+    // select(builder: QueryBuilder, type: QueryType, query: Query): Query {
+    //     let selectColumns = ''
+    //     let fromTable = ''
+    //     const joinClauses = builder.joins?.join(' ') || ''
 
-        builder.columnsWithTable?.forEach((set, index) => {
-            if (index > 0) {
-                selectColumns += ', '
-            }
+    //     builder.columnsWithTable?.forEach((set, index) => {
+    //         if (index > 0) {
+    //             selectColumns += ', '
+    //         }
 
-            const schema = set.schema ? `${set.schema}.` : ''
-            let useTable = this.reservedKeywords.includes(set.table)
-                ? `"${set.table}"`
-                : set.table
+    //         const schema = set.schema ? `${set.schema}.` : ''
+    //         let useTable = this.reservedKeywords.includes(set.table)
+    //             ? `"${set.table}"`
+    //             : set.table
 
-            const columns = set.columns.map((column) => {
-                let useColumn = column
+    //         const columns = set.columns.map((column) => {
+    //             let useColumn = column
 
-                if (this.reservedKeywords.includes(column)) {
-                    useColumn = `"${column}"`
-                }
+    //             if (this.reservedKeywords.includes(column)) {
+    //                 useColumn = `"${column}"`
+    //             }
 
-                return `\`${schema ?? ''}${useTable}\`.${useColumn}`
-            })
+    //             return `\`${schema ?? ''}${useTable}\`.${useColumn}`
+    //         })
 
-            selectColumns += columns.join(', ')
+    //         selectColumns += columns.join(', ')
 
-            if (index === 0) {
-                fromTable = `\`${schema}${useTable}\``
-            }
-        })
+    //         if (index === 0) {
+    //             fromTable = `\`${schema}${useTable}\``
+    //         }
+    //     })
 
-        query.query = `SELECT ${selectColumns} FROM ${fromTable}`
+    //     query.query = `SELECT ${selectColumns} FROM ${fromTable}`
 
-        if (joinClauses) {
-            query.query += ` ${joinClauses}`
-        }
+    //     if (joinClauses) {
+    //         query.query += ` ${joinClauses}`
+    //     }
 
-        if (builder.whereClauses?.length ?? 0 > 0) {
-            query.query += ` WHERE ${builder?.whereClauses?.join(' AND ')}`
-        }
+    //     if (builder.whereClauses?.length ?? 0 > 0) {
+    //         query.query += ` WHERE ${builder?.whereClauses?.join(' AND ')}`
+    //     }
 
-        if (builder.orderBy !== undefined) {
-            query.query += ` ORDER BY ${builder.orderBy}`
-        }
+    //     if (builder.orderBy !== undefined) {
+    //         query.query += ` ORDER BY ${builder.orderBy}`
+    //     }
 
-        if (builder.limit !== undefined) {
-            query.query += ` LIMIT ${builder.limit}`
-            if (builder.offset) {
-                query.query += ` OFFSET ${builder.offset}`
-            }
-        }
+    //     if (builder.limit !== undefined) {
+    //         query.query += ` LIMIT ${builder.limit}`
+    //         if (builder.offset) {
+    //             query.query += ` OFFSET ${builder.offset}`
+    //         }
+    //     }
 
-        if (builder.groupBy !== undefined) {
-            query.query += ` GROUP BY ${builder.groupBy}`
-        }
+    //     if (builder.groupBy !== undefined) {
+    //         query.query += ` GROUP BY ${builder.groupBy}`
+    //     }
 
-        return query
-    }
+    //     return query
+    // }
 }
