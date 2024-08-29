@@ -191,14 +191,6 @@ export abstract class AbstractDialect implements Dialect {
         return table;
     }
 
-    formatFromSchemaAndTable(schema: string | undefined, table: string): string {
-        // Default implementation (can be overridden by specific dialects)
-        if (schema) {
-            return `"${schema}".${table}`;
-        }
-        return table;
-    }
-
     select(builder: QueryBuilder, type: QueryType, query: Query): Query {
         let selectColumns = ''
         let fromTable = ''
@@ -210,7 +202,6 @@ export abstract class AbstractDialect implements Dialect {
             }
 
             const formattedTable = this.formatSchemaAndTable(set.schema, set.table);
-            const formattedFromTable = this.formatFromSchemaAndTable(set.schema, set.table);
             const columns = set.columns.map((column) => {
                 let useColumn = column
 
@@ -224,7 +215,7 @@ export abstract class AbstractDialect implements Dialect {
             selectColumns += columns.join(', ')
 
             if (index === 0) {
-                fromTable = formattedFromTable
+                fromTable = formattedTable
             }
         })
 
@@ -263,7 +254,8 @@ export abstract class AbstractDialect implements Dialect {
                 ? columns.map((column) => `:${column}`).join(', ')
                 : columns.map(() => '?').join(', ')
 
-        query.query = `INSERT INTO ${builder.schema ? `"${builder.schema}".` : ''}${builder.table || ''} (${columns.join(
+        const formattedTable = this.formatSchemaAndTable(builder.schema, builder.table || '');
+        query.query = `INSERT INTO ${formattedTable} (${columns.join(
             ', '
         )}) VALUES (${placeholders})`
 
@@ -281,6 +273,7 @@ export abstract class AbstractDialect implements Dialect {
             return query
         }
 
+        const formattedTable = this.formatSchemaAndTable(builder.schema, builder.table || '');
         const columnsToUpdate = Object.keys(builder.data || {})
         const setClauses =
             type === QueryType.named
@@ -291,7 +284,7 @@ export abstract class AbstractDialect implements Dialect {
                       .map((column) => `${column} = ?`)
                       .join(', ')
 
-        query.query = `UPDATE ${builder.schema ? `"${builder.schema}".` : ''}${builder.table || ''} SET ${setClauses}`
+        query.query = `UPDATE ${formattedTable} SET ${setClauses}`
         if (builder.whereClauses?.length > 0) {
             query.query += ` WHERE ${builder.whereClauses.join(' AND ')}`
         }
@@ -313,7 +306,8 @@ export abstract class AbstractDialect implements Dialect {
             return query
         }
 
-        query.query = `DELETE FROM ${builder.schema ? `"${builder.schema}".` : ''}${builder.table || ''}`
+        const formattedTable = this.formatSchemaAndTable(builder.schema, builder.table || '');
+        query.query = `DELETE FROM ${formattedTable}`
         if (builder.whereClauses?.length > 0) {
             query.query += ` WHERE ${builder.whereClauses.join(' AND ')}`
         }
@@ -326,6 +320,7 @@ export abstract class AbstractDialect implements Dialect {
         //     return query
         // }
 
+        const formattedTable = this.formatSchemaAndTable(builder.schema, builder.table || '');
         const columns = builder?.columns?.map((column) => {
             const dataType = this.mapDataType(column.type)
 
@@ -340,7 +335,7 @@ export abstract class AbstractDialect implements Dialect {
 
         query.query = `
             CREATE TABLE IF NOT EXISTS 
-            ${builder.schema ? `"${builder.schema}".` : ''}${builder.table} 
+            ${formattedTable}
             (${columns.join(', ')})
         `
 
