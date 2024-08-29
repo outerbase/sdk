@@ -313,7 +313,7 @@ export abstract class AbstractDialect implements Dialect {
             return query
         }
 
-        const formattedTable = this.formatSchemaAndTable(builder.schema, builder.table || '');
+        const formattedTable = this.formatFromSchemaAndTable(builder.schema, builder.table || '');
         query.query = `DELETE FROM ${formattedTable}`
         if (builder.whereClauses?.length > 0) {
             query.query += ` WHERE ${builder.whereClauses.join(' AND ')}`
