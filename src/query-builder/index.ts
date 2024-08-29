@@ -184,7 +184,13 @@ export abstract class AbstractDialect implements Dialect {
      * @returns The formatted schema and table combination.
      */
     formatSchemaAndTable(schema: string | undefined, table: string): string {
-        // Default implementation (can be overridden by specific dialects)
+        if (schema) {
+            return `"${schema}".${table}`;
+        }
+        return table;
+    }
+
+    formatFromSchemaAndTable(schema: string | undefined, table: string): string {
         if (schema) {
             return `"${schema}".${table}`;
         }
@@ -202,6 +208,7 @@ export abstract class AbstractDialect implements Dialect {
             }
 
             const formattedTable = this.formatSchemaAndTable(set.schema, set.table);
+            const formattedFromTable = this.formatFromSchemaAndTable(set.schema, set.table);
             const columns = set.columns.map((column) => {
                 let useColumn = column
 
@@ -215,7 +222,7 @@ export abstract class AbstractDialect implements Dialect {
             selectColumns += columns.join(', ')
 
             if (index === 0) {
-                fromTable = formattedTable
+                fromTable = formattedFromTable
             }
         })
 

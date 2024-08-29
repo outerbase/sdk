@@ -8,7 +8,7 @@ import {
     TableIndex,
     TableIndexType,
 } from '../models/database'
-import { DefaultDialect } from '../query-builder/dialects/default'
+import { DuckDbDialect } from '../query-builder/dialects/duckdb'
 import duckDB from 'duckdb'
 
 type DuckDBParameters = {
@@ -24,7 +24,7 @@ export class DuckDBConnection implements Connection {
     queryType = QueryType.positional
 
     // Default dialect for MotherDuck
-    dialect = new DefaultDialect()
+    dialect = new DuckDbDialect()
 
     constructor(private _: DuckDBParameters) {
         this.duckDB = new duckDB.Database(_.path, {
