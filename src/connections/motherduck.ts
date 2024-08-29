@@ -28,7 +28,7 @@ export class DuckDBConnection implements Connection {
 
     constructor(private _: DuckDBParameters) {
         this.duckDB = new duckDB.Database(_.path, {
-            motherduck_token: _.token
+            motherduck_token: _.token,
         })
         this.connection = this.duckDB.connect()
     }
@@ -82,10 +82,7 @@ export class DuckDBConnection implements Connection {
                 )
                 result = res
             } else {
-                const { res } = await this.runQuery(
-                    connection,
-                    query.query
-                )
+                const { res } = await this.runQuery(connection, query.query)
                 result = res
             }
         } catch (e) {
@@ -103,7 +100,7 @@ export class DuckDBConnection implements Connection {
 
     public async fetchDatabaseSchema(): Promise<Database> {
         let database: Database = []
-    
+
         type DuckDBTables = {
             database: string
             schema: string
@@ -112,16 +109,32 @@ export class DuckDBConnection implements Connection {
             column_types: string[]
             temporary: boolean
         }
-    
+        type DuckDBSettingsRow = {
+            name: string
+            value: string
+            description: string
+            input_type: string
+            scope: string
+        }
+        const { data: currentDatabaseResponse, error } = await this.query({
+            query: `SELECT * FROM duckdb_settings();`,
+        })
+
+        const currentDatabase = (currentDatabaseResponse as DuckDBSettingsRow[])
+            .find((row) => row.name === 'temp_directory')
+            ?.value.split(':')[1]
+            .split('.')[0]
         const result = await this.query({
             query: `PRAGMA show_tables_expanded;`,
         })
-    
+
         const tables = result.data as DuckDBTables[]
-    
+        const currentTables = tables.filter(
+            (table) => table.database === currentDatabase
+        )
         const schemaMap: { [key: string]: Table[] } = {}
-    
-        for (const table of tables) {
+
+        for (const table of currentTables) {
             type DuckDBTableInfo = {
                 cid: number
                 name: string
@@ -133,9 +146,9 @@ export class DuckDBConnection implements Connection {
             const tableInfoResult = await this.query({
                 query: `PRAGMA table_info('${table.database}.${table.schema}.${table.name}')`,
             })
-    
+
             const tableInfo = tableInfoResult.data as DuckDBTableInfo[]
-    
+
             const constraints: TableIndex[] = []
             const columns = tableInfo.map((column) => {
                 if (column.pk) {
@@ -145,7 +158,7 @@ export class DuckDBConnection implements Connection {
                         columns: [column.name],
                     })
                 }
-    
+
                 const currentColumn: TableColumn = {
                     name: column.name,
                     type: column.type,
@@ -156,50 +169,50 @@ export class DuckDBConnection implements Connection {
                     unique: column.pk,
                     references: [], // DuckDB currently doesn't have a pragma for foreign keys
                 }
-    
+
                 return currentColumn
             })
-    
+
             const currentTable: Table = {
                 name: table.name,
-                schema: table.schema,  // Assign schema name to the table
+                schema: table.schema, // Assign schema name to the table
                 columns: columns,
                 indexes: constraints,
             }
-    
+
             if (!schemaMap[table.schema]) {
                 schemaMap[table.schema] = []
             }
-    
+
             schemaMap[table.schema].push(currentTable)
         }
-    
+
         database = Object.entries(schemaMap).map(([schemaName, tables]) => {
             return {
-                [schemaName]: tables
+                [schemaName]: tables,
             }
         })
-    
+
         return database
-    }    
+    }
 
     runQuery = async (
         connection: duckDB.Connection,
         query: string,
         ...params: any[]
-    ): Promise<{ stmt: duckDB.Statement; res: any[]; }> => {
+    ): Promise<{ stmt: duckDB.Statement; res: any[] }> => {
         return new Promise((resolve, reject) => {
             connection.prepare(query, (err, stmt) => {
                 if (err) {
                     return reject(err)
                 }
-    
+
                 stmt.all(...params, (err, res) => {
                     if (err) {
                         stmt.finalize()
                         return reject(err)
                     }
-    
+
                     resolve({ stmt, res })
                     stmt.finalize()
                 })
