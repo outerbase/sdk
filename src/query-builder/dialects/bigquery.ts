@@ -11,6 +11,13 @@ export class BigQueryDialect extends AbstractDialect {
         return `\`${table}\``;
     }
 
+    formatFromSchemaAndTable(schema: string | undefined, table: string): string {
+        if (schema) {
+            return `\`${schema}.${table}\``;
+        }
+        return `\`${table}\``;
+    }
+
     /**
      * BigQuery currently entirely reimplements the `select` method due to the specialized
      * nature of the BigQuery SQL dialect. When running a SELECT statement via BigQuery,
