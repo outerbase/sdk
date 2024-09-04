@@ -15,6 +15,21 @@ interface Dialect {
     dropTable(builder: QueryBuilder, type: QueryType, query: Query): Query;
     renameTable(builder: QueryBuilder, type: QueryType, query: Query): Query;
 
+    // Column operations
+    // addColumn?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
+    // dropColumn?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
+    // renameColumn?: (name: string, original: string, table: string, schema?: string) => Promise<OperationResponse>
+    // updateColumn?: (name: string, column: TableColumn, table: string, schema?: string) => Promise<OperationResponse>
+
+    // // // Index operations
+    // createIndex?: (index: TableIndex, table: string, schema?: string) => Promise<OperationResponse>
+    // dropIndex?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
+    // renameIndex?: (name: string, original: string, table: string, schema?: string) => Promise<OperationResponse>
+
+    // // // Schema operations
+    // createSchema?: (name: string) => Promise<OperationResponse>
+    // dropSchema?: (name: string) => Promise<OperationResponse>
+
     equals(a: any, b: string): string;
     equalsNumber(a: any, b: any): string;
     equalsColumn(a: any, b: any): string;
@@ -49,21 +64,6 @@ interface Dialect {
     notBetweenNumbers(a: any, b: any, c: any): string;
     ascending(a: any): string;
     descending(a: any): string;
-
-    // Column operations
-    // addColumn?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
-    // dropColumn?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
-    // renameColumn?: (name: string, original: string, table: string, schema?: string) => Promise<OperationResponse>
-    // updateColumn?: (name: string, column: TableColumn, table: string, schema?: string) => Promise<OperationResponse>
-
-    // // Index operations
-    // createIndex?: (index: TableIndex, table: string, schema?: string) => Promise<OperationResponse>
-    // dropIndex?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
-    // renameIndex?: (name: string, original: string, table: string, schema?: string) => Promise<OperationResponse>
-
-    // // Schema operations
-    // createSchema?: (name: string) => Promise<OperationResponse>
-    // dropSchema?: (name: string) => Promise<OperationResponse>
 }
 
 export enum ColumnDataType {
@@ -79,6 +79,16 @@ export enum ColumnDataType {
 }
 
 export abstract class AbstractDialect implements Dialect {
+    /**
+     * WORK IN PROGRESS!
+     * This code is not used anywhere in the SDK at the moment. It is a work in progress to add support for SQL functions
+     * in the query builder. The idea is to allow users to use SQL functions in their queries, and the query builder will
+     * automatically format the query to use the correct SQL function for the specific database dialect.
+     * 
+     * The `sqlFunctions` object is a map of SQL function names to their implementations. The `getFunction` method is used
+     * to get the implementation of a specific SQL function. The `addFunction` method is used to add a new SQL function
+     * to the `sqlFunctions` object.
+     */
     protected sqlFunctions: { [key: string]: (...args: string[]) => string } = {
         now: () => 'NOW()',
         concat: (...args: string[]) => `CONCAT(${args.join(', ')})`,
@@ -86,6 +96,12 @@ export abstract class AbstractDialect implements Dialect {
         abs: (value: string) => `ABS(${value})`,
     };
 
+    /**
+     * Retrieves the implementation of the SQL function with the given name.
+     * 
+     * @param funcName 
+     * @returns Returns the implementation of the SQL function with the given name.
+     */
     getFunction(funcName: string): (...args: string[]) => string {
         if (this.sqlFunctions[funcName]) {
             return this.sqlFunctions[funcName];
@@ -93,12 +109,23 @@ export abstract class AbstractDialect implements Dialect {
         throw new Error(`SQL function '${funcName}' not supported in this dialect.`);
     }
 
-    // Allow specific dialects to add or override functions
+    /**
+     * Adds a new SQL function to the `sqlFunctions` object. If a function with the same name already exists, it will be
+     * overwritten with the new implementation.
+     * 
+     * @param funcName 
+     * @param implementation 
+     */
     protected addFunction(funcName: string, implementation: (...args: string[]) => string) {
         this.sqlFunctions[funcName] = implementation;
     }
 
-    // Maps generic data types to database-specific data types
+    /**
+     * Maps the data type from the SDK to the equivalent data type for the specific database dialect.
+     * 
+     * @param dataType 
+     * @returns Returns the equivalent data type for the specific database dialect.
+     */
     mapDataType(dataType: ColumnDataType | string): string {
         switch (dataType) {
             case ColumnDataType.STRING:
@@ -114,6 +141,11 @@ export abstract class AbstractDialect implements Dialect {
         }
     }
 
+    /**
+     * Words that are reserved in the query language and may require special character wrapping to prevent
+     * collisions with the database engine executing the query. Each dialect may need to override this property
+     * with the reserved keywords for the specific database engine.
+     */
     reservedKeywords: string[] = [
         'ADD',
         'ALL',
@@ -178,7 +210,13 @@ export abstract class AbstractDialect implements Dialect {
     ];
 
     /**
-     * Formats the schema and table names according to the specific database dialect.
+     * Formats how the schema and table name should be used in the SELECT statement.
+     * 
+     * @why When implementing support for BigQuery, the SELECT statement takes only a table name, where the FROM
+     * statement takes the schema and table name. It also requires both the schema and name to be wrapped in
+     * backticks together, and not separately. This method allows for formatting the schema and table name in a way
+     * that is compatible with the specific database dialect. 
+     * See also - `formatFromSchemaAndTable`
      * @param schema The schema name (optional).
      * @param table The table name.
      * @returns The formatted schema and table combination.
@@ -190,6 +228,18 @@ export abstract class AbstractDialect implements Dialect {
         return table;
     }
 
+    /**
+     * Formats how the schema and table name should be used in the FROM statement.
+     * 
+     * @why When implementing support for BigQuery, the FROM statement takes a fully qualified schema and table name, 
+     * where the SELECT statement only takes the table name. It also requires both the schema and name to be wrapped
+     * in backticks together, and not separately. This method allows for formatting the schema and table name in a way
+     * that is compatible with the specific database dialect. 
+     * See also - `formatSchemaAndTable`
+     * @param schema 
+     * @param table 
+     * @returns The formatted schema and table combination.
+     */
     formatFromSchemaAndTable(schema: string | undefined, table: string): string {
         if (schema) {
             return `"${schema}".${table}`;
@@ -226,7 +276,11 @@ export abstract class AbstractDialect implements Dialect {
             }
         })
 
-        query.query = `SELECT ${selectColumns} FROM ${fromTable}`
+        query.query = `SELECT 
+            ${selectColumns} 
+            ${builder.selectRawValue ? builder.selectRawValue : ''} 
+            FROM ${fromTable}
+        `
 
         if (joinClauses) {
             query.query += ` ${joinClauses}`

@@ -7,8 +7,9 @@ export class CloudflareAi implements AiProvider {
 
     constructor(_?: { model: string, apiKey: string }) {
         if (!_) return;
-        this.model = _.model;
-        this.apiKey = _.apiKey;
+
+        if (_.model) this.model = _.model;
+        if (_.apiKey) this.apiKey = _.apiKey;
     }
 
     async startConversation(systemPrompt: string, message: string): Promise<OperationResponse> {

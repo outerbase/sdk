@@ -39,6 +39,8 @@ export interface QueryBuilder {
     asClass?: any
     groupBy?: string
 
+    selectRawValue?: string
+
     // General operation values, such as when renaming tables referencing the old and new name
     originalValue?: string
     newValue?: string
@@ -49,6 +51,8 @@ export interface OuterbaseType {
     selectFrom: (
         columnsArray: { schema?: string; table: string; columns: string[] }[]
     ) => OuterbaseType
+    selectRaw: (statement: string) => OuterbaseType
+
     insert: (data: { [key: string]: any }) => OuterbaseType
     update: (data: { [key: string]: any }) => OuterbaseType
     deleteFrom: (table: string) => OuterbaseType
@@ -109,6 +113,12 @@ export function Outerbase(connection: Connection): OuterbaseType {
             }
 
             this.queryBuilder.columnsWithTable = columnsArray
+
+            return this
+        },
+        selectRaw(statement) {
+            this.queryBuilder.action = QueryBuilderAction.SELECT
+            this.queryBuilder.selectRawValue = statement
 
             return this
         },

@@ -1,6 +1,3 @@
-import { QueryBuilder } from 'src/client';
-import { Query } from 'src/query';
-import { QueryType } from 'src/query-params';
 import { AbstractDialect } from '../index';
 
 export class BigQueryDialect extends AbstractDialect {
