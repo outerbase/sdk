@@ -276,11 +276,7 @@ export abstract class AbstractDialect implements Dialect {
             }
         })
 
-        query.query = `SELECT 
-            ${selectColumns} 
-            ${builder.selectRawValue ? builder.selectRawValue : ''} 
-            FROM ${fromTable}
-        `
+        query.query = `SELECT ${selectColumns} ${builder.selectRawValue ? builder.selectRawValue : ''} FROM ${fromTable}`
 
         if (joinClauses) {
             query.query += ` ${joinClauses}`
