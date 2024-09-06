@@ -2,7 +2,7 @@ import { QueryType } from '../query-params'
 import { Query, constructRawQuery } from '../query'
 import { Connection } from './index'
 import { Database, Table, TableColumn } from '../models/database'
-import { DefaultDialect } from '../query-builder/dialects/default'
+import { BigQueryDialect } from '../query-builder/dialects/bigquery'
 
 import { BigQuery } from '@google-cloud/bigquery'
 
@@ -19,7 +19,7 @@ export class BigQueryConnection implements Connection {
     queryType = QueryType.positional
 
     // Default dialect for BigQuery
-    dialect = new DefaultDialect()
+    dialect = new BigQueryDialect()
 
     /**
      * Creates a new BigQuery object.
