@@ -1,22 +1,22 @@
-import { QueryType } from "../query-params";
-import { QueryBuilder } from "../client";
-import { Query } from "../query";
+import { QueryType } from '../query-params'
+import { QueryBuilder } from '../client'
+import { Query } from '../query'
 
 interface Dialect {
     formatSchemaAndTable(schema: string | undefined, table: string): string
 
-    select(builder: QueryBuilder, type: QueryType, query: Query): Query;
-    insert(builder: QueryBuilder, type: QueryType, query: Query): Query;
-    update(builder: QueryBuilder, type: QueryType, query: Query): Query;
-    delete(builder: QueryBuilder, type: QueryType, query: Query): Query;
+    select(builder: QueryBuilder, type: QueryType, query: Query): Query
+    insert(builder: QueryBuilder, type: QueryType, query: Query): Query
+    update(builder: QueryBuilder, type: QueryType, query: Query): Query
+    delete(builder: QueryBuilder, type: QueryType, query: Query): Query
 
     // Table operations
-    createTable(builder: QueryBuilder, type: QueryType, query: Query): Query;
-    dropTable(builder: QueryBuilder, type: QueryType, query: Query): Query;
-    renameTable(builder: QueryBuilder, type: QueryType, query: Query): Query;
+    createTable(builder: QueryBuilder, type: QueryType, query: Query): Query
+    dropTable(builder: QueryBuilder, type: QueryType, query: Query): Query
+    renameTable(builder: QueryBuilder, type: QueryType, query: Query): Query
 
     // Column operations
-    // addColumn?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
+    addColumn(builder: QueryBuilder, type: QueryType, query: Query): Query
     // dropColumn?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
     // renameColumn?: (name: string, original: string, table: string, schema?: string) => Promise<OperationResponse>
     // updateColumn?: (name: string, column: TableColumn, table: string, schema?: string) => Promise<OperationResponse>
@@ -30,40 +30,40 @@ interface Dialect {
     // createSchema?: (name: string) => Promise<OperationResponse>
     // dropSchema?: (name: string) => Promise<OperationResponse>
 
-    equals(a: any, b: string): string;
-    equalsNumber(a: any, b: any): string;
-    equalsColumn(a: any, b: any): string;
-    notEquals(a: any, b: string): string;
-    notEqualsNumber(a: any, b: any): string;
-    notEqualsColumn(a: any, b: any): string;
-    greaterThan(a: any, b: string): string;
-    greaterThanNumber(a: any, b: any): string;
-    lessThan(a: any, b: string): string;
-    lessThanNumber(a: any, b: any): string;
-    greaterThanOrEqual(a: any, b: string): string;
-    greaterThanOrEqualNumber(a: any, b: any): string;
-    lessThanOrEqual(a: any, b: string): string;
-    lessThanOrEqualNumber(a: any, b: any): string;
-    inValues(a: any, b: any[]): string;
-    inNumbers(a: any, b: any[]): string;
-    notInValues(a: any, b: any[]): string;
-    notInNumbers(a: any, b: any[]): string;
-    is(current: any, a: any, b: string | null): string;
-    isNumber(a: any, b: any): string;
-    isNot(current: any, a: any, b: null): string;
-    isNotNumber(a: any, b: any): string;
-    like(a: any, b: string): string;
-    notLike(a: any, b: string): string;
-    ilike(a: any, b: string): string;
-    notILike(a: any, b: string): string;
-    isNull(a: any): string;
-    isNotNull(a: any): string;
-    between(a: any, b: string, c: string): string;
-    betweenNumbers(a: any, b: any, c: any): string;
-    notBetween(a: any, b: string, c: string): string;
-    notBetweenNumbers(a: any, b: any, c: any): string;
-    ascending(a: any): string;
-    descending(a: any): string;
+    equals(a: any, b: string): string
+    equalsNumber(a: any, b: any): string
+    equalsColumn(a: any, b: any): string
+    notEquals(a: any, b: string): string
+    notEqualsNumber(a: any, b: any): string
+    notEqualsColumn(a: any, b: any): string
+    greaterThan(a: any, b: string): string
+    greaterThanNumber(a: any, b: any): string
+    lessThan(a: any, b: string): string
+    lessThanNumber(a: any, b: any): string
+    greaterThanOrEqual(a: any, b: string): string
+    greaterThanOrEqualNumber(a: any, b: any): string
+    lessThanOrEqual(a: any, b: string): string
+    lessThanOrEqualNumber(a: any, b: any): string
+    inValues(a: any, b: any[]): string
+    inNumbers(a: any, b: any[]): string
+    notInValues(a: any, b: any[]): string
+    notInNumbers(a: any, b: any[]): string
+    is(current: any, a: any, b: string | null): string
+    isNumber(a: any, b: any): string
+    isNot(current: any, a: any, b: null): string
+    isNotNumber(a: any, b: any): string
+    like(a: any, b: string): string
+    notLike(a: any, b: string): string
+    ilike(a: any, b: string): string
+    notILike(a: any, b: string): string
+    isNull(a: any): string
+    isNotNull(a: any): string
+    between(a: any, b: string, c: string): string
+    betweenNumbers(a: any, b: any, c: any): string
+    notBetween(a: any, b: string, c: string): string
+    notBetweenNumbers(a: any, b: any, c: any): string
+    ascending(a: any): string
+    descending(a: any): string
 }
 
 export enum ColumnDataType {
@@ -84,7 +84,7 @@ export abstract class AbstractDialect implements Dialect {
      * This code is not used anywhere in the SDK at the moment. It is a work in progress to add support for SQL functions
      * in the query builder. The idea is to allow users to use SQL functions in their queries, and the query builder will
      * automatically format the query to use the correct SQL function for the specific database dialect.
-     * 
+     *
      * The `sqlFunctions` object is a map of SQL function names to their implementations. The `getFunction` method is used
      * to get the implementation of a specific SQL function. The `addFunction` method is used to add a new SQL function
      * to the `sqlFunctions` object.
@@ -94,50 +94,55 @@ export abstract class AbstractDialect implements Dialect {
         concat: (...args: string[]) => `CONCAT(${args.join(', ')})`,
         coalesce: (...args: string[]) => `COALESCE(${args.join(', ')})`,
         abs: (value: string) => `ABS(${value})`,
-    };
+    }
 
     /**
      * Retrieves the implementation of the SQL function with the given name.
-     * 
-     * @param funcName 
+     *
+     * @param funcName
      * @returns Returns the implementation of the SQL function with the given name.
      */
     getFunction(funcName: string): (...args: string[]) => string {
         if (this.sqlFunctions[funcName]) {
-            return this.sqlFunctions[funcName];
+            return this.sqlFunctions[funcName]
         }
-        throw new Error(`SQL function '${funcName}' not supported in this dialect.`);
+        throw new Error(
+            `SQL function '${funcName}' not supported in this dialect.`
+        )
     }
 
     /**
      * Adds a new SQL function to the `sqlFunctions` object. If a function with the same name already exists, it will be
      * overwritten with the new implementation.
-     * 
-     * @param funcName 
-     * @param implementation 
+     *
+     * @param funcName
+     * @param implementation
      */
-    protected addFunction(funcName: string, implementation: (...args: string[]) => string) {
-        this.sqlFunctions[funcName] = implementation;
+    protected addFunction(
+        funcName: string,
+        implementation: (...args: string[]) => string
+    ) {
+        this.sqlFunctions[funcName] = implementation
     }
 
     /**
      * Maps the data type from the SDK to the equivalent data type for the specific database dialect.
-     * 
-     * @param dataType 
+     *
+     * @param dataType
      * @returns Returns the equivalent data type for the specific database dialect.
      */
     mapDataType(dataType: ColumnDataType | string): string {
         switch (dataType) {
             case ColumnDataType.STRING:
-                return 'VARCHAR';
+                return 'VARCHAR'
             case ColumnDataType.NUMBER:
-                return 'INTEGER';
+                return 'INTEGER'
             case ColumnDataType.BOOLEAN:
-                return 'BOOLEAN';
+                return 'BOOLEAN'
             case ColumnDataType.DATE:
-                return 'DATE';
+                return 'DATE'
             default:
-                return dataType;
+                return dataType
         }
     }
 
@@ -207,15 +212,15 @@ export abstract class AbstractDialect implements Dialect {
         'VALUES',
         'VIEW',
         'WHERE',
-    ];
+    ]
 
     /**
      * Formats how the schema and table name should be used in the SELECT statement.
-     * 
+     *
      * @why When implementing support for BigQuery, the SELECT statement takes only a table name, where the FROM
      * statement takes the schema and table name. It also requires both the schema and name to be wrapped in
      * backticks together, and not separately. This method allows for formatting the schema and table name in a way
-     * that is compatible with the specific database dialect. 
+     * that is compatible with the specific database dialect.
      * See also - `formatFromSchemaAndTable`
      * @param schema The schema name (optional).
      * @param table The table name.
@@ -223,28 +228,31 @@ export abstract class AbstractDialect implements Dialect {
      */
     formatSchemaAndTable(schema: string | undefined, table: string): string {
         if (schema) {
-            return `"${schema}".${table}`;
+            return `"${schema}".${table}`
         }
-        return table;
+        return table
     }
 
     /**
      * Formats how the schema and table name should be used in the FROM statement.
-     * 
-     * @why When implementing support for BigQuery, the FROM statement takes a fully qualified schema and table name, 
+     *
+     * @why When implementing support for BigQuery, the FROM statement takes a fully qualified schema and table name,
      * where the SELECT statement only takes the table name. It also requires both the schema and name to be wrapped
      * in backticks together, and not separately. This method allows for formatting the schema and table name in a way
-     * that is compatible with the specific database dialect. 
+     * that is compatible with the specific database dialect.
      * See also - `formatSchemaAndTable`
-     * @param schema 
-     * @param table 
+     * @param schema
+     * @param table
      * @returns The formatted schema and table combination.
      */
-    formatFromSchemaAndTable(schema: string | undefined, table: string): string {
+    formatFromSchemaAndTable(
+        schema: string | undefined,
+        table: string
+    ): string {
         if (schema) {
-            return `"${schema}".${table}`;
+            return `"${schema}".${table}`
         }
-        return table;
+        return table
     }
 
     select(builder: QueryBuilder, type: QueryType, query: Query): Query {
@@ -257,8 +265,14 @@ export abstract class AbstractDialect implements Dialect {
                 selectColumns += ', '
             }
 
-            const formattedTable = this.formatSchemaAndTable(set.schema, set.table);
-            const formattedFromTable = this.formatFromSchemaAndTable(set.schema, set.table);
+            const formattedTable = this.formatSchemaAndTable(
+                set.schema,
+                set.table
+            )
+            const formattedFromTable = this.formatFromSchemaAndTable(
+                set.schema,
+                set.table
+            )
             const columns = set.columns.map((column) => {
                 let useColumn = column
 
@@ -307,11 +321,14 @@ export abstract class AbstractDialect implements Dialect {
     insert(builder: QueryBuilder, type: QueryType, query: Query): Query {
         const columns = Object.keys(builder.data || {})
         const placeholders =
-        type === QueryType.named
+            type === QueryType.named
                 ? columns.map((column) => `:${column}`).join(', ')
                 : columns.map(() => '?').join(', ')
 
-        const formattedTable = this.formatSchemaAndTable(builder.schema, builder.table || '');
+        const formattedTable = this.formatSchemaAndTable(
+            builder.schema,
+            builder.table || ''
+        )
         query.query = `INSERT INTO ${formattedTable} (${columns.join(
             ', '
         )}) VALUES (${placeholders})`
@@ -324,22 +341,23 @@ export abstract class AbstractDialect implements Dialect {
 
         return query
     }
-    
+
     update(builder: QueryBuilder, type: QueryType, query: Query): Query {
         if (!builder || !builder.whereClauses) {
             return query
         }
 
-        const formattedTable = this.formatSchemaAndTable(builder.schema, builder.table || '');
+        const formattedTable = this.formatSchemaAndTable(
+            builder.schema,
+            builder.table || ''
+        )
         const columnsToUpdate = Object.keys(builder.data || {})
         const setClauses =
             type === QueryType.named
                 ? columnsToUpdate
                       .map((column) => `${column} = :${column}`)
                       .join(', ')
-                : columnsToUpdate
-                      .map((column) => `${column} = ?`)
-                      .join(', ')
+                : columnsToUpdate.map((column) => `${column} = ?`).join(', ')
 
         query.query = `UPDATE ${formattedTable} SET ${setClauses}`
         if (builder.whereClauses?.length > 0) {
@@ -356,14 +374,14 @@ export abstract class AbstractDialect implements Dialect {
     }
 
     delete(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        if (
-            !builder.whereClauses ||
-            builder.whereClauses?.length === 0
-        ) {
+        if (!builder.whereClauses || builder.whereClauses?.length === 0) {
             return query
         }
 
-        const formattedTable = this.formatFromSchemaAndTable(builder.schema, builder.table || '');
+        const formattedTable = this.formatFromSchemaAndTable(
+            builder.schema,
+            builder.table || ''
+        )
         query.query = `DELETE FROM ${formattedTable}`
         if (builder.whereClauses?.length > 0) {
             query.query += ` WHERE ${builder.whereClauses.join(' AND ')}`
@@ -377,18 +395,22 @@ export abstract class AbstractDialect implements Dialect {
         //     return query
         // }
 
-        const formattedTable = this.formatSchemaAndTable(builder.schema, builder.table || '');
-        const columns = builder?.columns?.map((column) => {
-            const dataType = this.mapDataType(column.type)
+        const formattedTable = this.formatSchemaAndTable(
+            builder.schema,
+            builder.table || ''
+        )
+        const columns =
+            builder?.columns?.map((column) => {
+                const dataType = this.mapDataType(column.type)
 
-            return `${column.name} ${dataType}`
+                return `${column.name} ${dataType}`
 
-            // const constraints = column.constraints
-            //     ? column.constraints.join(' ')
-            //     : ''
+                // const constraints = column.constraints
+                //     ? column.constraints.join(' ')
+                //     : ''
 
-            // return `${column.name} ${dataType} ${constraints}`
-        }) ?? []
+                // return `${column.name} ${dataType} ${constraints}`
+            }) ?? []
 
         query.query = `
             CREATE TABLE IF NOT EXISTS 
@@ -403,7 +425,31 @@ export abstract class AbstractDialect implements Dialect {
         query.query = `DROP TABLE IF EXISTS ${builder.schema ? `"${builder.schema}".` : ''}${builder.table}`
         return query
     }
-    
+
+    addColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
+        const { schema, table, columns } = builder
+
+        if (!table || !columns || columns.length === 0) {
+            throw new Error('Table and columns are required to add columns')
+        }
+
+        const formattedTable = this.formatSchemaAndTable(schema, table)
+
+        const columnQueries = columns.map((col) => {
+            const dataType = this.mapDataType(col.type)
+            return `ALTER TABLE ${formattedTable} ADD ${col.name} ${dataType}`
+        })
+
+        // Join the statements with semicolons to represent multiple statements
+        // I did this based on D1 and they do not allow multiple queries in a single request.
+        query.query =
+            columnQueries.length === 1
+                ? columnQueries.join(';')
+                : columnQueries.join('; ')[0]
+
+        return query
+    }
+
     renameTable(builder: QueryBuilder, type: QueryType, query: Query): Query {
         query.query = `ALTER TABLE ${builder.schema ? `"${builder.schema}".` : ''}${builder.originalValue} RENAME TO ${builder.newValue}`
         return query

@@ -17,6 +17,8 @@ export enum QueryBuilderAction {
     DELETE_TABLE = 'deleteTable',
     TRUNCATE_TABLE = 'truncateTable',
     RENAME_TABLE = 'renameTable',
+    ALTER_TABLE = 'alterTable',
+    ADD_COLUMNS = 'addColumns',
 }
 
 export interface QueryBuilder {
@@ -28,7 +30,7 @@ export interface QueryBuilder {
     // Used specifically for SELECT statements, useful when joining multiple tables
     columnsWithTable?: { schema?: string; table: string; columns: string[] }[]
     // Used when column names and type are required, such as CREATE TABLE
-    columns?: { name: string, type: ColumnDataType }[]
+    columns?: { name: string; type: ColumnDataType }[]
     whereClauses?: string[]
     joins?: string[]
     data?: { [key: string]: any }
@@ -38,6 +40,8 @@ export interface QueryBuilder {
     returning?: string[]
     asClass?: any
     groupBy?: string
+    // In an alter state within the builder
+    isAltering?: boolean
 
     selectRawValue?: string
 
@@ -80,14 +84,20 @@ export interface OuterbaseType {
     schema: (schema: string) => OuterbaseType
     returning: (columns: string[]) => OuterbaseType
     groupBy: (column: string) => OuterbaseType
-    
+
     // WORK IN PROGRESS
     // WORK IN PROGRESS
     // Table operations
     createTable?: (table: string) => OuterbaseType
     renameTable?: (old: string, name: string) => OuterbaseType
+    addColumns: (
+        columns: { name: string; type: ColumnDataType }[]
+    ) => OuterbaseType
     dropTable?: (table: string) => OuterbaseType
-    columns?: (columns: { name: string, type: ColumnDataType }[]) => OuterbaseType
+    alterTable?: (table: string) => OuterbaseType
+    columns?: (
+        columns: { name: string; type: ColumnDataType }[]
+    ) => OuterbaseType
     // WORK IN PROGRESS
     // WORK IN PROGRESS
     // WORK IN PROGRESS
@@ -126,11 +136,13 @@ export function Outerbase(connection: Connection): OuterbaseType {
             // Check if `condition` is an array of conditions
             if (Array.isArray(condition)) {
                 if (this.queryBuilder.whereClauses) {
-                    this.queryBuilder.whereClauses.push(`(${condition.join(" AND ")})`);
+                    this.queryBuilder.whereClauses.push(
+                        `(${condition.join(' AND ')})`
+                    )
                 }
             } else {
                 if (this.queryBuilder.whereClauses) {
-                    this.queryBuilder.whereClauses.push(condition);
+                    this.queryBuilder.whereClauses.push(condition)
                 }
             }
             return this
@@ -216,6 +228,16 @@ export function Outerbase(connection: Connection): OuterbaseType {
                 )
             return this
         },
+
+        addColumns(columns) {
+            this.queryBuilder = {
+                ...this.queryBuilder,
+                columns,
+                action: QueryBuilderAction.ADD_COLUMNS,
+            }
+            return this
+        },
+
         insert(data) {
             this.queryBuilder = {
                 action: QueryBuilderAction.INSERT,
@@ -291,6 +313,7 @@ export function Outerbase(connection: Connection): OuterbaseType {
 
             // Otherwise, if asClass is not set, return the raw response
             let response = await connection.query(query)
+            console.log('The response', response)
             return {
                 ...response,
                 query,
@@ -327,6 +350,13 @@ export function Outerbase(connection: Connection): OuterbaseType {
             }
             return this
         },
+
+        alterTable(table) {
+            this.queryBuilder.isAltering = true
+            this.queryBuilder.table = table
+            return this
+        },
+
         dropTable(table) {
             this.queryBuilder = {
                 action: QueryBuilderAction.DELETE_TABLE,
@@ -338,10 +368,11 @@ export function Outerbase(connection: Connection): OuterbaseType {
             this.queryBuilder = {
                 action: QueryBuilderAction.RENAME_TABLE,
                 originalValue: old,
-                newValue: name
+                newValue: name,
             }
             return this
         },
+
         columns(columns) {
             this.queryBuilder.columns = columns
             return this
@@ -364,28 +395,71 @@ function buildQueryString(
     switch (queryBuilder.action) {
         case QueryBuilderAction.SELECT:
             query.query = dialect.select(queryBuilder, queryType, query).query
-            break;
+            break
         case QueryBuilderAction.INSERT:
             query.query = dialect.insert(queryBuilder, queryType, query).query
-            query.parameters = dialect.insert(queryBuilder, queryType, query).parameters
+            query.parameters = dialect.insert(
+                queryBuilder,
+                queryType,
+                query
+            ).parameters
             break
         case QueryBuilderAction.UPDATE:
             query.query = dialect.update(queryBuilder, queryType, query).query
-            query.parameters = dialect.update(queryBuilder, queryType, query).parameters
+            query.parameters = dialect.update(
+                queryBuilder,
+                queryType,
+                query
+            ).parameters
             break
         case QueryBuilderAction.DELETE:
             query.query = dialect.delete(queryBuilder, queryType, query).query
-            query.parameters = dialect.delete(queryBuilder, queryType, query).parameters
+            query.parameters = dialect.delete(
+                queryBuilder,
+                queryType,
+                query
+            ).parameters
             break
         case QueryBuilderAction.CREATE_TABLE:
-            query.query = dialect.createTable(queryBuilder, queryType, query).query
-            query.parameters = dialect.createTable(queryBuilder, queryType, query).parameters
+            query.query = dialect.createTable(
+                queryBuilder,
+                queryType,
+                query
+            ).query
+            query.parameters = dialect.createTable(
+                queryBuilder,
+                queryType,
+                query
+            ).parameters
             break
         case QueryBuilderAction.DELETE_TABLE:
-            query.query = dialect.dropTable(queryBuilder, queryType, query).query
+            query.query = dialect.dropTable(
+                queryBuilder,
+                queryType,
+                query
+            ).query
             break
         case QueryBuilderAction.RENAME_TABLE:
-            query.query = dialect.renameTable(queryBuilder, queryType, query).query
+            query.query = dialect.renameTable(
+                queryBuilder,
+                queryType,
+                query
+            ).query
+            break
+        case QueryBuilderAction.ADD_COLUMNS:
+            query.query = dialect.addColumn(
+                queryBuilder,
+                queryType,
+                query
+            ).query
+            break
+
+        case QueryBuilderAction.ALTER_TABLE:
+            query.query = dialect.addColumn(
+                queryBuilder,
+                queryType,
+                query
+            ).query
             break
         default:
             throw new Error('Invalid action')
@@ -394,13 +468,17 @@ function buildQueryString(
     return query
 }
 
-function mapToClass<T>(data: any | any[], ctor: new (data: any) => T, connection?: Connection): T | T[] {
+function mapToClass<T>(
+    data: any | any[],
+    ctor: new (data: any) => T,
+    connection?: Connection
+): T | T[] {
     if (Array.isArray(data)) {
-        return data.map(item => {
-            const model = new ctor(item) as BaseTable;
-            model._connection = connection;
-            return model;
-        }) as T[];
+        return data.map((item) => {
+            const model = new ctor(item) as BaseTable
+            model._connection = connection
+            return model
+        }) as T[]
     } else {
         const model = new ctor(data) as BaseTable
         model._connection = connection
@@ -408,138 +486,276 @@ function mapToClass<T>(data: any | any[], ctor: new (data: any) => T, connection
     }
 }
 
-export function equals(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function equals(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.equals(a, b)
 }
 
-export function equalsNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function equalsNumber(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.equalsNumber(a, b)
 }
 
-export function equalsColumn(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function equalsColumn(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.equalsColumn(a, b)
 }
 
-export function notEquals(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function notEquals(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.notEquals(a, b)
 }
 
-export function notEqualsNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function notEqualsNumber(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.notEqualsNumber(a, b)
 }
 
-export function notEqualsColumn(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function notEqualsColumn(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.notEqualsColumn(a, b)
 }
 
-export function greaterThan(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function greaterThan(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.greaterThan(a, b)
 }
 
-export function greaterThanNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function greaterThanNumber(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.greaterThanNumber(a, b)
 }
 
-export function lessThan(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function lessThan(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.lessThan(a, b)
 }
 
-export function lessThanNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function lessThanNumber(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.lessThanNumber(a, b)
 }
 
-export function greaterThanOrEqual(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function greaterThanOrEqual(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.greaterThanOrEqual(a, b)
 }
 
-export function greaterThanOrEqualNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function greaterThanOrEqualNumber(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.greaterThanOrEqualNumber(a, b)
 }
 
-export function lessThanOrEqual(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function lessThanOrEqual(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.lessThanOrEqual(a, b)
 }
 
-export function lessThanOrEqualNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function lessThanOrEqualNumber(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.lessThanOrEqualNumber(a, b)
 }
 
-export function inValues(a: any, b: any[], dialect: AbstractDialect = new DefaultDialect()) {
+export function inValues(
+    a: any,
+    b: any[],
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.inValues(a, b)
 }
 
-export function inNumbers(a: any, b: any[], dialect: AbstractDialect = new DefaultDialect()) {
+export function inNumbers(
+    a: any,
+    b: any[],
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.inNumbers(a, b)
 }
 
-export function notInValues(a: any, b: any[], dialect: AbstractDialect = new DefaultDialect()) {
+export function notInValues(
+    a: any,
+    b: any[],
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.notInValues(a, b)
 }
 
-export function notInNumbers(a: any, b: any[], dialect: AbstractDialect = new DefaultDialect()) {
+export function notInNumbers(
+    a: any,
+    b: any[],
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.notInNumbers(a, b)
 }
 
-export function is(this: any, a: any, b: string | null, dialect: AbstractDialect = new DefaultDialect()) {
+export function is(
+    this: any,
+    a: any,
+    b: string | null,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.is(this, a, b)
 }
 
-export function isNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function isNumber(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.isNumber(a, b)
 }
 
-export function isNot(this: any, a: any, b: null, dialect: AbstractDialect = new DefaultDialect()) {
+export function isNot(
+    this: any,
+    a: any,
+    b: null,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.isNot(this, a, b)
 }
 
-export function isNotNumber(a: any, b: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function isNotNumber(
+    a: any,
+    b: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.isNotNumber(a, b)
 }
 
-export function like(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function like(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.like(a, b)
 }
 
-export function notLike(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function notLike(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.notLike(a, b)
 }
 
-export function ilike(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function ilike(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.ilike(a, b)
 }
 
-export function notILike(a: any, b: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function notILike(
+    a: any,
+    b: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.notILike(a, b)
 }
 
-export function isNull(a: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function isNull(
+    a: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.isNull(a)
 }
 
-export function isNotNull(a: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function isNotNull(
+    a: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.isNotNull(a)
 }
 
-export function between(a: any, b: string, c: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function between(
+    a: any,
+    b: string,
+    c: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.between(a, b, c)
 }
 
-export function betweenNumbers(a: any, b: any, c: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function betweenNumbers(
+    a: any,
+    b: any,
+    c: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.betweenNumbers(a, b, c)
 }
 
-export function notBetween(a: any, b: string, c: string, dialect: AbstractDialect = new DefaultDialect()) {
+export function notBetween(
+    a: any,
+    b: string,
+    c: string,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.notBetween(a, b, c)
 }
 
-export function notBetweenNumbers(a: any, b: any, c: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function notBetweenNumbers(
+    a: any,
+    b: any,
+    c: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.notBetweenNumbers(a, b, c)
 }
 
-export function ascending(a: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function ascending(
+    a: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.ascending(a)
 }
 
-export function descending(a: any, dialect: AbstractDialect = new DefaultDialect()) {
+export function descending(
+    a: any,
+    dialect: AbstractDialect = new DefaultDialect()
+) {
     return dialect.descending(a)
 }

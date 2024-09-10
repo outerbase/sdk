@@ -147,6 +147,7 @@ export class BigQueryConnection implements Connection {
                     schema: datasetId, // Assign dataset (schema) name to the table
                     columns: columns,
                     indexes: [], // BigQuery does not support indexes
+                    constraints: [], // BigQuery does not support primary keys, foreign keys, or unique constraints
                 }
 
                 if (!schemaMap[datasetId]) {
