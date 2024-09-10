@@ -19,6 +19,9 @@ export enum QueryBuilderAction {
     RENAME_TABLE = 'renameTable',
     ALTER_TABLE = 'alterTable',
     ADD_COLUMNS = 'addColumns',
+    DROP_COLUMNS = 'dropColumns',
+    RENAME_COLUMNS = 'renameColumns',
+    UPDATE_COLUMNS = 'updateColumns',
 }
 
 export interface QueryBuilder {
@@ -30,7 +33,14 @@ export interface QueryBuilder {
     // Used specifically for SELECT statements, useful when joining multiple tables
     columnsWithTable?: { schema?: string; table: string; columns: string[] }[]
     // Used when column names and type are required, such as CREATE TABLE
-    columns?: { name: string; type: ColumnDataType }[]
+    columns?: {
+        default?: string
+        nullable?: boolean
+        name?: string
+        type?: ColumnDataType | string
+        oldName?: string
+        newName?: string
+    }[]
     whereClauses?: string[]
     joins?: string[]
     data?: { [key: string]: any }
@@ -90,13 +100,24 @@ export interface OuterbaseType {
     // Table operations
     createTable?: (table: string) => OuterbaseType
     renameTable?: (old: string, name: string) => OuterbaseType
-    addColumns: (
-        columns: { name: string; type: ColumnDataType }[]
+    addColumns: (columns: { name: string; type: string }[]) => OuterbaseType
+    dropColumns: (columns: string[]) => OuterbaseType
+    updateColumn: (
+        columns: {
+            name: string
+            type: ColumnDataType
+            nullable?: boolean
+            default?: string
+        }[]
     ) => OuterbaseType
     dropTable?: (table: string) => OuterbaseType
-    alterTable?: (table: string) => OuterbaseType
+    alterTable: (table: string) => OuterbaseType
     columns?: (
         columns: { name: string; type: ColumnDataType }[]
+    ) => OuterbaseType
+
+    renameColumns: (
+        columns: { newName: string; oldName: string }[]
     ) => OuterbaseType
     // WORK IN PROGRESS
     // WORK IN PROGRESS
@@ -237,7 +258,34 @@ export function Outerbase(connection: Connection): OuterbaseType {
             }
             return this
         },
-
+        renameColumns(columns) {
+            this.queryBuilder = {
+                ...this.queryBuilder,
+                columns,
+                action: QueryBuilderAction.RENAME_COLUMNS,
+            }
+            return this
+        },
+        dropColumns(columns) {
+            this.queryBuilder = {
+                ...this.queryBuilder,
+                columns: columns.map((column) => ({
+                    name: column,
+                    // We don't really care what the type is
+                    type: ColumnDataType.STRING,
+                })),
+                action: QueryBuilderAction.DROP_COLUMNS,
+            }
+            return this
+        },
+        updateColumn(columns) {
+            this.queryBuilder = {
+                ...this.queryBuilder,
+                columns,
+                action: QueryBuilderAction.UPDATE_COLUMNS,
+            }
+            return this
+        },
         insert(data) {
             this.queryBuilder = {
                 action: QueryBuilderAction.INSERT,
@@ -446,6 +494,7 @@ function buildQueryString(
                 query
             ).query
             break
+
         case QueryBuilderAction.ADD_COLUMNS:
             query.query = dialect.addColumn(
                 queryBuilder,
@@ -453,9 +502,22 @@ function buildQueryString(
                 query
             ).query
             break
-
-        case QueryBuilderAction.ALTER_TABLE:
-            query.query = dialect.addColumn(
+        case QueryBuilderAction.DROP_COLUMNS:
+            query.query = dialect.dropColumn(
+                queryBuilder,
+                queryType,
+                query
+            ).query
+            break
+        case QueryBuilderAction.RENAME_COLUMNS:
+            query.query = dialect.renameColumn(
+                queryBuilder,
+                queryType,
+                query
+            ).query
+            break
+        case QueryBuilderAction.UPDATE_COLUMNS:
+            query.query = dialect.updateColumn(
                 queryBuilder,
                 queryType,
                 query

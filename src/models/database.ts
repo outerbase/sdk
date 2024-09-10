@@ -1,13 +1,11 @@
-// Database consists of an array of schemas
-export type Database = Schema[]
+type SchemaName = string
+export type Database = Record<SchemaName, Schema>
 
-// Schema consists of a name and an array of tables
-export type Schema = Record<string, Table[]>
+type TableName = string
+export type Schema = Record<TableName, Table>
 
-// Table consists of a name, schema, an array of columns, and an array of indexes
 export type Table = {
     name: string
-    schema?: string
     columns: TableColumn[]
     indexes: TableIndex[]
     constraints: Constraint[]
@@ -15,10 +13,6 @@ export type Table = {
 
 export type ConstraintColumn = {
     columnName: string
-    constraintName: string
-    constraintSchema: string
-    tableName: string
-    tableSchema: string
 }
 
 export type Constraint = {
@@ -32,24 +26,16 @@ export type Constraint = {
 export type TableColumn = {
     name: string
     type: string
-
     position: number
-
     nullable: boolean
-    default: any
+    default: string | null
     primary: boolean
     unique: boolean
-
-    // expression: string
     references: TableReference[]
 }
 
 export type TableReference = {
-    // Unique name of the reference key for the database to use
-    name: string
-    // The table that the reference is pointing to
     table: string
-    // The column that the reference is pointing to
     column: string
 }
 

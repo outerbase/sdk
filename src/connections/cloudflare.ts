@@ -156,14 +156,13 @@ export class CloudflareD1Connection implements Connection {
 
     public async fetchDatabaseSchema(): Promise<Database> {
         const exclude_tables = ['_cf_kv', 'sqlite_schema', 'sqlite_temp_schema']
-        const constraints: Constraint[] = []
 
-        let database: Database = []
-        const schemaMap: { [key: string]: Table[] } = {}
+        const schemaMap: Record<string, Record<string, Table>> = {}
 
         const { data } = await this.query({
             query: `PRAGMA table_list`,
         })
+
         const allTables = (
             data as {
                 schema: string
@@ -172,7 +171,9 @@ export class CloudflareD1Connection implements Connection {
             }[]
         ).filter(
             (row) =>
-                !row.name.startsWith('_lite') && !row.name.startsWith('sqlite_')
+                !row.name.startsWith('_lite') &&
+                !row.name.startsWith('sqlite_') &&
+                !exclude_tables.includes(row.name?.toLowerCase())
         )
 
         for (const table of allTables) {
@@ -212,6 +213,8 @@ export class CloudflareD1Connection implements Connection {
                     !row.table.startsWith('sqlite_')
             )
 
+            const constraints: Constraint[] = []
+
             if (fkConstraintData.length > 0) {
                 const fkConstraints: Constraint = {
                     name: 'FOREIGN KEY',
@@ -224,10 +227,6 @@ export class CloudflareD1Connection implements Connection {
                 fkConstraintData.forEach((fkConstraint) => {
                     const currentConstraint: ConstraintColumn = {
                         columnName: fkConstraint.from,
-                        constraintName: fkConstraint.to,
-                        constraintSchema: table.schema,
-                        tableName: fkConstraint.table,
-                        tableSchema: table.schema,
                     }
                     fkConstraints.columns.push(currentConstraint)
                 })
@@ -236,7 +235,7 @@ export class CloudflareD1Connection implements Connection {
 
             const indexes: TableIndex[] = []
             const columns = tableData.map((column) => {
-                // Primary keys are ALWAYS considered Indexes
+                // Primary keys are ALWAYS considered indexes
                 if (column.pk === 1) {
                     indexes.push({
                         name: column.name,
@@ -258,7 +257,8 @@ export class CloudflareD1Connection implements Connection {
 
                 return currentColumn
             })
-            const current: Table = {
+
+            const currentTable: Table = {
                 name: table.name,
                 columns: columns,
                 indexes: indexes,
@@ -266,19 +266,12 @@ export class CloudflareD1Connection implements Connection {
             }
 
             if (!schemaMap[table.schema]) {
-                schemaMap[table.schema] = []
+                schemaMap[table.schema] = {}
             }
 
-            schemaMap[table.schema].push(current)
+            schemaMap[table.schema][table.name] = currentTable
         }
 
-        // Transform schemaMap into the final Database structure
-        database = Object.entries(schemaMap).map(([schemaName, tables]) => {
-            return {
-                [schemaName]: tables,
-            }
-        })
-
-        return database
+        return schemaMap
     }
 }

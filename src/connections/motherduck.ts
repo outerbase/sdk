@@ -125,66 +125,55 @@ export class DuckDBConnection implements Connection {
             pk: boolean
         }
 
-        type DuckDBConstraintInfo = {
-            database_name: string
-            database_oid: string
-            schema_name: string
-            schema_oid: string
-            table_name: string
-            table_oid: string
-            constraint_index: number
-            constraint_type:
-                | 'CHECK'
-                | 'NOT NULL'
-                | 'PRIMARY KEY'
-                | 'UNIQUE'
-                | 'FOREIGN KEY'
-            constraint_text: string
-            expression: string | null
-            // These will exist if you use DuckDB. Just not MotherDuck
-            constraint_column_indexes: number[] // Assuming this is an array of column indexes
-            constraint_column_names: string[] // Assuming this is an array of column names
+        const { data: currentDatabaseResponse, error: settingsError } =
+            await this.query({
+                query: `SELECT * FROM duckdb_settings();`,
+            })
+
+        if (settingsError || !currentDatabaseResponse) {
+            throw new Error('Failed to retrieve database settings.')
         }
 
-        const { data: currentDatabaseResponse, error } = await this.query({
-            query: `SELECT * FROM duckdb_settings();`,
-        })
-
-        // This seems so fragile.
         const currentDatabase = (currentDatabaseResponse as DuckDBSettingsRow[])
             .find((row) => row.name === 'temp_directory')
-            ?.value.split(':')[1]
-            .split('.')[0]
+            ?.value?.split(':')?.[1]
+            ?.split('.')?.[0]
 
-        const result = await this.query({
+        if (!currentDatabase) {
+            throw new Error('Current database could not be determined.')
+        }
+
+        const { data: result, error: tableError } = await this.query({
             query: `PRAGMA show_tables_expanded;`,
         })
 
-        const tables = result.data as DuckDBTables[]
+        if (tableError || !result) {
+            throw new Error('Failed to retrieve tables.')
+        }
+
+        const tables = result as DuckDBTables[]
         const currentTables = tables.filter(
             (table) => table.database === currentDatabase
         )
 
-        const schemaMap: { [key: string]: Table[] } = {}
+        const schemaMap: Record<string, Record<string, Table>> = {}
 
         for (const table of currentTables) {
-            const tableInfoResult = await this.query({
-                query: `PRAGMA table_info('${table.database}.${table.schema}.${table.name}')`,
-            })
+            const { data: tableInfoResult, error: tableInfoError } =
+                await this.query({
+                    query: `PRAGMA table_info('${table.database}.${table.schema}.${table.name}')`,
+                })
 
-            const tableInfo = tableInfoResult.data as DuckDBTableInfo[]
+            if (tableInfoError || !tableInfoResult) {
+                throw new Error(
+                    `Failed to retrieve table info for table: ${table.name}`
+                )
+            }
 
-            // You can't use information schema because motherduck doesn't support this
-            // Not sure if we can get which columns have the constraint on them
-            // const constraintResponse = await this.query({
-            //     query: `SELECT * FROM duckdb_constraints() WHERE database_name = '${table.database}' AND table_name = '${table.name}' AND schema_name = '${table.schema}';`,
-            // })
-            // const constraintInfo =
-            //     constraintResponse.data as DuckDBConstraintInfo[]
+            const tableInfo = tableInfoResult as DuckDBTableInfo[]
 
             const indexes: TableIndex[] = []
-
-            const columns = tableInfo.map((column) => {
+            const columns: TableColumn[] = tableInfo.map((column) => {
                 if (column.pk) {
                     indexes.push({
                         name: column.name,
@@ -193,73 +182,35 @@ export class DuckDBConnection implements Connection {
                     })
                 }
 
-                const currentColumn: TableColumn = {
+                return {
                     name: column.name,
                     type: column.type,
                     position: column.cid,
-                    nullable: !column.notnull, // Flip this because 'notnull' is true when it's NOT nullable
+                    nullable: !column.notnull,
                     default: column.dflt_value,
                     primary: column.pk,
-                    unique: column.pk, // Assuming if it's a PK, it's unique as well
-                    references: [], // MotherDuck currently doesn't have pragma for foreign keys
+                    unique: column.pk, // Assuming PK is unique
+                    references: [], // Foreign key references not supported by MotherDuck
                 }
-
-                return currentColumn
             })
-
-            // You can't use information schema because motherduck doesn't support this
-            // Not sure if we can get which columns have the constraint on them
-            // const tableConstraints: Constraint[] = constraintInfo.map(
-            //     (constraint) => {
-            //         return {
-            //             name:
-            //                 constraint.constraint_text ||
-            //                 `${table.name}_constraint_${constraint.constraint_index}`,
-            //             schema: table.schema,
-            //             tableName: table.name,
-            //             type: constraint.constraint_type,
-            //             columns: constraint.constraint_column_names.map(
-            //                 (columnName) => {
-            //                     return {
-            //                         columnName,
-            //                         constraintName:
-            //                             constraint.constraint_text ||
-            //                             `${table.name}_constraint_${constraint.constraint_index}`,
-            //                         constraintSchema: table.schema,
-            //                         tableName: table.name,
-            //                         tableSchema: table.schema,
-            //                     }
-            //                 }
-            //             ),
-            //         }
-            //     }
-            // )
 
             const currentTable: Table = {
                 name: table.name,
-                schema: table.schema,
                 columns: columns,
                 indexes: indexes,
-                constraints: [], // Add processed constraints
+                constraints: [], // Constraints are not available in MotherDuck
             }
 
+            // Ensure the schema exists in the schemaMap
             if (!schemaMap[table.schema]) {
-                schemaMap[table.schema] = []
+                schemaMap[table.schema] = {}
             }
 
-            schemaMap[table.schema].push(currentTable)
+            schemaMap[table.schema][table.name] = currentTable
         }
 
-        // Map schemaMap to Database format
-        const database = Object.entries(schemaMap).map(
-            ([schemaName, tables]) => {
-                return {
-                    [schemaName]: tables,
-                }
-            }
-        )
-
-        return database
+        // Return the schema map as a properly typed Database object
+        return schemaMap
     }
 
     runQuery = async (

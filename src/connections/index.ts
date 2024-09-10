@@ -1,6 +1,6 @@
 import { QueryType } from '../query-params'
 import { Query } from '../query'
-import { Schema } from '../models/database'
+import { Database } from '../models/database'
 import { AbstractDialect } from 'src/query-builder'
 
 export type OperationResponse = {
@@ -23,5 +23,5 @@ export interface Connection {
     ) => Promise<{ data: any; error: Error | null; query: string }>
 
     // Retrieve metadata about the database, useful for introspection.
-    fetchDatabaseSchema?: () => Promise<Schema[]>
+    fetchDatabaseSchema?: () => Promise<Database>
 }

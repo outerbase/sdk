@@ -17,9 +17,9 @@ interface Dialect {
 
     // Column operations
     addColumn(builder: QueryBuilder, type: QueryType, query: Query): Query
-    // dropColumn?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
-    // renameColumn?: (name: string, original: string, table: string, schema?: string) => Promise<OperationResponse>
-    // updateColumn?: (name: string, column: TableColumn, table: string, schema?: string) => Promise<OperationResponse>
+    dropColumn(builder: QueryBuilder, type: QueryType, query: Query): Query
+    renameColumn(builder: QueryBuilder, type: QueryType, query: Query): Query
+    updateColumn(builder: QueryBuilder, type: QueryType, query: Query): Query
 
     // // // Index operations
     // createIndex?: (index: TableIndex, table: string, schema?: string) => Promise<OperationResponse>
@@ -401,6 +401,8 @@ export abstract class AbstractDialect implements Dialect {
         )
         const columns =
             builder?.columns?.map((column) => {
+                if (!column.type)
+                    throw new Error('Column type is required to create table.')
                 const dataType = this.mapDataType(column.type)
 
                 return `${column.name} ${dataType}`
@@ -436,16 +438,102 @@ export abstract class AbstractDialect implements Dialect {
         const formattedTable = this.formatSchemaAndTable(schema, table)
 
         const columnQueries = columns.map((col) => {
+            if (!col.type)
+                throw new Error('Column type is required to add a column.')
             const dataType = this.mapDataType(col.type)
             return `ALTER TABLE ${formattedTable} ADD ${col.name} ${dataType}`
         })
 
-        // Join the statements with semicolons to represent multiple statements
-        // I did this based on D1 and they do not allow multiple queries in a single request.
-        query.query =
-            columnQueries.length === 1
-                ? columnQueries.join(';')
-                : columnQueries.join('; ')[0]
+        query.query = columnQueries.join('; ')
+
+        return query
+    }
+
+    dropColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
+        const { schema, table, columns } = builder
+
+        if (!table || !columns || columns.length === 0) {
+            throw new Error('Table and columns are required to drop columns')
+        }
+
+        const formattedTable = this.formatSchemaAndTable(schema, table)
+
+        const columnQueries = columns.map((col) => {
+            return `ALTER TABLE ${formattedTable} DROP COLUMN ${col.name}`
+        })
+
+        query.query = columnQueries.join('; ')
+
+        return query
+    }
+
+    renameColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
+        const { schema, table, columns } = builder
+
+        if (!table || !columns || columns.length === 0) {
+            throw new Error('Table and columns are required to rename columns')
+        }
+
+        const formattedTable = this.formatSchemaAndTable(schema, table)
+
+        const columnQueries = columns.map((col) => {
+            if (!col.oldName || !col.newName) {
+                throw new Error(
+                    'Both old and new column names are required to rename columns'
+                )
+            }
+            return `ALTER TABLE ${formattedTable} RENAME COLUMN ${col.oldName} TO ${col.newName}`
+        })
+
+        query.query = columnQueries.join('; ')
+
+        return query
+    }
+    updateColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
+        const { schema, table, columns } = builder
+
+        if (!table || !columns || columns.length === 0) {
+            throw new Error('Table and columns are required to update columns')
+        }
+
+        const formattedTable = this.formatSchemaAndTable(schema, table)
+
+        const columnQueries = columns.map((col) => {
+            if (!col.name) {
+                throw new Error('Column name is required to update a column.')
+            }
+
+            const columnUpdateParts: string[] = []
+
+            if (col.type) {
+                const dataType = this.mapDataType(col.type)
+                columnUpdateParts.push(
+                    `ALTER COLUMN ${col.name} TYPE ${dataType}`
+                )
+            }
+
+            if (col.nullable) {
+                columnUpdateParts.push(
+                    `ALTER COLUMN ${col.name} ${col.nullable ? 'DROP' : 'SET'} NOT NULL`
+                )
+            }
+
+            if (col.default) {
+                columnUpdateParts.push(
+                    `ALTER COLUMN ${col.name} SET DEFAULT ${col.default}`
+                )
+            }
+
+            if (columnUpdateParts.length === 0) {
+                throw new Error(
+                    'No valid attributes provided to update the column.'
+                )
+            }
+
+            return `ALTER TABLE ${formattedTable} ${columnUpdateParts.join(', ')}`
+        })
+
+        query.query = columnQueries.join('; ')
 
         return query
     }
