@@ -10,6 +10,23 @@ export type Table = {
     schema?: string
     columns: TableColumn[]
     indexes: TableIndex[]
+    constraints: Constraint[]
+}
+
+export type ConstraintColumn = {
+    columnName: string
+    constraintName: string
+    constraintSchema: string
+    tableName: string
+    tableSchema: string
+}
+
+export type Constraint = {
+    name: string
+    schema: string
+    tableName: string
+    type: string
+    columns: ConstraintColumn[]
 }
 
 export type TableColumn = {
@@ -22,7 +39,7 @@ export type TableColumn = {
     default: any
     primary: boolean
     unique: boolean
-    
+
     // expression: string
     references: TableReference[]
 }
