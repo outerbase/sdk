@@ -99,8 +99,6 @@ export class DuckDBConnection implements Connection {
     }
 
     public async fetchDatabaseSchema(): Promise<Database> {
-        let database: Database = []
-
         type DuckDBTables = {
             database: string
             schema: string
@@ -109,6 +107,7 @@ export class DuckDBConnection implements Connection {
             column_types: string[]
             temporary: boolean
         }
+
         type DuckDBSettingsRow = {
             name: string
             value: string
@@ -116,84 +115,102 @@ export class DuckDBConnection implements Connection {
             input_type: string
             scope: string
         }
-        const { data: currentDatabaseResponse, error } = await this.query({
-            query: `SELECT * FROM duckdb_settings();`,
-        })
+
+        type DuckDBTableInfo = {
+            cid: number
+            name: string
+            type: string
+            notnull: boolean
+            dflt_value: string | null
+            pk: boolean
+        }
+
+        const { data: currentDatabaseResponse, error: settingsError } =
+            await this.query({
+                query: `SELECT * FROM duckdb_settings();`,
+            })
+
+        if (settingsError || !currentDatabaseResponse) {
+            throw new Error('Failed to retrieve database settings.')
+        }
 
         const currentDatabase = (currentDatabaseResponse as DuckDBSettingsRow[])
             .find((row) => row.name === 'temp_directory')
-            ?.value.split(':')[1]
-            .split('.')[0]
-        const result = await this.query({
+            ?.value?.split(':')?.[1]
+            ?.split('.')?.[0]
+
+        if (!currentDatabase) {
+            throw new Error('Current database could not be determined.')
+        }
+
+        const { data: result, error: tableError } = await this.query({
             query: `PRAGMA show_tables_expanded;`,
         })
 
-        const tables = result.data as DuckDBTables[]
+        if (tableError || !result) {
+            throw new Error('Failed to retrieve tables.')
+        }
+
+        const tables = result as DuckDBTables[]
         const currentTables = tables.filter(
             (table) => table.database === currentDatabase
         )
-        const schemaMap: { [key: string]: Table[] } = {}
+
+        const schemaMap: Record<string, Record<string, Table>> = {}
 
         for (const table of currentTables) {
-            type DuckDBTableInfo = {
-                cid: number
-                name: string
-                type: string
-                notnull: boolean
-                dflt_value: string | null
-                pk: boolean
+            const { data: tableInfoResult, error: tableInfoError } =
+                await this.query({
+                    query: `PRAGMA table_info('${table.database}.${table.schema}.${table.name}')`,
+                })
+
+            if (tableInfoError || !tableInfoResult) {
+                throw new Error(
+                    `Failed to retrieve table info for table: ${table.name}`
+                )
             }
-            const tableInfoResult = await this.query({
-                query: `PRAGMA table_info('${table.database}.${table.schema}.${table.name}')`,
-            })
 
-            const tableInfo = tableInfoResult.data as DuckDBTableInfo[]
+            const tableInfo = tableInfoResult as DuckDBTableInfo[]
 
-            const constraints: TableIndex[] = []
-            const columns = tableInfo.map((column) => {
+            const indexes: TableIndex[] = []
+            const columns: TableColumn[] = tableInfo.map((column) => {
                 if (column.pk) {
-                    constraints.push({
+                    indexes.push({
                         name: column.name,
                         type: TableIndexType.PRIMARY,
                         columns: [column.name],
                     })
                 }
 
-                const currentColumn: TableColumn = {
+                return {
                     name: column.name,
                     type: column.type,
                     position: column.cid,
-                    nullable: column.notnull,
+                    nullable: !column.notnull,
                     default: column.dflt_value,
                     primary: column.pk,
-                    unique: column.pk,
-                    references: [], // DuckDB currently doesn't have a pragma for foreign keys
+                    unique: column.pk, // Assuming PK is unique
+                    references: [], // Foreign key references not supported by MotherDuck
                 }
-
-                return currentColumn
             })
 
             const currentTable: Table = {
                 name: table.name,
-                schema: table.schema, // Assign schema name to the table
                 columns: columns,
-                indexes: constraints,
+                indexes: indexes,
+                constraints: [], // Constraints are not available in MotherDuck
             }
 
+            // Ensure the schema exists in the schemaMap
             if (!schemaMap[table.schema]) {
-                schemaMap[table.schema] = []
+                schemaMap[table.schema] = {}
             }
 
-            schemaMap[table.schema].push(currentTable)
+            schemaMap[table.schema][table.name] = currentTable
         }
 
-        database = Object.entries(schemaMap).map(([schemaName, tables]) => {
-            return {
-                [schemaName]: tables,
-            }
-        })
-
-        return database
+        // Return the schema map as a properly typed Database object
+        return schemaMap
     }
 
     runQuery = async (

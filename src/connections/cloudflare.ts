@@ -1,17 +1,45 @@
 import { QueryType } from '../query-params'
 import { Query, constructRawQuery } from '../query'
 import { Connection, OperationResponse } from './index'
-import { Database, Schema, Table, TableColumn, TableCondition, TableIndex, TableIndexType } from '../models/database';
-import { equalsNumber, Outerbase } from '../client';
-import { MySQLDialect } from '../query-builder/dialects/mysql';
-import { PostgresDialect } from '../query-builder/dialects/postgres';
-import { DefaultDialect } from '../query-builder/dialects/default';
+import {
+    Constraint,
+    ConstraintColumn,
+    Database,
+    Table,
+    TableColumn,
+    TableIndex,
+    TableIndexType,
+} from '../models/database'
+import { DefaultDialect } from '../query-builder/dialects/default'
+
+interface SuccessResponse {
+    result: Record<string, any>[] // Array of objects representing results
+    success: true
+    meta: {
+        served_by: string
+        duration: number
+        changes: number
+        last_row_id: number
+        changed_db: boolean
+        size_after: number
+        rows_read: number
+        rows_written: number
+    }
+}
+interface ErrorResponse {
+    result: [] // Empty result on error
+    success: false
+    errors: { code: number; message: string }[] // Array of errors
+    messages: any[] // You can adjust this type based on your use case
+}
+
+type APIResponse = SuccessResponse | ErrorResponse
 
 export type CloudflareD1ConnectionDetails = {
-    apiKey: string,
-    accountId: string,
+    apiKey: string
+    accountId: string
     databaseId: string
-};
+}
 
 export class CloudflareD1Connection implements Connection {
     // The Cloudflare API key with D1 access
@@ -34,9 +62,9 @@ export class CloudflareD1Connection implements Connection {
      * @param databaseId - The database ID to be used for querying.
      */
     constructor(private _: CloudflareD1ConnectionDetails) {
-        this.apiKey = _.apiKey;
-        this.accountId = _.accountId;
-        this.databaseId = _.databaseId;
+        this.apiKey = _.apiKey
+        this.accountId = _.accountId
+        this.databaseId = _.databaseId
     }
 
     /**
@@ -48,7 +76,7 @@ export class CloudflareD1Connection implements Connection {
      * @returns Promise<any>
      */
     async connect(): Promise<any> {
-        return Promise.resolve();
+        return Promise.resolve()
     }
 
     /**
@@ -101,89 +129,149 @@ export class CloudflareD1Connection implements Connection {
             }
         )
 
-        let json = await response.json()
-        let error = null
-        const resultArray = (await json?.result) ?? []
-        const items = (await resultArray[0]?.results) ?? []
+        const json: APIResponse = await response.json()
+
+        if (json.success) {
+            const items = json.result[0].results
+            const rawSQL = constructRawQuery(query)
+
+            return {
+                data: items,
+                error: null,
+                query: rawSQL,
+                // There's additional metadata here we could pass in the future
+                // meta: json.meta,
+            }
+        }
+
+        const error = json.errors.map((error) => error.message).join(', ')
         const rawSQL = constructRawQuery(query)
 
         return {
-            data: items,
-            error: error,
+            data: [],
+            error: new Error(error),
             query: rawSQL,
         }
     }
 
     public async fetchDatabaseSchema(): Promise<Database> {
-        const exclude_tables = ['_cf_kv']
-    
-        let database: Database = []
-        const schemaMap: { [key: string]: Table[] } = {}
-    
-        const { data } = await this.query({ query: `SELECT * FROM sqlite_master WHERE type='table' AND name NOT LIKE '_lite%' AND name NOT LIKE 'sqlite_%'` })
-    
-        for (const table of data) {
-            // Skip excluded tables
-            if (exclude_tables.includes(table.name?.toLowerCase())) continue;
-    
-            if (table.type === 'table') {
-                const { data: tableData } = await this.query({ query: `PRAGMA table_info('${table.name}')` })
-    
-                // TODO: This is not returning any data. Need to investigate why.
-                const { data: indexData } = await this.query({ query: `PRAGMA index_list('${table.name}')` })
-    
-                console.log('Table: ', tableData)
-                console.log('Index: ', indexData)
-    
-                let constraints: TableIndex[] = []
-                let columns = tableData.map((column: any) => {
-                    if (column.pk === 1) {
-                        constraints.push({
-                            name: column.name,
-                            type: TableIndexType.PRIMARY,
-                            columns: [column.name]
-                        })
-                    }
-    
-                    const currentColumn: TableColumn = {
-                        name: column.name,
-                        type: column.type,
-                        position: column.cid,
-                        nullable: column.notnull === 0,
-                        default: column.dflt_value,
-                        primary: column.pk === 1,
-                        unique: column.pk === 1,
-                        // TODO: Need to support foreign key references
-                        references: []
-                    }
-    
-                    return currentColumn
-                })
-    
-                let current: Table = {
-                    name: table.name,
-                    columns: columns,
-                    indexes: constraints
-                }
-    
-                // Use the table's schema name (assuming all tables belong to the same schema, e.g., "main")
-                const schemaName = 'main' // Replace with the actual schema name if needed
-    
-                if (!schemaMap[schemaName]) {
-                    schemaMap[schemaName] = []
-                }
-    
-                schemaMap[schemaName].push(current)
-            }
-        }
-    
-        // Transform schemaMap into the final Database structure
-        database = Object.entries(schemaMap).map(([schemaName, tables]) => {
-            return {
-                [schemaName]: tables
-            }
+        const exclude_tables = ['_cf_kv', 'sqlite_schema', 'sqlite_temp_schema']
+
+        const schemaMap: Record<string, Record<string, Table>> = {}
+
+        const { data } = await this.query({
+            query: `PRAGMA table_list`,
         })
-    
-        return database
-    }    
+
+        const allTables = (
+            data as {
+                schema: string
+                name: string
+                type: string
+            }[]
+        ).filter(
+            (row) =>
+                !row.name.startsWith('_lite') &&
+                !row.name.startsWith('sqlite_') &&
+                !exclude_tables.includes(row.name?.toLowerCase())
+        )
+
+        for (const table of allTables) {
+            if (exclude_tables.includes(table.name?.toLowerCase())) continue
+
+            const { data: pragmaData } = await this.query({
+                query: `PRAGMA table_info('${table.name}')`,
+            })
+
+            const tableData = pragmaData as {
+                cid: number
+                name: string
+                type: string
+                notnull: 0 | 1
+                dflt_value: string | null
+                pk: 0 | 1
+            }[]
+
+            const { data: fkConstraintResponse } = await this.query({
+                query: `PRAGMA foreign_key_list('${table.name}')`,
+            })
+
+            const fkConstraintData = (
+                fkConstraintResponse as {
+                    id: number
+                    seq: number
+                    table: string
+                    from: string
+                    to: string
+                    on_update: 'NO ACTION' | unknown
+                    on_delete: 'NO ACTION' | unknown
+                    match: 'NONE' | unknown
+                }[]
+            ).filter(
+                (row) =>
+                    !row.table.startsWith('_lite') &&
+                    !row.table.startsWith('sqlite_')
+            )
+
+            const constraints: Constraint[] = []
+
+            if (fkConstraintData.length > 0) {
+                const fkConstraints: Constraint = {
+                    name: 'FOREIGN KEY',
+                    schema: table.schema,
+                    tableName: table.name,
+                    type: 'FOREIGN KEY',
+                    columns: [],
+                }
+
+                fkConstraintData.forEach((fkConstraint) => {
+                    const currentConstraint: ConstraintColumn = {
+                        columnName: fkConstraint.from,
+                    }
+                    fkConstraints.columns.push(currentConstraint)
+                })
+                constraints.push(fkConstraints)
+            }
+
+            const indexes: TableIndex[] = []
+            const columns = tableData.map((column) => {
+                // Primary keys are ALWAYS considered indexes
+                if (column.pk === 1) {
+                    indexes.push({
+                        name: column.name,
+                        type: TableIndexType.PRIMARY,
+                        columns: [column.name],
+                    })
+                }
+
+                const currentColumn: TableColumn = {
+                    name: column.name,
+                    type: column.type,
+                    position: column.cid,
+                    nullable: column.notnull === 0,
+                    default: column.dflt_value,
+                    primary: column.pk === 1,
+                    unique: column.pk === 1,
+                    references: [],
+                }
+
+                return currentColumn
+            })
+
+            const currentTable: Table = {
+                name: table.name,
+                columns: columns,
+                indexes: indexes,
+                constraints: constraints,
+            }
+
+            if (!schemaMap[table.schema]) {
+                schemaMap[table.schema] = {}
+            }
+
+            schemaMap[table.schema][table.name] = currentTable
+        }
+
+        return schemaMap
+    }
 }

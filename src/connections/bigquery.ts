@@ -107,7 +107,7 @@ export class BigQueryConnection implements Connection {
     }
 
     public async fetchDatabaseSchema(): Promise<Database> {
-        let database: Database = []
+        const database: Database = {}
 
         // Fetch all datasets
         const [datasets] = await this.bigQuery.getDatasets()
@@ -115,20 +115,23 @@ export class BigQueryConnection implements Connection {
             throw new Error('No datasets found in the project.')
         }
 
+        // Iterate over each dataset
         for (const dataset of datasets) {
             const datasetId = dataset.id
-            if (datasetId === undefined) continue
-            // Fetch all tables in the dataset
+            if (!datasetId) continue
+
             const [tables] = await dataset.getTables()
 
-            const schemaMap: { [key: string]: Table[] } = {}
+            if (!database[datasetId]) {
+                database[datasetId] = {} // Initialize schema in the database
+            }
 
             for (const table of tables) {
-                // Fetch table schema (columns)
                 const [metadata] = await table.getMetadata()
+
                 const columns = metadata.schema.fields.map(
-                    (field: any, index: number) => {
-                        const currentColumn: TableColumn = {
+                    (field: any, index: number): TableColumn => {
+                        return {
                             name: field.name,
                             type: field.type,
                             position: index,
@@ -138,29 +141,18 @@ export class BigQueryConnection implements Connection {
                             unique: false, // BigQuery does not have a concept of unique constraints
                             references: [], // BigQuery does not support foreign keys
                         }
-                        return currentColumn
                     }
                 )
 
                 const currentTable: Table = {
                     name: table.id ?? '',
-                    schema: datasetId, // Assign dataset (schema) name to the table
                     columns: columns,
                     indexes: [], // BigQuery does not support indexes
+                    constraints: [], // BigQuery does not support primary keys, foreign keys, or unique constraints
                 }
 
-                if (!schemaMap[datasetId]) {
-                    schemaMap[datasetId] = []
-                }
-
-                schemaMap[datasetId].push(currentTable)
+                database[datasetId][table.id ?? ''] = currentTable
             }
-
-            database = Object.entries(schemaMap).map(([schemaName, tables]) => {
-                return {
-                    [schemaName]: tables,
-                }
-            })
         }
 
         return database
