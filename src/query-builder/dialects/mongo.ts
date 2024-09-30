@@ -50,28 +50,12 @@ export class MongoDialect extends AbstractDialect {
 
         query.query = `db.${fromTable}.find({}, {"projection": {${selectColumns}}})`
 
-        if (joinClauses) {
-            query.query += ` ${joinClauses}`
-        }
-
-        if (builder.whereClauses?.length ?? 0 > 0) {
-            query.query += ` WHERE ${builder?.whereClauses?.join(' AND ')}`
-        }
-
-        if (builder.orderBy !== undefined) {
-            query.query += ` ORDER BY ${builder.orderBy}`
-        }
-
         if (builder.limit !== undefined) {
             query.query += `.limit(${builder.limit})`
         }
 
         if (builder.offset) {
             query.query += `.skip(${builder.offset})`
-        }
-
-        if (builder.groupBy !== undefined) {
-            query.query += ` GROUP BY ${builder.groupBy}`
         }
 
         return query
