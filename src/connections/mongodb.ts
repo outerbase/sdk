@@ -230,9 +230,13 @@ export class MongoDBConnection implements Connection {
 
             // Dynamically run the command with arguments
             const commandName = command.split('(')[0]
-            const result = await this.db.command({ [commandName]: parsedArgs })
 
-            return { stmt: statement, res: [JSON.stringify(result)] }
+            const result = await this.db.command({ [commandName]: parsedArgs })
+            const isBatch = result?.cursor?.firstBatch
+            if (isBatch) {
+                return { stmt: statement, res: result.cursor.firstBatch }
+            } 
+            return { stmt: statement, res: [result] }
         }
 
         const [db, collectionNameFromQuery, ...otherCalls] = parts
@@ -240,8 +244,10 @@ export class MongoDBConnection implements Connection {
 
         if (db !== 'db') throw new Error('Query must begin with db')
 
+        const collectionExists = (await this.db.listCollections().toArray()).some(c => c.name === collectionNameFromQuery)
+        if (!collectionExists) throw new Error(`Collection ${collectionNameFromQuery} does not exist.`)
         const collection = this.db.collection(collectionNameFromQuery)
-
+        
         let cursor = collection
 
         otherCalls.forEach(async (call) => {
@@ -280,6 +286,15 @@ export class MongoDBConnection implements Connection {
             return { stmt: statement, res: result }
         } catch {
             const result = await c
+            try {
+                JSON.stringify(result)
+            } catch (e) {
+                // Converting circular structure to JSON -->
+                // @todo, need to find a better way to handle
+                // This error rather than checking here
+                throw new Error('Invalid query')
+            }
+
             return { stmt: statement, res: result }
         }
     }
