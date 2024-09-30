@@ -138,12 +138,10 @@ export function Outerbase(connection: Connection): OuterbaseType {
         selectFrom(columnsArray) {
             this.queryBuilder = {
                 action: QueryBuilderAction.SELECT,
-                columnsWithTable: [],
+                columnsWithTable: columnsArray,
                 whereClauses: [],
                 joins: [],
             }
-
-            this.queryBuilder.columnsWithTable = columnsArray
 
             return this
         },
@@ -343,7 +341,7 @@ export function Outerbase(connection: Connection): OuterbaseType {
                 connection.queryType,
                 dialect
             )
-
+            
             // If asClass is set, map the response to the class
             if (this.queryBuilder.asClass) {
                 const response = await connection.query(query)
@@ -361,7 +359,7 @@ export function Outerbase(connection: Connection): OuterbaseType {
 
             // Otherwise, if asClass is not set, return the raw response
             let response = await connection.query(query)
-            console.log('The response', response)
+
             return {
                 ...response,
                 query,
