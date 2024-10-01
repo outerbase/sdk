@@ -16,7 +16,9 @@
         "publish-npm-module": "npm publish --access public",
         "prepack": "npm run build",
         "prepare": "husky install",
-        "test": "jest"
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage && npx serve coverage/lcov-report"
     },
     "lint-staged": {
         "**/*.{ts,tsx,js,json,css,scss,md}": [
