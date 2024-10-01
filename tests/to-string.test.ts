@@ -69,7 +69,7 @@ describe('toString', () => {
         })
         const db = Outerbase(connection)
 
-        test.skip('toString – Not reserved keyword "users" is not wrapped in quotes', () => {
+        test('toString – Not reserved keyword "users" is not wrapped in quotes', () => {
             const sql = db
                 .selectFrom([{ table: 'users', columns: ['name'] }])
                 .toString()
