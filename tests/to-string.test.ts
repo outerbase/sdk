@@ -31,7 +31,7 @@ describe('toString', () => {
             )
         })
 
-        test.skip('Select from one table, multiple columns with where clause', () => {
+        test('Select from one table, multiple columns with where clause', () => {
             const sql = db
                 .selectFrom([
                     {
