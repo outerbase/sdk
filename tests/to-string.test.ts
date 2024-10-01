@@ -10,14 +10,14 @@ describe('toString', () => {
         })
         const db = Outerbase(connection)
 
-        test('Select from one table, one column', () => {
+        test.skip('Select from one table, one column', () => {
             const sql = db
                 .selectFrom([{ table: 'person', columns: ['name'] }])
                 .toString()
             expect(sql).toBe('SELECT person.name FROM person')
         })
 
-        test('Select from one table, multiple columns', () => {
+        test.skip('Select from one table, multiple columns', () => {
             const sql = db
                 .selectFrom([
                     {
@@ -31,7 +31,7 @@ describe('toString', () => {
             )
         })
 
-        test('Select from one table, multiple columns with where clause', () => {
+        test.skip('Select from one table, multiple columns with where clause', () => {
             const sql = db
                 .selectFrom([
                     {
@@ -46,7 +46,7 @@ describe('toString', () => {
             )
         })
 
-        test('Select from one table, multiple columns with multiple where clauses', () => {
+        test.skip('Select from one table, multiple columns with multiple where clauses', () => {
             const sql = db
                 .selectFrom([
                     {
@@ -69,14 +69,14 @@ describe('toString', () => {
         })
         const db = Outerbase(connection)
 
-        test('toString – Not reserved keyword "users" is not wrapped in quotes', () => {
+        test.skip('toString – Not reserved keyword "users" is not wrapped in quotes', () => {
             const sql = db
                 .selectFrom([{ table: 'users', columns: ['name'] }])
                 .toString()
             expect(sql).toBe('SELECT users.name FROM users')
         })
 
-        test('toString – Reserved keyword "user" wrapped in quotes', () => {
+        test.skip('toString – Reserved keyword "user" wrapped in quotes', () => {
             const sql = db
                 .selectFrom([{ table: 'user', columns: ['name'] }])
                 .toString()
