@@ -10,7 +10,7 @@ describe('toString', () => {
         })
         const db = Outerbase(connection)
 
-        test.skip('Select from one table, one column', () => {
+        test('Select from one table, one column', () => {
             const sql = db
                 .selectFrom([{ table: 'person', columns: ['name'] }])
                 .toString()
