@@ -17,7 +17,7 @@ describe('toString', () => {
             expect(sql).toBe('SELECT person.name FROM person')
         })
 
-        test.skip('Select from one table, multiple columns', () => {
+        test('Select from one table, multiple columns', () => {
             const sql = db
                 .selectFrom([
                     {
