@@ -212,6 +212,7 @@ export abstract class AbstractDialect implements Dialect {
         'VALUES',
         'VIEW',
         'WHERE',
+        'USER'
     ]
 
     /**
@@ -227,9 +228,12 @@ export abstract class AbstractDialect implements Dialect {
      * @returns The formatted schema and table combination.
      */
     formatSchemaAndTable(schema: string | undefined, table: string): string {
+        table = this.reservedKeywords.includes(table.toUpperCase()) ? `"${table}"` : table
+
         if (schema) {
             return `"${schema}".${table}`
         }
+        
         return table
     }
 
@@ -249,6 +253,7 @@ export abstract class AbstractDialect implements Dialect {
         schema: string | undefined,
         table: string
     ): string {
+        table = this.reservedKeywords.includes(table.toUpperCase()) ? `"${table}"` : table
         if (schema) {
             return `"${schema}".${table}`
         }
@@ -276,7 +281,7 @@ export abstract class AbstractDialect implements Dialect {
             const columns = set.columns.map((column) => {
                 let useColumn = column
 
-                if (this.reservedKeywords.includes(column)) {
+                if (this.reservedKeywords.includes(column.toUpperCase())) {
                     useColumn = `"${column}"`
                 }
 

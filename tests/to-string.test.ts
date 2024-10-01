@@ -76,7 +76,7 @@ describe('toString', () => {
             expect(sql).toBe('SELECT users.name FROM users')
         })
 
-        test.skip('toString – Reserved keyword "user" wrapped in quotes', () => {
+        test('toString – Reserved keyword "user" wrapped in quotes', () => {
             const sql = db
                 .selectFrom([{ table: 'user', columns: ['name'] }])
                 .toString()
