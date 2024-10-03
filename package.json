@@ -35,6 +35,7 @@
         "@neondatabase/serverless": "^0.9.3",
         "duckdb": "^1.0.0",
         "handlebars": "^4.7.8",
+        "mongodb": "^6.9.0",
         "ws": "^8.17.1"
     },
     "devDependencies": {
