@@ -14,4 +14,12 @@ module.exports = {
     moduleDirectories: ['node_modules', 'src'],
     modulePaths: ['<rootDir>'],
     setupFiles: ['<rootDir>/jest.setup.js'],
+    coverageThreshold: {
+        global: {
+            branches: 4,
+            functions: 6,
+            lines: 21,
+            statements: 20
+        }
+    }
 }
