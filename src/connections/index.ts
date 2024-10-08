@@ -9,6 +9,12 @@ export type OperationResponse = {
     error: Error | null
 }
 
+export interface QueryResult<T = Record<string, unknown>> {
+    data: T[]
+    error: Error | null
+    query: string
+}
+
 export interface Connection {
     queryType: QueryType
     dialect: AbstractDialect
@@ -18,9 +24,9 @@ export interface Connection {
     disconnect: () => Promise<any>
 
     // Raw query execution method that can be used to execute any query.
-    query: (
+    query: <T = Record<string, unknown>>(
         query: Query
-    ) => Promise<{ data: any; error: Error | null; query: string }>
+    ) => Promise<QueryResult<T>>
 
     // Retrieve metadata about the database, useful for introspection.
     fetchDatabaseSchema?: () => Promise<Database>
