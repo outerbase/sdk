@@ -24,7 +24,7 @@ jobs:
               run: npm test
 
     test_postgre:
-        name: 'Postgres Connection Test'
+        name: 'Postgres Connection'
         runs-on: ubuntu-latest
         needs: build
 
@@ -49,9 +49,41 @@ jobs:
 
             - name: Run tests
               env:
+                  CONNECTION_TYPE: postgres
                   POSTGRES_HOST: localhost
                   POSTGRES_DB: postgres
                   POSTGRES_USER: postgres
                   POSTGRES_PASSWORD: 123456
                   POSTGRES_PORT: 5432
+              run: npm run test:connection
+
+    test_mysql:
+        name: 'MySQL Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        services:
+            mysql:
+                image: mysql:8.0
+                env:
+                    MYSQL_DATABASE: testdb
+                    MYSQL_ROOT_PASSWORD: 123456
+                ports:
+                    - 3306:3306
+                options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: mysql
+                  MYSQL_HOST: localhost
+                  MYSQL_DB: testdb
+                  MYSQL_USER: root
+                  MYSQL_PASSWORD: 123456
+                  MYSQL_PORT: 3306
               run: npm run test:connection

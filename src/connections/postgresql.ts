@@ -27,7 +27,9 @@ export class PostgreSQLConnection implements Connection {
         await this.client.end();
     }
 
-    async query(query: Query): Promise<QueryResult> {
+    async query<T = Record<string, unknown>>(
+        query: Query
+    ): Promise<QueryResult<T>> {
         const { rows } = await this.client.query(
             replacePlaceholders(query.query),
             query.parameters as unknown[]
