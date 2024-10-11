@@ -1,5 +1,6 @@
 import { QueryType } from '../query-params';
 import {
+    OrderByClause,
     QueryBuilderInternal,
     QueryPart,
     WhereClaues,
@@ -160,6 +161,16 @@ export abstract class AbstractDialect implements Dialect {
         return ['SET ' + setClauses.join(', '), bindings];
     }
 
+    protected buildOrderPart(orderBy: OrderByClause[]): QueryPart {
+        if (orderBy.length === 0) return ['', []];
+
+        const orderClauses = orderBy.map((clause) => {
+            return `${this.escapeId(clause.columnName)}${clause.direction === 'ASC' ? '' : ' DESC'}`;
+        });
+
+        return ['ORDER BY ' + orderClauses.join(', '), []];
+    }
+
     protected buildInsertValuesPart(data: Record<string, unknown>): QueryPart {
         const columns = Object.keys(data);
         const bindings: unknown[] = [];
@@ -190,6 +201,7 @@ export abstract class AbstractDialect implements Dialect {
                 this.buildSelectPart(builder.selectColumns),
                 [`FROM ${this.escapeId(tableName)}`, []],
                 this.buildWherePart(builder.whereClauses),
+                this.buildOrderPart(builder.orderBy),
                 this.buildLimitPart(builder.limit, builder.offset),
             ],
             ' '

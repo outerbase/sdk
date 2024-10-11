@@ -155,6 +155,21 @@ describe('Query Builder - Postgre Dialect', () => {
         expect(parameters).toEqual([18, 'female']);
     });
 
+    test('Select with where, order by and limit', () => {
+        const { query, parameters } = qb()
+            .select('id', 'name')
+            .from('users')
+            .where('age', '>', 18)
+            .orderBy('age', 'DESC')
+            .limit(10)
+            .toQuery();
+
+        expect(query).toBe(
+            `SELECT "id", "name" FROM "users" WHERE "age" > ? ORDER BY "age" DESC LIMIT ?`
+        );
+        expect(parameters).toEqual([18, 10]);
+    });
+
     test('Update query without where condition', () => {
         const { query, parameters } = qb()
             .update({ last_name: 'Visal', first_name: 'In' })
@@ -227,5 +242,10 @@ describe('Query Builder - Postgre Dialect', () => {
         expect(query).toBe(
             'CREATE TABLE IF NOT EXISTS "persons" ("id" SERIAL PRIMARY KEY, "first_name" VARCHAR(50), "last_name" VARCHAR(50))'
         );
+    });
+
+    test('Drop table', () => {
+        const { query } = qb().dropTable('persons').toQuery();
+        expect(query).toBe('DROP TABLE IF EXISTS "persons"');
     });
 });

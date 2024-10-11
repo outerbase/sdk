@@ -37,6 +37,11 @@ export interface WhereClaues {
 
 export type WhereGenerator = () => WhereClaues;
 
+export interface OrderByClause {
+    columnName: string;
+    direction: 'ASC' | 'DESC';
+}
+
 export interface QueryBuilderInternal {
     action: QueryBuilderAction;
     // Sets the focused schema name, used for INSERT, UPDATE, DELETE
@@ -61,7 +66,7 @@ export interface QueryBuilderInternal {
     data?: Record<string, unknown>;
     limit?: number;
     offset?: number;
-    orderBy: { columnName: string; direction: 'ASC' | 'DESC' }[];
+    orderBy: OrderByClause[];
     returning?: string[];
     asClass?: any;
     groupBy?: string;
@@ -378,15 +383,10 @@ function buildQueryString(
     switch (queryBuilder.action) {
         case QueryBuilderAction.SELECT:
             return dialect.select(queryBuilder);
-            break;
         case QueryBuilderAction.INSERT:
-            query.query = dialect.insert(queryBuilder).query;
-            query.parameters = dialect.insert(queryBuilder).parameters;
-            break;
+            return dialect.insert(queryBuilder);
         case QueryBuilderAction.UPDATE:
-            query.query = dialect.update(queryBuilder).query;
-            query.parameters = dialect.update(queryBuilder).parameters;
-            break;
+            return dialect.update(queryBuilder);
         // case QueryBuilderAction.DELETE:
         //     query.query = dialect.delete(queryBuilder, queryType, query).query;
         //     query.parameters = dialect.delete(
@@ -399,7 +399,6 @@ function buildQueryString(
             return dialect.createTable(queryBuilder);
         case QueryBuilderAction.DELETE_TABLE:
             return dialect.dropTable(queryBuilder);
-            break;
         // case QueryBuilderAction.RENAME_TABLE:
         //     query.query = dialect.renameTable(
         //         queryBuilder,

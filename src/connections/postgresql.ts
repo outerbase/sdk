@@ -31,7 +31,9 @@ export class PostgreSQLConnection implements Connection {
         query: Query
     ): Promise<QueryResult<T>> {
         const { rows } = await this.client.query(
-            replacePlaceholders(query.query),
+            query.parameters?.length === 0
+                ? query.query
+                : replacePlaceholders(query.query),
             query.parameters as unknown[]
         );
 
