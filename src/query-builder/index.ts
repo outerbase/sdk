@@ -1,4 +1,3 @@
-import { QueryType } from '../query-params';
 import {
     OrderByClause,
     QueryBuilderInternal,
@@ -16,6 +15,7 @@ interface Dialect {
     // delete(builder: QueryBuilderInternal): Query;
     createTable(builder: QueryBuilderInternal): Query;
     dropTable(builder: QueryBuilderInternal): Query;
+    renameColumn(builder: QueryBuilderInternal): Query;
 }
 
 export enum ColumnDataType {
@@ -316,6 +316,35 @@ export abstract class AbstractDialect implements Dialect {
 
         return {
             query: `DROP TABLE IF EXISTS ${this.escapeId(tableName)}`,
+            parameters: [],
+        };
+    }
+
+    renameColumn(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+
+        if (!tableName) {
+            throw new Error(
+                'Table name is required to build a CREATE TABLE query.'
+            );
+        }
+
+        if (builder.columns.length !== 1) {
+            throw new Error('Exactly one column is required to rename.');
+        }
+
+        const column = builder.columns[0];
+
+        if (!column.oldName) {
+            throw new Error('Old column name is required to rename.');
+        }
+
+        if (!column.newName) {
+            throw new Error('New column name is required to rename.');
+        }
+
+        return {
+            query: `ALTER TABLE ${this.escapeId(tableName)} RENAME COLUMN ${this.escapeId(column.oldName)} TO ${this.escapeId(column.newName)}`,
             parameters: [],
         };
     }

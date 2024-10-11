@@ -61,6 +61,7 @@ export interface QueryBuilderInternal {
         oldName?: string;
         newName?: string;
     }[];
+
     whereClauses: WhereClaues;
     joins?: string[];
     data?: Record<string, unknown>;
@@ -304,6 +305,34 @@ class QueryBuilderDropTable extends IQueryBuilder {
     }
 }
 
+class QueryBuilderAlterTable extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(
+        QueryBuilderAction.ALTER_TABLE
+    );
+
+    constructor(connection: Connection, tableName: string) {
+        super(connection);
+        this.state.table = tableName;
+    }
+
+    renameTable(newTableName: string) {
+        this.state.originalValue = this.state.table;
+        this.state.newValue = newTableName;
+        return this;
+    }
+
+    renameColumn(columnName: string, newColumnName: string) {
+        this.state.action = QueryBuilderAction.RENAME_COLUMNS;
+        this.state.columns = [
+            {
+                oldName: columnName,
+                newName: newColumnName,
+            },
+        ];
+        return this;
+    }
+}
+
 class QueryBuilder {
     connection: Connection;
 
@@ -329,6 +358,10 @@ class QueryBuilder {
 
     dropTable(tableName: string) {
         return new QueryBuilderDropTable(this.connection, tableName);
+    }
+
+    alterTable(tableName: string) {
+        return new QueryBuilderAlterTable(this.connection, tableName);
     }
 
     or(
@@ -421,13 +454,8 @@ function buildQueryString(
         //         query
         //     ).query;
         //     break;
-        // case QueryBuilderAction.RENAME_COLUMNS:
-        //     query.query = dialect.renameColumn(
-        //         queryBuilder,
-        //         queryType,
-        //         query
-        //     ).query;
-        //     break;
+        case QueryBuilderAction.RENAME_COLUMNS:
+            return dialect.renameColumn(queryBuilder);
         // case QueryBuilderAction.UPDATE_COLUMNS:
         //     query.query = dialect.updateColumn(
         //         queryBuilder,

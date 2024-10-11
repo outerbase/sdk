@@ -102,4 +102,22 @@ describe('Database Connection', () => {
             { id: 2, name: 'Outerbase', age: 30 },
         ]);
     });
+
+    test('Rename table column', async () => {
+        await qb
+            .alterTable('persons')
+            .renameColumn('name', 'full_name')
+            .query();
+
+        const { data } = await qb
+            .select()
+            .from('persons')
+            .orderBy('id')
+            .query();
+
+        expect(data).toEqual([
+            { id: 1, full_name: 'Visal In', age: 25 },
+            { id: 2, full_name: 'Outerbase', age: 30 },
+        ]);
+    });
 });

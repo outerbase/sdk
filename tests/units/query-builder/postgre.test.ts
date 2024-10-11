@@ -248,4 +248,15 @@ describe('Query Builder - Postgre Dialect', () => {
         const { query } = qb().dropTable('persons').toQuery();
         expect(query).toBe('DROP TABLE IF EXISTS "persons"');
     });
+
+    test('Rename column', () => {
+        const { query } = qb()
+            .alterTable('persons')
+            .renameColumn('first_name', 'full_name')
+            .toQuery();
+
+        expect(query).toBe(
+            'ALTER TABLE "persons" RENAME COLUMN "first_name" TO "full_name"'
+        );
+    });
 });
