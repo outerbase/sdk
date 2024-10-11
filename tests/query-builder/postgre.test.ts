@@ -214,4 +214,18 @@ describe('Query Builder - Postgre Dialect', () => {
             qb().insert({ first_name: undefined }).into('persons').toQuery();
         }).toThrowError();
     });
+
+    test('Create table', () => {
+        // Create table test for postgresql
+        const { query } = qb()
+            .createTable('persons')
+            .column('id', 'SERIAL', { primaryKey: true })
+            .column('first_name', 'VARCHAR(50)')
+            .column('last_name', 'VARCHAR(50)')
+            .toQuery();
+
+        expect(query).toBe(
+            'CREATE TABLE IF NOT EXISTS "persons" ("id" SERIAL PRIMARY KEY, "first_name" VARCHAR(50), "last_name" VARCHAR(50))'
+        );
+    });
 });

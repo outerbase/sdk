@@ -47,8 +47,9 @@ export interface QueryBuilderInternal {
     selectColumns: string[];
 
     // Used when column names and type are required, such as CREATE TABLE
-    columns?: {
+    columns: {
         default?: string;
+        primaryKey?: boolean;
         nullable?: boolean;
         name?: string;
         type?: ColumnDataType | string;
@@ -167,6 +168,7 @@ function createBlankState(action: QueryBuilderAction): QueryBuilderInternal {
         whereClauses: { joinType: 'AND', conditions: [] },
         selectColumns: [],
         orderBy: [],
+        columns: [],
     };
 }
 
@@ -256,6 +258,31 @@ class QueryBuilderUpdate extends IQueryBuilder {
     }
 }
 
+class QueryBuilderCreateTable extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(
+        QueryBuilderAction.CREATE_TABLE
+    );
+
+    constructor(connection: Connection, tableName: string) {
+        super(connection);
+        this.state.table = tableName;
+    }
+
+    column(
+        columnName: string,
+        type: string,
+        options?: { nullable?: boolean; default?: string; primaryKey?: boolean }
+    ) {
+        this.state.columns.push({
+            name: columnName,
+            type,
+            nullable: true, // Most database when creating a table, the column is nullable by default
+            ...options,
+        });
+        return this;
+    }
+}
+
 class QueryBuilder {
     connection: Connection;
 
@@ -273,6 +300,10 @@ class QueryBuilder {
 
     update(data: Record<string, unknown>) {
         return new QueryBuilderUpdate(this.connection, data);
+    }
+
+    createTable(tableName: string) {
+        return new QueryBuilderCreateTable(this.connection, tableName);
     }
 
     or(
@@ -344,18 +375,8 @@ function buildQueryString(
         //         query
         //     ).parameters;
         //     break;
-        // case QueryBuilderAction.CREATE_TABLE:
-        //     query.query = dialect.createTable(
-        //         queryBuilder,
-        //         queryType,
-        //         query
-        //     ).query;
-        //     query.parameters = dialect.createTable(
-        //         queryBuilder,
-        //         queryType,
-        //         query
-        //     ).parameters;
-        //     break;
+        case QueryBuilderAction.CREATE_TABLE:
+            return dialect.createTable(queryBuilder);
         // case QueryBuilderAction.DELETE_TABLE:
         //     query.query = dialect.dropTable(
         //         queryBuilder,

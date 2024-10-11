@@ -13,6 +13,7 @@ interface Dialect {
     insert(builder: QueryBuilderInternal): Query;
     update(builder: QueryBuilderInternal): Query;
     // delete(builder: QueryBuilderInternal): Query;
+    createTable(builder: QueryBuilderInternal): Query;
 }
 
 export enum ColumnDataType {
@@ -252,6 +253,43 @@ export abstract class AbstractDialect implements Dialect {
             query: combinedParts[0],
             parameters: combinedParts[1],
         };
+    }
+
+    createTable(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+
+        if (!tableName) {
+            throw new Error(
+                'Table name is required to build a CREATE TABLE query.'
+            );
+        }
+
+        const columns =
+            builder?.columns?.map((column) => {
+                if (!column.type)
+                    throw new Error('Column type is required to create table.');
+
+                if (!column.name)
+                    throw new Error('Column name is required to create table.');
+
+                return [
+                    this.escapeId(column.name),
+                    column.type,
+                    !column.nullable ? 'NOT NULL' : '',
+                    column.primaryKey ? 'PRIMARY KEY' : '',
+                    column.default ? `DEFAULT ${column.default}` : '',
+                ]
+                    .filter(Boolean)
+                    .join(' ');
+            }) ?? [];
+
+        const query = [
+            'CREATE TABLE IF NOT EXISTS',
+            this.escapeId(tableName),
+            `(${columns.join(', ')})`,
+        ].join(' ');
+
+        return { query, parameters: [] };
     }
 
     // delete(
