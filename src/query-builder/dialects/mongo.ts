@@ -1,285 +1,326 @@
-import { QueryType } from '../../query-params'
-import { QueryBuilder } from '../../client'
-import { Query } from '../../query'
-import { MongoClient, Collection, ObjectId } from 'mongodb'
-import { AbstractDialect, ColumnDataType } from '../index'
+// import { QueryType } from '../../query-params';
+// import { QueryBuilderInternal } from '../../client';
+// import { Query } from '../../query';
+// import { MongoClient, Collection, ObjectId } from 'mongodb';
+// import { AbstractDialect, ColumnDataType } from '../index';
 
-export class MongoDialect extends AbstractDialect {
-    reservedKeywords: string[] = []
-    // protected sqlFunctions: { [key: string]: (...args: string[]) => string }
+// export class MongoDialect extends AbstractDialect {
+//     reservedKeywords: string[] = [];
+//     // protected sqlFunctions: { [key: string]: (...args: string[]) => string }
 
-    getFunction(funcName: string): (...args: string[]) => string {
-        throw new Error('Method not implemented.')
-    }
-    protected addFunction(
-        funcName: string,
-        implementation: (...args: string[]) => string
-    ): void {
-        throw new Error('Method not implemented.')
-    }
-    mapDataType(dataType: ColumnDataType | string): string {
-        throw new Error('Method not implemented.')
-    }
+//     getFunction(funcName: string): (...args: string[]) => string {
+//         throw new Error('Method not implemented.');
+//     }
+//     protected addFunction(
+//         funcName: string,
+//         implementation: (...args: string[]) => string
+//     ): void {
+//         throw new Error('Method not implemented.');
+//     }
+//     mapDataType(dataType: ColumnDataType | string): string {
+//         throw new Error('Method not implemented.');
+//     }
 
-    formatSchemaAndTable(schema: string | undefined, table: string): string {
-        throw new Error('Method not implemented.')
-    }
+//     formatSchemaAndTable(schema: string | undefined, table: string): string {
+//         throw new Error('Method not implemented.');
+//     }
 
-    formatFromSchemaAndTable(
-        schema: string | undefined,
-        table: string
-    ): string {
-        throw new Error('Method not implemented.')
-    }
-    select(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        let selectColumns = ''
-        let fromTable = ''
+//     formatFromSchemaAndTable(
+//         schema: string | undefined,
+//         table: string
+//     ): string {
+//         throw new Error('Method not implemented.');
+//     }
+//     select(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         let selectColumns = '';
+//         let fromTable = '';
 
-        const joinClauses = builder.joins?.join(' ') || ''
+//         const joinClauses = builder.joins?.join(' ') || '';
 
-        builder.columnsWithTable?.forEach((set, index) => {
-            // Some people who use sql might want to use *,
-            // By passing no value into projection it selects all.
-            selectColumns += set.columns
-                .filter((x) => x && x !== '*')
-                .map((columnName) => `"${columnName}": 1,`)
-            // Remove last ,
-            selectColumns = selectColumns.slice(0, -1)
-            fromTable += set.table
-        })
+//         // builder.columnsWithTable?.forEach((set, index) => {
+//         //     // Some people who use sql might want to use *,
+//         //     // By passing no value into projection it selects all.
+//         //     selectColumns += set.columns
+//         //         .filter((x) => x && x !== '*')
+//         //         .map((columnName) => `"${columnName}": 1,`)
+//         //     // Remove last ,
+//         //     selectColumns = selectColumns.slice(0, -1)
+//         //     fromTable += set.table
+//         // })
 
-        query.query = `db.${fromTable}.find({}, {"projection": {${selectColumns}}})`
+//         query.query = `db.${fromTable}.find({}, {"projection": {${selectColumns}}})`;
 
-        if (builder.limit !== undefined) {
-            query.query += `.limit(${builder.limit})`
-        }
+//         if (builder.limit !== undefined) {
+//             query.query += `.limit(${builder.limit})`;
+//         }
 
-        if (builder.offset) {
-            query.query += `.skip(${builder.offset})`
-        }
+//         if (builder.offset) {
+//             query.query += `.skip(${builder.offset})`;
+//         }
 
-        return query
-    }
+//         return query;
+//     }
 
-    insert(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        const columns = Object.keys(builder.data || {})
-        const placeholders =
-            type === QueryType.named
-                ? columns.map((column) => `:${column}`).join(', ')
-                : columns.map(() => '?').join(', ')
+//     insert(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         const columns = Object.keys(builder.data || {});
+//         const placeholders =
+//             type === QueryType.named
+//                 ? columns.map((column) => `:${column}`).join(', ')
+//                 : columns.map(() => '?').join(', ');
 
-        query.query = `db.${builder.table}.insertOne(${JSON.stringify(builder.data)})`
+//         query.query = `db.${builder.table}.insertOne(${JSON.stringify(builder.data)})`;
 
-        if (type === QueryType.named) {
-            query.parameters = builder.data ?? {}
-        } else {
-            query.parameters = Object.values(builder.data ?? {})
-        }
+//         if (type === QueryType.named) {
+//             query.parameters = builder.data ?? {};
+//         } else {
+//             query.parameters = Object.values(builder.data ?? {});
+//         }
 
-        return query
-    }
+//         return query;
+//     }
 
-    update(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        if (!builder.whereClauses || builder.whereClauses.length === 0) {
-            throw new Error('Update operation requires a condition');
-        }
-    
-        if (!builder.data || Object.keys(builder.data).length === 0) {
-            throw new Error('Update operation requires data to update');
-        }
-    
-        const whereObject = {} as any;
-        builder.whereClauses.forEach((obj) => {
-            const t = obj as any;
-            const key = Object.keys(obj)[0];
-            const value = t[key];
-            whereObject[key] = value;
-        });
-    
-        const updateObject = {
-            $set: builder.data
-        };
-    
-        query.query = `db.${builder.table}.updateOne(${JSON.stringify(whereObject)}, ${JSON.stringify(updateObject)})`;
-    
-        return query;
-    }
-    
+//     update(
+//         builder: QueryBuilderInternal,
+//     ): Query {
+//         // if (!builder.whereClauses || builder.whereClauses.length === 0) {
+//         //     throw new Error('Update operation requires a condition')
+//         // }
 
-    delete(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        if (!builder.whereClauses || builder.whereClauses.length === 0) {
-            throw new Error('Delete operation requires a condition')
-        }
+//         if (!builder.data || Object.keys(builder.data).length === 0) {
+//             throw new Error('Update operation requires data to update');
+//         }
 
-        // Pass in ObjectId as a string
-        // We will parse the actual function in the connection
-        const whereObject = {} as any
-        builder.whereClauses.forEach((obj) => {
-            const t = obj as any
-            const key = Object.keys(obj)[0]
-            const value = t[key]
-            whereObject[key] = value
-        })
+//         const whereObject = {} as any;
+//         // builder.whereClauses.forEach((obj) => {
+//         //     const t = obj as any
+//         //     const key = Object.keys(obj)[0]
+//         //     const value = t[key]
+//         //     whereObject[key] = value
+//         // })
 
-        query.query = `db.${builder.table}.deleteOne(${JSON.stringify(whereObject)})`
+//         const updateObject = {
+//             $set: builder.data,
+//         };
 
-        return query
-    }
-    createTable(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        throw new Error('Method not implemented.')
-    }
-    dropTable(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        throw new Error('Method not implemented.')
-    }
-    addColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        throw new Error('Method not implemented.')
-    }
-    dropColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        throw new Error('Method not implemented.')
-    }
-    renameColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        throw new Error('Method not implemented.')
-    }
-    updateColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        throw new Error('Method not implemented.')
-    }
-    renameTable(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        throw new Error('Method not implemented.')
-    }
-    // MongoDB query operator mappings
-    equals(a: any, b: string): any {
-        return { [a]: { $eq: b } }
-    }
+//         query.query = `db.${builder.table}.updateOne(${JSON.stringify(whereObject)}, ${JSON.stringify(updateObject)})`;
 
-    equalsNumber(a: any, b: any): any {
-        return { [a]: { $eq: b } }
-    }
+//         return query;
+//     }
 
-    equalsColumn(a: any, b: any): any {
-        return { [a]: { $eq: b } }
-    }
+//     delete(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         // if (!builder.whereClauses || builder.whereClauses.length === 0) {
+//         //     throw new Error('Delete operation requires a condition')
+//         // }
 
-    notEquals(a: any, b: string): any {
-        return { [a]: { $ne: b } }
-    }
+//         // Pass in ObjectId as a string
+//         // We will parse the actual function in the connection
+//         const whereObject = {} as any;
+//         // builder.whereClauses.forEach((obj) => {
+//         //     const t = obj as any
+//         //     const key = Object.keys(obj)[0]
+//         //     const value = t[key]
+//         //     whereObject[key] = value
+//         // })
 
-    notEqualsNumber(a: any, b: any): any {
-        return { [a]: { $ne: b } }
-    }
+//         query.query = `db.${builder.table}.deleteOne(${JSON.stringify(whereObject)})`;
 
-    notEqualsColumn(a: any, b: any): any {
-        return { [a]: { $ne: b } }
-    }
+//         return query;
+//     }
+//     createTable(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         throw new Error('Method not implemented.');
+//     }
+//     dropTable(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         throw new Error('Method not implemented.');
+//     }
+//     addColumn(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         throw new Error('Method not implemented.');
+//     }
+//     dropColumn(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         throw new Error('Method not implemented.');
+//     }
+//     renameColumn(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         throw new Error('Method not implemented.');
+//     }
+//     updateColumn(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         throw new Error('Method not implemented.');
+//     }
+//     renameTable(
+//         builder: QueryBuilderInternal,
+//         type: QueryType,
+//         query: Query
+//     ): Query {
+//         throw new Error('Method not implemented.');
+//     }
+//     // MongoDB query operator mappings
+//     equals(a: any, b: string): any {
+//         return { [a]: { $eq: b } };
+//     }
 
-    greaterThan(a: any, b: string): any {
-        return { [a]: { $gt: b } }
-    }
+//     equalsNumber(a: any, b: any): any {
+//         return { [a]: { $eq: b } };
+//     }
 
-    greaterThanNumber(a: any, b: any): any {
-        return { [a]: { $gt: b } }
-    }
+//     equalsColumn(a: any, b: any): any {
+//         return { [a]: { $eq: b } };
+//     }
 
-    lessThan(a: any, b: string): any {
-        return { [a]: { $lt: b } }
-    }
+//     notEquals(a: any, b: string): any {
+//         return { [a]: { $ne: b } };
+//     }
 
-    lessThanNumber(a: any, b: any): any {
-        return { [a]: { $lt: b } }
-    }
+//     notEqualsNumber(a: any, b: any): any {
+//         return { [a]: { $ne: b } };
+//     }
 
-    greaterThanOrEqual(a: any, b: string): any {
-        return { [a]: { $gte: b } }
-    }
+//     notEqualsColumn(a: any, b: any): any {
+//         return { [a]: { $ne: b } };
+//     }
 
-    greaterThanOrEqualNumber(a: any, b: any): any {
-        return { [a]: { $gte: b } }
-    }
+//     greaterThan(a: any, b: string): any {
+//         return { [a]: { $gt: b } };
+//     }
 
-    lessThanOrEqual(a: any, b: string): any {
-        return { [a]: { $lte: b } }
-    }
+//     greaterThanNumber(a: any, b: any): any {
+//         return { [a]: { $gt: b } };
+//     }
 
-    lessThanOrEqualNumber(a: any, b: any): any {
-        return { [a]: { $lte: b } }
-    }
+//     lessThan(a: any, b: string): any {
+//         return { [a]: { $lt: b } };
+//     }
 
-    inValues(a: any, b: any[]): any {
-        return { [a]: { $in: b } }
-    }
+//     lessThanNumber(a: any, b: any): any {
+//         return { [a]: { $lt: b } };
+//     }
 
-    inNumbers(a: any, b: any[]): any {
-        return { [a]: { $in: b } }
-    }
+//     greaterThanOrEqual(a: any, b: string): any {
+//         return { [a]: { $gte: b } };
+//     }
 
-    notInValues(a: any, b: any[]): any {
-        return { [a]: { $nin: b } }
-    }
+//     greaterThanOrEqualNumber(a: any, b: any): any {
+//         return { [a]: { $gte: b } };
+//     }
 
-    notInNumbers(a: any, b: any[]): any {
-        return { [a]: { $nin: b } }
-    }
+//     lessThanOrEqual(a: any, b: string): any {
+//         return { [a]: { $lte: b } };
+//     }
 
-    is(current: any, a: any, b: string | null): any {
-        return b === null ? { [a]: { $exists: false } } : { [a]: b }
-    }
+//     lessThanOrEqualNumber(a: any, b: any): any {
+//         return { [a]: { $lte: b } };
+//     }
 
-    isNumber(a: any, b: any): any {
-        return { [a]: b }
-    }
+//     inValues(a: any, b: any[]): any {
+//         return { [a]: { $in: b } };
+//     }
 
-    isNot(current: any, a: any, b: null): any {
-        return b === null ? { [a]: { $exists: true } } : { [a]: { $ne: b } }
-    }
+//     inNumbers(a: any, b: any[]): any {
+//         return { [a]: { $in: b } };
+//     }
 
-    isNotNumber(a: any, b: any): any {
-        return { [a]: { $ne: b } }
-    }
+//     notInValues(a: any, b: any[]): any {
+//         return { [a]: { $nin: b } };
+//     }
 
-    like(a: any, b: string): any {
-        return { [a]: { $regex: b, $options: 'i' } }
-    }
+//     notInNumbers(a: any, b: any[]): any {
+//         return { [a]: { $nin: b } };
+//     }
 
-    notLike(a: any, b: string): any {
-        return { [a]: { $not: { $regex: b, $options: 'i' } } }
-    }
+//     is(current: any, a: any, b: string | null): any {
+//         return b === null ? { [a]: { $exists: false } } : { [a]: b };
+//     }
 
-    ilike(a: any, b: string): any {
-        return { [a]: { $regex: b, $options: 'i' } }
-    }
+//     isNumber(a: any, b: any): any {
+//         return { [a]: b };
+//     }
 
-    notILike(a: any, b: string): any {
-        return { [a]: { $not: { $regex: b, $options: 'i' } } }
-    }
+//     isNot(current: any, a: any, b: null): any {
+//         return b === null ? { [a]: { $exists: true } } : { [a]: { $ne: b } };
+//     }
 
-    isNull(a: any): any {
-        return { [a]: { $exists: false } }
-    }
+//     isNotNumber(a: any, b: any): any {
+//         return { [a]: { $ne: b } };
+//     }
 
-    isNotNull(a: any): any {
-        return { [a]: { $exists: true } }
-    }
+//     like(a: any, b: string): any {
+//         return { [a]: { $regex: b, $options: 'i' } };
+//     }
 
-    between(a: any, b: string, c: string): any {
-        return { [a]: { $gte: b, $lte: c } }
-    }
+//     notLike(a: any, b: string): any {
+//         return { [a]: { $not: { $regex: b, $options: 'i' } } };
+//     }
 
-    betweenNumbers(a: any, b: any, c: any): any {
-        return { [a]: { $gte: b, $lte: c } }
-    }
+//     ilike(a: any, b: string): any {
+//         return { [a]: { $regex: b, $options: 'i' } };
+//     }
 
-    notBetween(a: any, b: string, c: string): any {
-        return { [a]: { $not: { $gte: b, $lte: c } } }
-    }
+//     notILike(a: any, b: string): any {
+//         return { [a]: { $not: { $regex: b, $options: 'i' } } };
+//     }
 
-    notBetweenNumbers(a: any, b: any, c: any): any {
-        return { [a]: { $not: { $gte: b, $lte: c } } }
-    }
+//     isNull(a: any): any {
+//         return { [a]: { $exists: false } };
+//     }
 
-    ascending(a: any): any {
-        return { [a]: 1 }
-    }
+//     isNotNull(a: any): any {
+//         return { [a]: { $exists: true } };
+//     }
 
-    descending(a: any): any {
-        return { [a]: -1 }
-    }
-}
+//     between(a: any, b: string, c: string): any {
+//         return { [a]: { $gte: b, $lte: c } };
+//     }
+
+//     betweenNumbers(a: any, b: any, c: any): any {
+//         return { [a]: { $gte: b, $lte: c } };
+//     }
+
+//     notBetween(a: any, b: string, c: string): any {
+//         return { [a]: { $not: { $gte: b, $lte: c } } };
+//     }
+
+//     notBetweenNumbers(a: any, b: any, c: any): any {
+//         return { [a]: { $not: { $gte: b, $lte: c } } };
+//     }
+
+//     ascending(a: any): any {
+//         return { [a]: 1 };
+//     }
+
+//     descending(a: any): any {
+//         return { [a]: -1 };
+//     }
+// }

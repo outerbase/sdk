@@ -1,69 +1,18 @@
-import { QueryType } from '../query-params'
-import { QueryBuilder } from '../client'
-import { Query } from '../query'
+import { QueryType } from '../query-params';
+import {
+    QueryBuilderInternal,
+    QueryPart,
+    WhereClaues,
+    WhereCondition,
+} from '../client';
+import { Query } from '../query';
 
 interface Dialect {
-    formatSchemaAndTable(schema: string | undefined, table: string): string
-
-    select(builder: QueryBuilder, type: QueryType, query: Query): Query
-    insert(builder: QueryBuilder, type: QueryType, query: Query): Query
-    update(builder: QueryBuilder, type: QueryType, query: Query): Query
-    delete(builder: QueryBuilder, type: QueryType, query: Query): Query
-
-    // Table operations
-    createTable(builder: QueryBuilder, type: QueryType, query: Query): Query
-    dropTable(builder: QueryBuilder, type: QueryType, query: Query): Query
-    renameTable(builder: QueryBuilder, type: QueryType, query: Query): Query
-
-    // Column operations
-    addColumn(builder: QueryBuilder, type: QueryType, query: Query): Query
-    dropColumn(builder: QueryBuilder, type: QueryType, query: Query): Query
-    renameColumn(builder: QueryBuilder, type: QueryType, query: Query): Query
-    updateColumn(builder: QueryBuilder, type: QueryType, query: Query): Query
-
-    // // // Index operations
-    // createIndex?: (index: TableIndex, table: string, schema?: string) => Promise<OperationResponse>
-    // dropIndex?: (name: string, table: string, schema?: string) => Promise<OperationResponse>
-    // renameIndex?: (name: string, original: string, table: string, schema?: string) => Promise<OperationResponse>
-
-    // // // Schema operations
-    // createSchema?: (name: string) => Promise<OperationResponse>
-    // dropSchema?: (name: string) => Promise<OperationResponse>
-
-    equals(a: any, b: string): string
-    equalsNumber(a: any, b: any): string
-    equalsColumn(a: any, b: any): string
-    notEquals(a: any, b: string): string
-    notEqualsNumber(a: any, b: any): string
-    notEqualsColumn(a: any, b: any): string
-    greaterThan(a: any, b: string): string
-    greaterThanNumber(a: any, b: any): string
-    lessThan(a: any, b: string): string
-    lessThanNumber(a: any, b: any): string
-    greaterThanOrEqual(a: any, b: string): string
-    greaterThanOrEqualNumber(a: any, b: any): string
-    lessThanOrEqual(a: any, b: string): string
-    lessThanOrEqualNumber(a: any, b: any): string
-    inValues(a: any, b: any[]): string
-    inNumbers(a: any, b: any[]): string
-    notInValues(a: any, b: any[]): string
-    notInNumbers(a: any, b: any[]): string
-    is(current: any, a: any, b: string | null): string
-    isNumber(a: any, b: any): string
-    isNot(current: any, a: any, b: null): string
-    isNotNumber(a: any, b: any): string
-    like(a: any, b: string): string
-    notLike(a: any, b: string): string
-    ilike(a: any, b: string): string
-    notILike(a: any, b: string): string
-    isNull(a: any): string
-    isNotNull(a: any): string
-    between(a: any, b: string, c: string): string
-    betweenNumbers(a: any, b: any, c: any): string
-    notBetween(a: any, b: string, c: string): string
-    notBetweenNumbers(a: any, b: any, c: any): string
-    ascending(a: any): string
-    descending(a: any): string
+    escapeId(identifier: string): string;
+    select(builder: QueryBuilderInternal): Query;
+    insert(builder: QueryBuilderInternal): Query;
+    update(builder: QueryBuilderInternal): Query;
+    // delete(builder: QueryBuilderInternal): Query;
 }
 
 export enum ColumnDataType {
@@ -79,616 +28,248 @@ export enum ColumnDataType {
 }
 
 export abstract class AbstractDialect implements Dialect {
-    /**
-     * WORK IN PROGRESS!
-     * This code is not used anywhere in the SDK at the moment. It is a work in progress to add support for SQL functions
-     * in the query builder. The idea is to allow users to use SQL functions in their queries, and the query builder will
-     * automatically format the query to use the correct SQL function for the specific database dialect.
-     *
-     * The `sqlFunctions` object is a map of SQL function names to their implementations. The `getFunction` method is used
-     * to get the implementation of a specific SQL function. The `addFunction` method is used to add a new SQL function
-     * to the `sqlFunctions` object.
-     */
-    protected sqlFunctions: { [key: string]: (...args: string[]) => string } = {
-        now: () => 'NOW()',
-        concat: (...args: string[]) => `CONCAT(${args.join(', ')})`,
-        coalesce: (...args: string[]) => `COALESCE(${args.join(', ')})`,
-        abs: (value: string) => `ABS(${value})`,
-    }
-
-    /**
-     * Retrieves the implementation of the SQL function with the given name.
-     *
-     * @param funcName
-     * @returns Returns the implementation of the SQL function with the given name.
-     */
-    getFunction(funcName: string): (...args: string[]) => string {
-        if (this.sqlFunctions[funcName]) {
-            return this.sqlFunctions[funcName]
-        }
-        throw new Error(
-            `SQL function '${funcName}' not supported in this dialect.`
-        )
-    }
-
-    /**
-     * Adds a new SQL function to the `sqlFunctions` object. If a function with the same name already exists, it will be
-     * overwritten with the new implementation.
-     *
-     * @param funcName
-     * @param implementation
-     */
-    protected addFunction(
-        funcName: string,
-        implementation: (...args: string[]) => string
-    ) {
-        this.sqlFunctions[funcName] = implementation
-    }
-
-    /**
-     * Maps the data type from the SDK to the equivalent data type for the specific database dialect.
-     *
-     * @param dataType
-     * @returns Returns the equivalent data type for the specific database dialect.
-     */
-    mapDataType(dataType: ColumnDataType | string): string {
-        switch (dataType) {
-            case ColumnDataType.STRING:
-                return 'VARCHAR'
-            case ColumnDataType.NUMBER:
-                return 'INTEGER'
-            case ColumnDataType.BOOLEAN:
-                return 'BOOLEAN'
-            case ColumnDataType.DATE:
-                return 'DATE'
-            default:
-                return dataType
-        }
-    }
-
-    /**
-     * Words that are reserved in the query language and may require special character wrapping to prevent
-     * collisions with the database engine executing the query. Each dialect may need to override this property
-     * with the reserved keywords for the specific database engine.
-     */
-    reservedKeywords: string[] = [
-        'ADD',
-        'ALL',
-        'ALTER',
-        'AND',
-        'AS',
-        'ASC',
-        'BETWEEN',
-        'BY',
-        'CASE',
-        'CHECK',
-        'COLUMN',
-        'CONSTRAINT',
-        'CREATE',
-        'DATABASE',
-        'DEFAULT',
-        'DELETE',
-        'DESC',
-        'DISTINCT',
-        'DROP',
-        'ELSE',
-        'END',
-        'EXISTS',
-        'FOREIGN',
-        'FROM',
-        'FULL',
-        'GROUP',
-        'HAVING',
-        'IF',
-        'IN',
-        'INDEX',
-        'INNER',
-        'INSERT',
-        'INTO',
-        'IS',
-        'JOIN',
-        'KEY',
-        'LEFT',
-        'LIKE',
-        'LIMIT',
-        'NOT',
-        'NULL',
-        'ON',
-        'OR',
-        'ORDER',
-        'OUTER',
-        'PRIMARY',
-        'REFERENCES',
-        'RIGHT',
-        'SELECT',
-        'SET',
-        'TABLE',
-        'THEN',
-        'TO',
-        'TOP',
-        'UNION',
-        'UNIQUE',
-        'UPDATE',
-        'VALUES',
-        'VIEW',
-        'WHERE',
-        'USER'
-    ]
-
-    /**
-     * Formats how the schema and table name should be used in the SELECT statement.
-     *
-     * @why When implementing support for BigQuery, the SELECT statement takes only a table name, where the FROM
-     * statement takes the schema and table name. It also requires both the schema and name to be wrapped in
-     * backticks together, and not separately. This method allows for formatting the schema and table name in a way
-     * that is compatible with the specific database dialect.
-     * See also - `formatFromSchemaAndTable`
-     * @param schema The schema name (optional).
-     * @param table The table name.
-     * @returns The formatted schema and table combination.
-     */
-    formatSchemaAndTable(schema: string | undefined, table: string): string {
-        table = this.reservedKeywords.includes(table.toUpperCase()) ? `"${table}"` : table
-
-        if (schema) {
-            return `"${schema}".${table}`
-        }
-        
-        return table
-    }
-
-    /**
-     * Formats how the schema and table name should be used in the FROM statement.
-     *
-     * @why When implementing support for BigQuery, the FROM statement takes a fully qualified schema and table name,
-     * where the SELECT statement only takes the table name. It also requires both the schema and name to be wrapped
-     * in backticks together, and not separately. This method allows for formatting the schema and table name in a way
-     * that is compatible with the specific database dialect.
-     * See also - `formatSchemaAndTable`
-     * @param schema
-     * @param table
-     * @returns The formatted schema and table combination.
-     */
-    formatFromSchemaAndTable(
-        schema: string | undefined,
-        table: string
-    ): string {
-        table = this.reservedKeywords.includes(table.toUpperCase()) ? `"${table}"` : table
-        if (schema) {
-            return `"${schema}".${table}`
-        }
-        return table
-    }
-
-    select(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        let selectColumns = ''
-        let fromTable = ''
-        const joinClauses = builder.joins?.join(' ') || ''
-
-        builder.columnsWithTable?.forEach((set, index) => {
-            if (index > 0) {
-                selectColumns += ', '
-            }
-
-            const formattedTable = this.formatSchemaAndTable(
-                set.schema,
-                set.table
-            )
-            const formattedFromTable = this.formatFromSchemaAndTable(
-                set.schema,
-                set.table
-            )
-            const columns = set.columns.map((column) => {
-                let useColumn = column
-
-                if (this.reservedKeywords.includes(column.toUpperCase())) {
-                    useColumn = `"${column}"`
-                }
-
-                return `${formattedTable}.${useColumn}`
+    escapeId(identifier: string): string {
+        return identifier
+            .split('.')
+            .map((str) => {
+                if (str === '*') return '*';
+                return '"' + str.replace(/"/g, '""') + '"';
             })
-
-            selectColumns += columns.join(', ')
-
-            if (index === 0) {
-                fromTable = formattedFromTable
-            }
-        })
-
-        query.query = `SELECT ${selectColumns} ${builder.selectRawValue ? builder.selectRawValue : ''}FROM ${fromTable}`
-        
-        if (joinClauses) {
-            query.query += ` ${joinClauses}`
-        }
-
-        if (builder.whereClauses?.length ?? 0 > 0) {
-            query.query += ` WHERE ${builder?.whereClauses?.join(' AND ')}`
-        }
-
-        if (builder.orderBy !== undefined) {
-            query.query += ` ORDER BY ${builder.orderBy}`
-        }
-
-        if (builder.limit !== undefined) {
-            query.query += ` LIMIT ${builder.limit}`
-            if (builder.offset) {
-                query.query += ` OFFSET ${builder.offset}`
-            }
-        }
-
-        if (builder.groupBy !== undefined) {
-            query.query += ` GROUP BY ${builder.groupBy}`
-        }
-
-        return query
+            .join('.');
     }
 
-    insert(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        const columns = Object.keys(builder.data || {})
-        const placeholders =
-            type === QueryType.named
-                ? columns.map((column) => `:${column}`).join(', ')
-                : columns.map(() => '?').join(', ')
+    protected removeEmptyValues(
+        data: Record<string, unknown>
+    ): Record<string, unknown> {
+        return Object.keys(data).reduce(
+            (acc, key) => {
+                if (data[key] !== undefined) {
+                    acc[key] = data[key];
+                }
+                return acc;
+            },
+            {} as Record<string, unknown>
+        );
+    }
 
-        const formattedTable = this.formatSchemaAndTable(
-            builder.schema,
-            builder.table || ''
-        )
-        query.query = `INSERT INTO ${formattedTable} (${columns.join(
-            ', '
-        )}) VALUES (${placeholders})`
+    protected mergePart(parts: QueryPart[], separator: string): QueryPart {
+        const finalParts = parts.filter((part) => part[0] !== '');
+        const query = finalParts.map((part) => part[0]).join(separator);
+        const binding = finalParts.map((part) => part[1]).flat();
+        return [query, binding];
+    }
 
-        if (type === QueryType.named) {
-            query.parameters = builder.data ?? {}
+    protected flattenWhereClause(
+        where: WhereClaues | WhereCondition
+    ): WhereClaues | WhereCondition {
+        // This is normal condition, we cannot flatten it
+        if (!where.joinType) return where;
+
+        // If there is only one condition, we can promote it to parent
+        if (where.conditions.length === 1) {
+            return this.flattenWhereClause(where.conditions[0]);
+        }
+
+        // If there are multiple conditions, we need to check if they are of same join type
+        if (where.conditions.length > 1) {
+            const conditions = where.conditions
+                .map((condition) => this.flattenWhereClause(condition))
+                .map((condition) => {
+                    if (condition.joinType === where.joinType)
+                        return condition.conditions;
+                    return condition;
+                })
+                .flat();
+
+            return {
+                joinType: where.joinType,
+                conditions,
+            };
+        }
+
+        return where;
+    }
+
+    protected buildWhereClause(
+        where: WhereClaues | WhereCondition,
+        depth: number = 0
+    ): QueryPart {
+        if (where.joinType) {
+            const joinConditions = where.conditions.map((condition) => {
+                return this.buildWhereClause(condition, depth + 1);
+            });
+
+            const merged = this.mergePart(
+                joinConditions,
+                ` ${where.joinType} `
+            );
+            if (depth > 0) {
+                return [`(${merged[0]})`, merged[1]];
+            }
+            return merged;
         } else {
-            query.parameters = Object.values(builder.data ?? {})
+            return [
+                `${this.escapeId(where.column)} ${where.operator} ?`,
+                [where.value],
+            ];
+        }
+    }
+
+    protected buildWherePart(where: WhereClaues): QueryPart {
+        if (!where) return ['', []];
+        const part = this.buildWhereClause(this.flattenWhereClause(where));
+
+        if (part[0]) {
+            return ['WHERE ' + part[0], part[1]];
         }
 
-        return query
+        return part;
     }
 
-    update(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        if (!builder || !builder.whereClauses) {
-            return query
+    protected buildLimitPart(
+        limit: number | undefined,
+        offset: number | undefined
+    ): QueryPart {
+        if (limit !== undefined && offset !== undefined) {
+            return [`LIMIT ? OFFSET ?`, [limit, offset]];
+        } else if (limit !== undefined) {
+            return ['LIMIT ?', [limit]];
+        }
+        return ['', []];
+    }
+
+    protected buildSelectPart(selectedColumns?: string[]): QueryPart {
+        if (!selectedColumns) return ['*', []];
+        if (selectedColumns.length === 0) return ['*', []];
+
+        const columns = selectedColumns.map((column) => this.escapeId(column));
+        return [columns.join(', '), []];
+    }
+
+    protected buildSetPart(data: Record<string, unknown>): QueryPart {
+        const columns = Object.keys(data);
+        const bindings: unknown[] = [];
+
+        const setClauses = columns.map((column) => {
+            bindings.push(data[column]);
+            return `${this.escapeId(column)} = ?`;
+        });
+
+        return ['SET ' + setClauses.join(', '), bindings];
+    }
+
+    protected buildInsertValuesPart(data: Record<string, unknown>): QueryPart {
+        const columns = Object.keys(data);
+        const bindings: unknown[] = [];
+
+        const columnNames = columns.map((column) => {
+            bindings.push(data[column]);
+            return this.escapeId(column);
+        });
+
+        const placeholders = columns.map(() => '?').join(', ');
+
+        return [
+            `(${columnNames.join(', ')}) VALUES(${placeholders})`,
+            bindings,
+        ];
+    }
+
+    select(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+
+        if (!tableName) {
+            throw new Error('Table name is required to build a SELECT query.');
         }
 
-        const formattedTable = this.formatSchemaAndTable(
-            builder.schema,
-            builder.table || ''
-        )
-        const columnsToUpdate = Object.keys(builder.data || {})
-        const setClauses =
-            type === QueryType.named
-                ? columnsToUpdate
-                      .map((column) => `${column} = :${column}`)
-                      .join(', ')
-                : columnsToUpdate.map((column) => `${column} = ?`).join(', ')
+        const combinedParts = this.mergePart(
+            [
+                ['SELECT', []],
+                this.buildSelectPart(builder.selectColumns),
+                [`FROM ${this.escapeId(tableName)}`, []],
+                this.buildWherePart(builder.whereClauses),
+                this.buildLimitPart(builder.limit, builder.offset),
+            ],
+            ' '
+        );
 
-        query.query = `UPDATE ${formattedTable} SET ${setClauses}`
-        if (builder.whereClauses?.length > 0) {
-            query.query += ` WHERE ${builder.whereClauses.join(' AND ')}`
+        return {
+            query: combinedParts[0],
+            parameters: combinedParts[1],
+        };
+    }
+
+    insert(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+
+        if (!tableName) {
+            throw new Error('Table name is required to build a UPDATE query.');
         }
 
-        if (type === QueryType.named) {
-            query.parameters = builder.data ?? {}
-        } else {
-            query.parameters = Object.values(builder.data ?? {})
+        // Remove all empty value from object and check if there is any data to update
+        const data = this.removeEmptyValues({ ...builder.data });
+        if (Object.keys(data).length === 0) {
+            throw new Error('Data is required to update the table.');
         }
 
-        return query
+        const combinedParts = this.mergePart(
+            [
+                [`INSERT INTO ${this.escapeId(tableName)}`, []],
+                this.buildInsertValuesPart(data),
+            ],
+            ''
+        );
+
+        return {
+            query: combinedParts[0],
+            parameters: combinedParts[1],
+        };
     }
 
-    delete(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        if (!builder.whereClauses || builder.whereClauses?.length === 0) {
-            return query
+    update(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+
+        if (!tableName) {
+            throw new Error('Table name is required to build a UPDATE query.');
         }
 
-        const formattedTable = this.formatFromSchemaAndTable(
-            builder.schema,
-            builder.table || ''
-        )
-        query.query = `DELETE FROM ${formattedTable}`
-        if (builder.whereClauses?.length > 0) {
-            query.query += ` WHERE ${builder.whereClauses.join(' AND ')}`
+        // Remove all empty value from object and check if there is any data to update
+        const data = this.removeEmptyValues({ ...builder.data });
+        if (Object.keys(data).length === 0) {
+            throw new Error('Data is required to update the table.');
         }
 
-        return query
+        const combinedParts = this.mergePart(
+            [
+                [`UPDATE ${this.escapeId(tableName)}`, []],
+                this.buildSetPart(data),
+                this.buildWherePart(builder.whereClauses),
+            ],
+            ' '
+        );
+
+        return {
+            query: combinedParts[0],
+            parameters: combinedParts[1],
+        };
     }
 
-    createTable(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        // if (!builder.createTable?.columns) {
-        //     return query
-        // }
-
-        const formattedTable = this.formatSchemaAndTable(
-            builder.schema,
-            builder.table || ''
-        )
-        const columns =
-            builder?.columns?.map((column) => {
-                if (!column.type)
-                    throw new Error('Column type is required to create table.')
-                const dataType = this.mapDataType(column.type)
-
-                return `${column.name} ${dataType}`
-
-                // const constraints = column.constraints
-                //     ? column.constraints.join(' ')
-                //     : ''
-
-                // return `${column.name} ${dataType} ${constraints}`
-            }) ?? []
-
-        query.query = `
-            CREATE TABLE IF NOT EXISTS 
-            ${formattedTable}
-            (${columns.join(', ')})
-        `
-
-        return query
-    }
-
-    dropTable(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        query.query = `DROP TABLE IF EXISTS ${builder.schema ? `"${builder.schema}".` : ''}${builder.table}`
-        return query
-    }
-
-    addColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        const { schema, table, columns } = builder
-
-        if (!table || !columns || columns.length === 0) {
-            throw new Error('Table and columns are required to add columns')
-        }
-
-        const formattedTable = this.formatSchemaAndTable(schema, table)
-
-        const columnQueries = columns.map((col) => {
-            if (!col.type)
-                throw new Error('Column type is required to add a column.')
-            const dataType = this.mapDataType(col.type)
-            return `ALTER TABLE ${formattedTable} ADD ${col.name} ${dataType}`
-        })
-
-        query.query = columnQueries.join('; ')
-
-        return query
-    }
-
-    dropColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        const { schema, table, columns } = builder
-
-        if (!table || !columns || columns.length === 0) {
-            throw new Error('Table and columns are required to drop columns')
-        }
-
-        const formattedTable = this.formatSchemaAndTable(schema, table)
-
-        const columnQueries = columns.map((col) => {
-            return `ALTER TABLE ${formattedTable} DROP COLUMN ${col.name}`
-        })
-
-        query.query = columnQueries.join('; ')
-
-        return query
-    }
-
-    renameColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        const { schema, table, columns } = builder
-
-        if (!table || !columns || columns.length === 0) {
-            throw new Error('Table and columns are required to rename columns')
-        }
-
-        const formattedTable = this.formatSchemaAndTable(schema, table)
-
-        const columnQueries = columns.map((col) => {
-            if (!col.oldName || !col.newName) {
-                throw new Error(
-                    'Both old and new column names are required to rename columns'
-                )
-            }
-            return `ALTER TABLE ${formattedTable} RENAME COLUMN ${col.oldName} TO ${col.newName}`
-        })
-
-        query.query = columnQueries.join('; ')
-
-        return query
-    }
-    updateColumn(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        const { schema, table, columns } = builder
-
-        if (!table || !columns || columns.length === 0) {
-            throw new Error('Table and columns are required to update columns')
-        }
-
-        const formattedTable = this.formatSchemaAndTable(schema, table)
-
-        const columnQueries = columns.map((col) => {
-            if (!col.name) {
-                throw new Error('Column name is required to update a column.')
-            }
-
-            const columnUpdateParts: string[] = []
-
-            if (col.type) {
-                const dataType = this.mapDataType(col.type)
-                columnUpdateParts.push(
-                    `ALTER COLUMN ${col.name} TYPE ${dataType}`
-                )
-            }
-
-            if (col.nullable) {
-                columnUpdateParts.push(
-                    `ALTER COLUMN ${col.name} ${col.nullable ? 'DROP' : 'SET'} NOT NULL`
-                )
-            }
-
-            if (col.default) {
-                columnUpdateParts.push(
-                    `ALTER COLUMN ${col.name} SET DEFAULT ${col.default}`
-                )
-            }
-
-            if (columnUpdateParts.length === 0) {
-                throw new Error(
-                    'No valid attributes provided to update the column.'
-                )
-            }
-
-            return `ALTER TABLE ${formattedTable} ${columnUpdateParts.join(', ')}`
-        })
-
-        query.query = columnQueries.join('; ')
-
-        return query
-    }
-
-    renameTable(builder: QueryBuilder, type: QueryType, query: Query): Query {
-        query.query = `ALTER TABLE ${builder.schema ? `"${builder.schema}".` : ''}${builder.originalValue} RENAME TO ${builder.newValue}`
-        return query
-    }
-
-    equals(a: any, b: string): string {
-        return `${a} = '${b.replace(/'/g, "\\'")}'`
-    }
-
-    equalsNumber(a: any, b: any) {
-        return `${a} = ${b}`
-    }
-
-    equalsColumn(a: any, b: any) {
-        return `${a} = ${b}`
-    }
-
-    notEquals(a: any, b: string) {
-        return `${a} != '${b.replace(/'/g, "\\'")}'`
-    }
-
-    notEqualsNumber(a: any, b: any) {
-        return `${a} != ${b}`
-    }
-
-    notEqualsColumn(a: any, b: any) {
-        return `${a} != ${b}`
-    }
-
-    greaterThan(a: any, b: string) {
-        return `${a} > '${b.replace(/'/g, "\\'")}'`
-    }
-
-    greaterThanNumber(a: any, b: any) {
-        return `${a} > ${b}`
-    }
-
-    lessThan(a: any, b: string) {
-        return `${a} < '${b.replace(/'/g, "\\'")}'`
-    }
-
-    lessThanNumber(a: any, b: any) {
-        return `${a} < ${b}`
-    }
-
-    greaterThanOrEqual(a: any, b: string) {
-        return `${a} >= '${b.replace(/'/g, "\\'")}'`
-    }
-
-    greaterThanOrEqualNumber(a: any, b: any) {
-        return `${a} >= ${b}`
-    }
-
-    lessThanOrEqual(a: any, b: string) {
-        return `${a} <= '${b.replace(/'/g, "\\'")}'`
-    }
-
-    lessThanOrEqualNumber(a: any, b: any) {
-        return `${a} <= ${b}`
-    }
-
-    inValues(a: any, b: any[]) {
-        return `${a} IN ('${b.join("', '").replace(/'/g, "\\'")}')`
-    }
-
-    inNumbers(a: any, b: any[]) {
-        return `${a} IN (${b.join(', ')})`
-    }
-
-    notInValues(a: any, b: any[]) {
-        return `${a} NOT IN ('${b.join("', '").replace(/'/g, "\\'")}')`
-    }
-
-    notInNumbers(a: any, b: any[]) {
-        return `${a} NOT IN (${b.join(', ')})`
-    }
-
-    is(current: any, a: any, b: string | null) {
-        if (b === null) return `${current} IS NULL`
-        return `${a} IS '${b.replace(/'/g, "\\'")}'`
-    }
-
-    isNumber(a: any, b: any) {
-        return `${a} IS ${b}`
-    }
-
-    isNot(current: any, a: any, b: null) {
-        if (b === null) return `${current} IS NOT NULL`
-        return `${a} IS NOT ${b}`
-    }
-
-    isNotNumber(a: any, b: any) {
-        return `${a} IS NOT ${b}`
-    }
-
-    like(a: any, b: string) {
-        return `${a} LIKE '${b.replace(/'/g, "\\'")}'`
-    }
-
-    notLike(a: any, b: string) {
-        return `${a} NOT LIKE '${b.replace(/'/g, "\\'")}'`
-    }
-
-    ilike(a: any, b: string) {
-        return `${a} ILIKE '${b.replace(/'/g, "\\'")}'`
-    }
-
-    notILike(a: any, b: string) {
-        return `${a} NOT ILIKE '${b.replace(/'/g, "\\'")}'`
-    }
-
-    isNull(a: any) {
-        return `${a} IS NULL`
-    }
-
-    isNotNull(a: any) {
-        return `${a} IS NOT NULL`
-    }
-
-    between(a: any, b: string, c: string) {
-        return `${a} BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(
-            /'/g,
-            "\\'"
-        )}'`
-    }
-
-    betweenNumbers(a: any, b: any, c: any) {
-        return `${a} BETWEEN ${b} AND ${c}`
-    }
-
-    notBetween(a: any, b: string, c: string) {
-        return `${a} NOT BETWEEN '${b.replace(/'/g, "\\'")}' AND '${c.replace(
-            /'/g,
-            "\\'"
-        )}'`
-    }
-
-    notBetweenNumbers(a: any, b: any, c: any) {
-        return `${a} NOT BETWEEN ${b} AND ${c}`
-    }
-
-    ascending(a: any) {
-        return `${a} ASC`
-    }
-
-    descending(a: any) {
-        return `${a} DESC`
-    }
+    // delete(
+    //     builder: QueryBuilderInternal,
+    // ): Query {
+    //     // if (!builder.whereClauses || builder.whereClauses?.length === 0) {
+    //     //     return query
+    //     // }
+
+    //     // const formattedTable = this.formatFromSchemaAndTable(
+    //     //     builder.schema,
+    //     //     builder.table || ''
+    //     // )
+    //     // query.query = `DELETE FROM ${formattedTable}`
+    //     // if (builder.whereClauses?.length > 0) {
+    //     //     query.query += ` WHERE ${builder.whereClauses.join(' AND ')}`
+    //     // }
+
+    //     return ;
+    // }
 }
