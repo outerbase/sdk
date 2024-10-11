@@ -19,7 +19,10 @@ export class MySQLConnection implements BaseConnection {
     ): Promise<QueryResult<T>> {
         const rows = await new Promise<RowDataPacket[]>((r) =>
             this.conn.query(query.query, query.parameters, (_, result) => {
-                r((result as RowDataPacket[]) ?? []);
+                if (Array.isArray(result)) {
+                    r((result as RowDataPacket[]) ?? []);
+                }
+                return r([]);
             })
         );
 
