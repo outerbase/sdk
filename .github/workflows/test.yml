@@ -7,7 +7,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
 
             - name: Install modules
               run: npm install
@@ -36,16 +36,18 @@ jobs:
                     --health-interval 10s
                     --health-timeout 5s
                     --health-retries 5
+                ports:
+                    - 5432:5432
 
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
 
             - name: Install modules
               run: npm install
 
             - name: Run tests
               env:
-                  POSTGRES_HOST: postgres
+                  POSTGRES_HOST: localhost
                   POSTGRES_DB: postgres
                   POSTGRES_USER: postgres
                   POSTGRES_PASSWORD: 123456
