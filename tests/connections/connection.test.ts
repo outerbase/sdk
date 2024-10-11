@@ -1,4 +1,3 @@
-import { afterAll, beforeAll, describe, test } from '@jest/globals';
 import { Client as PgClient } from 'pg';
 import { createConnection as createMySqlConnection } from 'mysql2';
 import {
@@ -48,7 +47,7 @@ afterAll(async () => {
     await db.disconnect();
 });
 
-describe('PostgreSQL Connection', () => {
+describe('Database Connection', () => {
     test('Create table', async () => {
         // Create testing table
         await qb
@@ -70,5 +69,28 @@ describe('PostgreSQL Connection', () => {
             .insert({ id: 2, name: 'Outerbase', age: 30 })
             .into('persons')
             .query();
+    });
+
+    test('Select data', async () => {
+        const { data } = await qb.select().from('persons').query();
+        expect(data).toEqual([
+            { id: 1, name: 'Visal', age: 25 },
+            { id: 2, name: 'Outerbase', age: 30 },
+        ]);
+    });
+
+    test('Update data', async () => {
+        await qb
+            .update({ name: 'Visal In' })
+            .into('persons')
+            .where({ id: 1 })
+            .query();
+
+        const { data } = await qb.select().from('persons').query();
+
+        expect(data).toEqual([
+            { id: 1, name: 'Visal In', age: 25 },
+            { id: 2, name: 'Outerbase', age: 30 },
+        ]);
     });
 });
