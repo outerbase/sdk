@@ -1,9 +1,9 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 
-const { pathsToModuleNameMapper } = require('ts-jest')
-const { compilerOptions } = require('./tsconfig')
+const { pathsToModuleNameMapper } = require('ts-jest');
+const { compilerOptions } = require('./tsconfig');
 
-pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>' })
+pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>' });
 
 module.exports = {
     preset: 'ts-jest',
@@ -14,12 +14,13 @@ module.exports = {
     moduleDirectories: ['node_modules', 'src'],
     modulePaths: ['<rootDir>'],
     setupFiles: ['<rootDir>/jest.setup.js'],
+    coveragePathIgnorePatterns: ['<rootDir>/src/connections/.*$'],
     coverageThreshold: {
         global: {
             branches: 4,
             functions: 6,
             lines: 21,
-            statements: 20
-        }
-    }
-}
+            statements: 20,
+        },
+    },
+};

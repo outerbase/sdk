@@ -14,6 +14,7 @@ interface Dialect {
     update(builder: QueryBuilderInternal): Query;
     // delete(builder: QueryBuilderInternal): Query;
     createTable(builder: QueryBuilderInternal): Query;
+    dropTable(builder: QueryBuilderInternal): Query;
 }
 
 export enum ColumnDataType {
@@ -290,6 +291,21 @@ export abstract class AbstractDialect implements Dialect {
         ].join(' ');
 
         return { query, parameters: [] };
+    }
+
+    dropTable(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+
+        if (!tableName) {
+            throw new Error(
+                'Table name is required to build a CREATE TABLE query.'
+            );
+        }
+
+        return {
+            query: `DROP TABLE IF EXISTS ${this.escapeId(tableName)}`,
+            parameters: [],
+        };
     }
 
     // delete(

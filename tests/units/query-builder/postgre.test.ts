@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
-import { Connection, Outerbase } from '../../src';
-import { DefaultDialect } from '../../src/query-builder/dialects/default';
+import { Connection, Outerbase } from '../../../src';
+import { DefaultDialect } from '../../../src/query-builder/dialects/default';
 
 function qb() {
     return Outerbase({

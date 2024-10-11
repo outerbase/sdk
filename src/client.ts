@@ -1,4 +1,4 @@
-import { Connection } from './connections';
+import { Connection, QueryResult } from './connections';
 import { Query, constructRawQuery } from './query';
 import { QueryParams, QueryType } from './query-params';
 import { AbstractDialect, ColumnDataType } from './query-builder';
@@ -160,6 +160,11 @@ abstract class IQueryBuilder {
             this.connection.dialect
         );
     }
+
+    query(): Promise<QueryResult> {
+        const query = this.toQuery();
+        return this.connection.query(query);
+    }
 }
 
 function createBlankState(action: QueryBuilderAction): QueryBuilderInternal {
@@ -283,6 +288,17 @@ class QueryBuilderCreateTable extends IQueryBuilder {
     }
 }
 
+class QueryBuilderDropTable extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(
+        QueryBuilderAction.DELETE_TABLE
+    );
+
+    constructor(connection: Connection, tableName: string) {
+        super(connection);
+        this.state.table = tableName;
+    }
+}
+
 class QueryBuilder {
     connection: Connection;
 
@@ -304,6 +320,10 @@ class QueryBuilder {
 
     createTable(tableName: string) {
         return new QueryBuilderCreateTable(this.connection, tableName);
+    }
+
+    dropTable(tableName: string) {
+        return new QueryBuilderDropTable(this.connection, tableName);
     }
 
     or(
@@ -377,13 +397,9 @@ function buildQueryString(
         //     break;
         case QueryBuilderAction.CREATE_TABLE:
             return dialect.createTable(queryBuilder);
-        // case QueryBuilderAction.DELETE_TABLE:
-        //     query.query = dialect.dropTable(
-        //         queryBuilder,
-        //         queryType,
-        //         query
-        //     ).query;
-        //     break;
+        case QueryBuilderAction.DELETE_TABLE:
+            return dialect.dropTable(queryBuilder);
+            break;
         // case QueryBuilderAction.RENAME_TABLE:
         //     query.query = dialect.renameTable(
         //         queryBuilder,
