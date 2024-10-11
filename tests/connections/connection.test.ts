@@ -72,7 +72,12 @@ describe('Database Connection', () => {
     });
 
     test('Select data', async () => {
-        const { data } = await qb.select().from('persons').query();
+        const { data } = await qb
+            .select()
+            .from('persons')
+            .orderBy('id')
+            .query();
+
         expect(data).toEqual([
             { id: 1, name: 'Visal', age: 25 },
             { id: 2, name: 'Outerbase', age: 30 },
@@ -86,7 +91,11 @@ describe('Database Connection', () => {
             .where({ id: 1 })
             .query();
 
-        const { data } = await qb.select().from('persons').query();
+        const { data } = await qb
+            .select()
+            .from('persons')
+            .orderBy('id')
+            .query();
 
         expect(data).toEqual([
             { id: 1, name: 'Visal In', age: 25 },
