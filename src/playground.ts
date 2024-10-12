@@ -16,7 +16,7 @@ const r = q
     .where(
         q.or(
             q.where('age', '>', 18),
-            q.or(
+            q.and(
                 q.where('gender', '=', 'female'),
                 q.where('planet', '=', 'earth')
             )

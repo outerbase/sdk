@@ -1,25 +1,24 @@
-import { QueryType } from '../query-params'
-import { Query, constructRawQuery } from '../query'
-import { Connection } from './index'
-import { Database, Table, TableColumn } from '../models/database'
-import { BigQueryDialect } from '../query-builder/dialects/bigquery'
+import { QueryType } from '../query-params';
+import { Query, constructRawQuery } from '../query';
+import { Connection } from './index';
+import { Database, Table, TableColumn } from '../models/database';
+import { BigQueryDialect } from '../query-builder/dialects/bigquery';
 
-import { BigQuery } from '@google-cloud/bigquery'
+import { BigQuery } from '@google-cloud/bigquery';
 
 type BigQueryParameters = {
-    keyFileName: string
-    region: string
-}
+    keyFileName: string;
+    region: string;
+};
 
 export class BigQueryConnection implements Connection {
-    bigQuery: BigQuery
-    bigQueryRegion: string
+    bigQuery: BigQuery;
 
     // Default query type to positional for BigQuery
-    queryType = QueryType.positional
+    queryType = QueryType.positional;
 
     // Default dialect for BigQuery
-    dialect = new BigQueryDialect()
+    dialect = new BigQueryDialect();
 
     /**
      * Creates a new BigQuery object.
@@ -27,13 +26,8 @@ export class BigQueryConnection implements Connection {
      * @param keyFileName - Path to a .json, .pem, or .p12 key file.
      * @param region - Region for your dataset
      */
-    constructor(private _: BigQueryParameters) {
-        const bigQuery = new BigQuery({
-            keyFilename: _.keyFileName,
-        })
-
-        this.bigQueryRegion = _.region
-        this.bigQuery = bigQuery
+    constructor(bigQuery: BigQuery) {
+        this.bigQuery = bigQuery;
     }
 
     /**
@@ -45,7 +39,7 @@ export class BigQueryConnection implements Connection {
      * @returns Promise<any>
      */
     async connect(): Promise<any> {
-        return Promise.resolve()
+        return Promise.resolve();
     }
 
     /**
@@ -56,7 +50,7 @@ export class BigQueryConnection implements Connection {
      * @returns Promise<any>
      */
     async disconnect(): Promise<any> {
-        return Promise.resolve()
+        return Promise.resolve();
     }
 
     /**
@@ -74,60 +68,60 @@ export class BigQueryConnection implements Connection {
     async query(
         query: Query
     ): Promise<{ data: any; error: Error | null; query: string }> {
-        const raw = constructRawQuery(query)
+        const raw = constructRawQuery(query);
         try {
             const options = {
                 query: query.query,
                 params: query.parameters,
                 useLegacySql: false,
-            }
+            };
 
-            const [rows] = await this.bigQuery.query(options)
+            const [rows] = await this.bigQuery.query(options);
 
             return {
                 data: rows,
                 error: null,
                 query: raw,
-            }
+            };
         } catch (error) {
             if (error instanceof Error) {
                 return {
                     data: null,
                     error: error,
                     query: raw,
-                }
+                };
             }
 
             return {
                 data: null,
                 error: new Error('Unexpected Error'),
                 query: raw,
-            }
+            };
         }
     }
 
     public async fetchDatabaseSchema(): Promise<Database> {
-        const database: Database = {}
+        const database: Database = {};
 
         // Fetch all datasets
-        const [datasets] = await this.bigQuery.getDatasets()
+        const [datasets] = await this.bigQuery.getDatasets();
         if (datasets.length === 0) {
-            throw new Error('No datasets found in the project.')
+            throw new Error('No datasets found in the project.');
         }
 
         // Iterate over each dataset
         for (const dataset of datasets) {
-            const datasetId = dataset.id
-            if (!datasetId) continue
+            const datasetId = dataset.id;
+            if (!datasetId) continue;
 
-            const [tables] = await dataset.getTables()
+            const [tables] = await dataset.getTables();
 
             if (!database[datasetId]) {
-                database[datasetId] = {} // Initialize schema in the database
+                database[datasetId] = {}; // Initialize schema in the database
             }
 
             for (const table of tables) {
-                const [metadata] = await table.getMetadata()
+                const [metadata] = await table.getMetadata();
 
                 const columns = metadata.schema.fields.map(
                     (field: any, index: number): TableColumn => {
@@ -140,21 +134,21 @@ export class BigQueryConnection implements Connection {
                             primary: false, // BigQuery does not have a concept of primary keys
                             unique: false, // BigQuery does not have a concept of unique constraints
                             references: [], // BigQuery does not support foreign keys
-                        }
+                        };
                     }
-                )
+                );
 
                 const currentTable: Table = {
                     name: table.id ?? '',
                     columns: columns,
                     indexes: [], // BigQuery does not support indexes
                     constraints: [], // BigQuery does not support primary keys, foreign keys, or unique constraints
-                }
+                };
 
-                database[datasetId][table.id ?? ''] = currentTable
+                database[datasetId][table.id ?? ''] = currentTable;
             }
         }
 
-        return database
+        return database;
     }
 }
