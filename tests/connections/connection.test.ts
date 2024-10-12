@@ -70,7 +70,12 @@ describe('Database Connection', () => {
         await qb
             .createTable(`${DEFAULT_SCHEMA}.persons`)
             .column('id', 'INTEGER')
-            .column('name', 'STRING')
+            .column(
+                'name',
+                process.env.CONNECTION_TYPE === 'bigquery'
+                    ? 'STRING'
+                    : 'VARCHAR(255)'
+            )
             .column('age', 'INTEGER')
             .query();
     });
