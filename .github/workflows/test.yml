@@ -16,9 +16,9 @@ jobs:
             - name: Build
               run: npm run build
 
-            - name: Run sync-database-models command
-              id: sync
-              run: npm exec sync-database-models
+            # - name: Run sync-database-models command
+            #   id: sync
+            #   run: npm exec sync-database-models
 
             - name: Run tests
               run: npm test
