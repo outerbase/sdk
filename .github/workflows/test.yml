@@ -113,3 +113,19 @@ jobs:
                   BIGQUERY_PRIVATE_KEY: ${{ secrets.BIGQUERY_PRIVATE_KEY }}
                   BIGQUERY_DEFAULT_SCHEMA: ${{ secrets.BIGQUERY_DEFAULT_SCHEMA }}
               run: npm run test:connection
+
+    test_turso:
+        name: 'Turso Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: turso
+              run: npm run test:connection

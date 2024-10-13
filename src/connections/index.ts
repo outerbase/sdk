@@ -16,7 +16,6 @@ export interface QueryResult<T = Record<string, unknown>> {
 }
 
 export interface Connection {
-    queryType: QueryType;
     dialect: AbstractDialect;
 
     // Handles logic for securely connecting and properly disposing of the connection.

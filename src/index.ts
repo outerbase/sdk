@@ -8,6 +8,7 @@ export * from './connections/starbase';
 export * from './connections/mongodb';
 export * from './connections/mysql';
 export * from './connections/postgresql';
+export * from './connections/turso';
 export * from './client';
 export * from './models';
 export * from './models/decorators';

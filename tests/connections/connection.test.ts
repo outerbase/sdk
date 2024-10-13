@@ -1,5 +1,6 @@
 import { Client as PgClient } from 'pg';
 import { BigQuery } from '@google-cloud/bigquery';
+import { createClient as createTursoConnection } from '@libsql/client';
 import { createConnection as createMySqlConnection } from 'mysql2';
 import {
     Connection,
@@ -7,6 +8,7 @@ import {
     PostgreSQLConnection,
     MySQLConnection,
     BigQueryConnection,
+    TursoConnection,
 } from '../../src';
 
 let DEFAULT_SCHEMA = '';
@@ -45,6 +47,9 @@ function createClient(): Connection {
                 },
             })
         );
+    } else if (process.env.CONNECTION_TYPE === 'turso') {
+        DEFAULT_SCHEMA = 'main';
+        return new TursoConnection(createTursoConnection({ url: ':memory:' }));
     }
 
     throw new Error('Invalid connection type');
