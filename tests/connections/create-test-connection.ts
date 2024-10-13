@@ -10,8 +10,6 @@ import {
     TursoConnection,
 } from '../../src';
 
-let DEFAULT_SCHEMA = '';
-
 export default function createTestClient(): {
     client: Connection;
     defaultSchema: string;

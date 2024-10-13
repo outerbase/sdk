@@ -1,15 +1,17 @@
 import { Client } from '@libsql/client';
 
 import { AbstractDialect } from 'src/query-builder';
-import { Connection, QueryResult } from '.';
-import { Query } from '../query';
+import { QueryResult } from '..';
+import { Query } from '../../query';
 import { PostgresDialect } from 'src/query-builder/dialects/postgres';
+import { SqliteBaseConnection } from './base';
 
-export class TursoConnection implements Connection {
+export class TursoConnection extends SqliteBaseConnection {
     client: Client;
     dialect: AbstractDialect = new PostgresDialect();
 
     constructor(client: Client) {
+        super();
         this.client = client;
     }
 

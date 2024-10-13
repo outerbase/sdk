@@ -15,18 +15,18 @@ export interface QueryResult<T = Record<string, unknown>> {
     query: string;
 }
 
-export interface Connection {
-    dialect: AbstractDialect;
+export abstract class Connection {
+    abstract dialect: AbstractDialect;
 
     // Handles logic for securely connecting and properly disposing of the connection.
-    connect: () => Promise<any>;
-    disconnect: () => Promise<any>;
+    abstract connect(): Promise<any>;
+    abstract disconnect(): Promise<any>;
 
     // Raw query execution method that can be used to execute any query.
-    query: <T = Record<string, unknown>>(
+    abstract query<T = Record<string, unknown>>(
         query: Query
-    ) => Promise<QueryResult<T>>;
+    ): Promise<QueryResult<T>>;
 
     // Retrieve metadata about the database, useful for introspection.
-    fetchDatabaseSchema?: () => Promise<Database>;
+    abstract fetchDatabaseSchema(): Promise<Database>;
 }

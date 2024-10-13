@@ -3,13 +3,7 @@ import { Query, constructRawQuery } from '../query';
 import { Connection } from './index';
 import { Database, Table, TableColumn } from '../models/database';
 import { BigQueryDialect } from '../query-builder/dialects/bigquery';
-
 import { BigQuery } from '@google-cloud/bigquery';
-
-type BigQueryParameters = {
-    keyFileName: string;
-    region: string;
-};
 
 export class BigQueryConnection implements Connection {
     bigQuery: BigQuery;
