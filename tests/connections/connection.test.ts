@@ -80,6 +80,45 @@ describe('Database Connection', () => {
             .query();
     });
 
+    test('Check the schema', async () => {
+        if (db.fetchDatabaseSchema) {
+            const schemas = await db.fetchDatabaseSchema();
+
+            // Column names are sorted for easier comparison
+            const expectedSchema = {
+                [DEFAULT_SCHEMA]: {
+                    persons: {
+                        columns: ['age', 'id', 'name'],
+                    },
+                },
+            };
+
+            // We only care about the columns for this test
+            const actualSchema = Object.entries(schemas).reduce(
+                (a, [schemaName, schemaTables]) => {
+                    a[schemaName] = Object.entries(schemaTables).reduce(
+                        (b, [tableName, table]) => {
+                            b[tableName] = {
+                                columns: table.columns
+                                    .map((column) => column.name)
+                                    .sort(),
+                            };
+                            return b;
+                        },
+                        {} as Record<string, { columns: string[] }>
+                    );
+
+                    return a;
+                },
+                {} as Record<string, Record<string, { columns: string[] }>>
+            );
+
+            expect(actualSchema).toEqual(expectedSchema);
+        }
+
+        expect(true).toBe(true);
+    });
+
     test('Insert data', async () => {
         // Insert data
         await qb
