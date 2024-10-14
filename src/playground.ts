@@ -1,11 +1,10 @@
-import { Connection, Outerbase } from '.';
-import { DefaultDialect } from './query-builder/dialects/default';
+import { Outerbase, SqlConnection } from '.';
 import { MySQLDialect } from './query-builder/dialects/mysql';
 
 function qb() {
     return Outerbase({
         dialect: new MySQLDialect(),
-    } as Connection);
+    } as SqlConnection);
 }
 
 const q = qb();
