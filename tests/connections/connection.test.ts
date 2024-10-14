@@ -129,7 +129,14 @@ describe('Database Connection', () => {
     });
 
     test('Rename table column', async () => {
-        await db.renameColumn(DEFAULT_SCHEMA, 'persons', 'name', 'full_name');
+        const { error } = await db.renameColumn(
+            DEFAULT_SCHEMA,
+            'persons',
+            'name',
+            'full_name'
+        );
+
+        expect(error).not.toBeTruthy();
 
         const { data } = await qb
             .select()

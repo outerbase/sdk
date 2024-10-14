@@ -270,7 +270,7 @@ export class MySQLConnection extends SqlConnection {
         tableName: string,
         columnName: string,
         newColumnName: string
-    ): Promise<void> {
+    ): Promise<QueryResult> {
         // Check the MySQL version
         const { data: version } = await this.query<{ version: string }>({
             query: 'SELECT VERSION() AS version',
@@ -291,7 +291,12 @@ export class MySQLConnection extends SqlConnection {
             });
 
             // Cannot rename column if the table does not exist
-            if (createTableResponse.length === 0) return;
+            if (createTableResponse.length === 0)
+                return {
+                    error: { message: 'Table does not exist', name: 'Error' },
+                    data: [],
+                    query: '',
+                };
 
             // Get the line of the column
             const createTable = createTableResponse[0]['Create Table'];
@@ -303,15 +308,20 @@ export class MySQLConnection extends SqlConnection {
                     .startsWith(this.dialect.escapeId(columnName).toLowerCase())
             );
 
-            if (!columnLine) return;
+            if (!columnLine)
+                return {
+                    error: { message: 'Column does not exist', name: 'Error' },
+                    data: [],
+                    query: '',
+                };
+
             const [columnNamePart, ...columnDefinitions] = columnLine
                 .trim()
                 .replace(/,$/, '')
                 .split(' ');
 
             const query = `ALTER TABLE ${fullTableName} CHANGE COLUMN ${columnNamePart} ${this.dialect.escapeId(newColumnName)} ${columnDefinitions.join(' ')}`;
-            console.log(query);
-            await this.query({ query });
+            return await this.query({ query });
         }
 
         return super.renameColumn(
@@ -327,14 +337,3 @@ export class MySQLConnection extends SqlConnection {
         this.conn.destroy();
     }
 }
-
-/*
-CREATE TABLE `album` (
-  `AlbumId` int NOT NULL,
-  `Title` varchar(160) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `ArtistId` int NOT NULL,
-  PRIMARY KEY (`AlbumId`),
-  KEY `IFK_AlbumArtistId` (`ArtistId`),
-  CONSTRAINT `FK_AlbumArtistId` FOREIGN KEY (`ArtistId`) REFERENCES `artist` (`ArtistId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-*/

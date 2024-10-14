@@ -29,7 +29,7 @@ export abstract class Connection {
         tableName: string,
         columnName: string,
         newColumnName: string
-    ): Promise<void>;
+    ): Promise<QueryResult>;
 }
 
 export abstract class SqlConnection extends Connection {
@@ -44,10 +44,10 @@ export abstract class SqlConnection extends Connection {
         tableName: string,
         columnName: string,
         newColumnName: string
-    ): Promise<void> {
+    ): Promise<QueryResult> {
         const qb = Outerbase(this);
 
-        this.query(
+        return await this.query(
             qb
                 .alterTable(
                     schemaName ? `${schemaName}.${tableName}` : tableName

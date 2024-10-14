@@ -1,6 +1,6 @@
 import { QueryType } from '../query-params';
 import { Query, constructRawQuery } from '../query';
-import { Connection } from './index';
+import { Connection, QueryResult } from './index';
 import {
     Database,
     Table,
@@ -33,7 +33,7 @@ export class DuckDBConnection implements Connection {
         this.connection = this.duckDB.connect();
     }
 
-    renameColumn(): Promise<void> {
+    renameColumn(): Promise<QueryResult> {
         throw new Error('Method not implemented.');
     }
 

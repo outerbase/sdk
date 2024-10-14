@@ -1,6 +1,6 @@
 import { QueryType } from '../query-params';
 import { Query, constructRawQuery } from '../query';
-import { Connection } from './index';
+import { Connection, QueryResult } from './index';
 import {
     Database,
     Table,
@@ -118,7 +118,7 @@ export class MongoDBConnection implements Connection {
         return this.client?.close();
     }
 
-    renameColumn(): Promise<void> {
+    renameColumn(): Promise<QueryResult> {
         throw new Error('Method not implemented.');
     }
 
