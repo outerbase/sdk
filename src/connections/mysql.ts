@@ -1,4 +1,4 @@
-import { type Connection, type RowDataPacket } from 'mysql2';
+import { QueryError, type Connection, type RowDataPacket } from 'mysql2';
 import { Connection as BaseConnection, QueryResult } from '.';
 import { constructRawQuery, Query } from '../query';
 import { QueryType } from '../query-params';
@@ -189,20 +189,46 @@ export class MySQLConnection implements BaseConnection {
     async query<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>> {
-        const rows = await new Promise<RowDataPacket[]>((r) =>
-            this.conn.query(query.query, query.parameters, (_, result) => {
-                if (Array.isArray(result)) {
-                    r((result as RowDataPacket[]) ?? []);
-                }
-                return r([]);
-            })
-        );
+        try {
+            const { rows, error } = await new Promise<{
+                rows: RowDataPacket[];
+                error: QueryError | null;
+            }>((r) =>
+                this.conn.query(
+                    query.query,
+                    query.parameters,
+                    (error, result) => {
+                        if (Array.isArray(result)) {
+                            r({
+                                rows: (result as RowDataPacket[]) ?? [],
+                                error,
+                            });
+                        }
+                        return r({ rows: [], error });
+                    }
+                )
+            );
 
-        return {
-            data: rows.map((r) => ({ ...r }) as T),
-            error: null,
-            query: constructRawQuery(query),
-        };
+            if (error) {
+                return {
+                    data: [],
+                    error: { message: error.message, name: error.name },
+                    query: constructRawQuery(query),
+                };
+            } else {
+                return {
+                    data: rows.map((r) => ({ ...r }) as T),
+                    error: null,
+                    query: constructRawQuery(query),
+                };
+            }
+        } catch {
+            return {
+                error: { message: 'Unknown Error', name: 'Error' },
+                data: [],
+                query: '',
+            };
+        }
     }
 
     async fetchDatabaseSchema(): Promise<Database> {

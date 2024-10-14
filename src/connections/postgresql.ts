@@ -32,18 +32,33 @@ export class PostgreSQLConnection implements Connection {
     async query<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>> {
-        const { rows } = await this.client.query(
-            query.parameters?.length === 0
-                ? query.query
-                : replacePlaceholders(query.query),
-            query.parameters as unknown[]
-        );
+        try {
+            const { rows } = await this.client.query(
+                query.parameters?.length === 0
+                    ? query.query
+                    : replacePlaceholders(query.query),
+                query.parameters as unknown[]
+            );
 
-        return {
-            data: rows,
-            error: null,
-            query: query.query,
-        };
+            return {
+                data: rows,
+                error: null,
+                query: query.query,
+            };
+        } catch (e) {
+            if (e instanceof Error) {
+                return {
+                    data: [],
+                    error: { message: e.message, name: e.name },
+                    query: query.query,
+                };
+            }
+            return {
+                data: [],
+                error: { message: 'Unknown Error', name: 'Error' },
+                query: query.query,
+            };
+        }
     }
 
     async fetchDatabaseSchema(): Promise<Database> {
