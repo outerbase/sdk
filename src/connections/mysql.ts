@@ -304,10 +304,13 @@ export class MySQLConnection extends SqlConnection {
             );
 
             if (!columnLine) return;
-            const [columnNamePart, ...columnDefinitions] =
-                columnLine.split(' ');
+            const [columnNamePart, ...columnDefinitions] = columnLine
+                .trim()
+                .replace(/,$/, '')
+                .split(' ');
 
-            const query = `ALTER TABLE ${fullTableName} CHANGE ${columnNamePart} ${this.dialect.escapeId(newColumnName)} ${columnDefinitions.join(' ')}`;
+            const query = `ALTER TABLE ${fullTableName} CHANGE COLUMN ${columnNamePart} ${this.dialect.escapeId(newColumnName)} ${columnDefinitions.join(' ')}`;
+            console.log(query);
             await this.query({ query });
         }
 
