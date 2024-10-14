@@ -37,12 +37,20 @@ export class TursoConnection extends SqliteBaseConnection {
                 error: null,
                 query: query.query,
             };
-        } catch {
-            return {
-                data: [],
-                error: new Error('Failed to execute query'),
-                query: query.query,
-            };
+        } catch (e) {
+            if (e instanceof Error) {
+                return {
+                    data: [],
+                    error: { message: e.message, name: e.name },
+                    query: query.query,
+                };
+            } else {
+                return {
+                    data: [],
+                    error: { message: 'Unknown error', name: 'Unknown' },
+                    query: query.query,
+                };
+            }
         }
     }
 
