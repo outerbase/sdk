@@ -7,9 +7,9 @@ import {
     Database,
     Table,
 } from 'src/models/database';
-import { Connection } from '..';
+import { Connection, SqlConnection } from '..';
 
-export abstract class SqliteBaseConnection extends Connection {
+export abstract class SqliteBaseConnection extends SqlConnection {
     public async fetchDatabaseSchema(): Promise<Database> {
         const exclude_tables = [
             '_cf_kv',

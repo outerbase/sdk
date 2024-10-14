@@ -1,6 +1,6 @@
-import { Connection, QueryResult } from './connections';
-import { Query, constructRawQuery } from './query';
-import { QueryParams, QueryType } from './query-params';
+import { SqlConnection, QueryResult } from './connections';
+import { Query } from './query';
+import { QueryType } from './query-params';
 import { AbstractDialect, ColumnDataType } from './query-builder';
 
 export enum QueryBuilderAction {
@@ -153,9 +153,9 @@ function whereImplementation(state: QueryBuilderInternal, args: unknown[]) {
 abstract class IQueryBuilder {
     abstract state: QueryBuilderInternal;
 
-    protected connection: Connection;
+    protected connection: SqlConnection;
 
-    constructor(connection: Connection) {
+    constructor(connection: SqlConnection) {
         this.connection = connection;
     }
 
@@ -186,7 +186,7 @@ function createBlankState(action: QueryBuilderAction): QueryBuilderInternal {
 class QueryBuilderSelect extends IQueryBuilder {
     state: QueryBuilderInternal = createBlankState(QueryBuilderAction.SELECT);
 
-    constructor(connection: Connection, columnNames: string[]) {
+    constructor(connection: SqlConnection, columnNames: string[]) {
         super(connection);
         this.state.selectColumns = columnNames;
     }
@@ -232,7 +232,7 @@ class QueryBuilderSelect extends IQueryBuilder {
 class QueryBuilderInsert extends IQueryBuilder {
     state: QueryBuilderInternal = createBlankState(QueryBuilderAction.INSERT);
 
-    constructor(connection: Connection, data: Record<string, unknown>) {
+    constructor(connection: SqlConnection, data: Record<string, unknown>) {
         super(connection);
         this.state.data = data;
     }
@@ -246,7 +246,7 @@ class QueryBuilderInsert extends IQueryBuilder {
 class QueryBuilderUpdate extends IQueryBuilder {
     state: QueryBuilderInternal = createBlankState(QueryBuilderAction.UPDATE);
 
-    constructor(connection: Connection, data: Record<string, unknown>) {
+    constructor(connection: SqlConnection, data: Record<string, unknown>) {
         super(connection);
         this.state.data = data;
     }
@@ -274,7 +274,7 @@ class QueryBuilderCreateTable extends IQueryBuilder {
         QueryBuilderAction.CREATE_TABLE
     );
 
-    constructor(connection: Connection, tableName: string) {
+    constructor(connection: SqlConnection, tableName: string) {
         super(connection);
         this.state.table = tableName;
     }
@@ -299,7 +299,7 @@ class QueryBuilderDropTable extends IQueryBuilder {
         QueryBuilderAction.DELETE_TABLE
     );
 
-    constructor(connection: Connection, tableName: string) {
+    constructor(connection: SqlConnection, tableName: string) {
         super(connection);
         this.state.table = tableName;
     }
@@ -310,7 +310,7 @@ class QueryBuilderAlterTable extends IQueryBuilder {
         QueryBuilderAction.ALTER_TABLE
     );
 
-    constructor(connection: Connection, tableName: string) {
+    constructor(connection: SqlConnection, tableName: string) {
         super(connection);
         this.state.table = tableName;
     }
@@ -334,9 +334,9 @@ class QueryBuilderAlterTable extends IQueryBuilder {
 }
 
 class QueryBuilder {
-    connection: Connection;
+    connection: SqlConnection;
 
-    constructor(connection: Connection) {
+    constructor(connection: SqlConnection) {
         this.connection = connection;
     }
 
@@ -399,7 +399,7 @@ class QueryBuilder {
     }
 }
 
-export function Outerbase(connection: Connection) {
+export function Outerbase(connection: SqlConnection) {
     return new QueryBuilder(connection);
 }
 

@@ -1,5 +1,5 @@
 import { QueryError, type Connection, type RowDataPacket } from 'mysql2';
-import { Connection as BaseConnection, QueryResult } from '.';
+import { QueryResult, SqlConnection } from '.';
 import { constructRawQuery, Query } from '../query';
 import { QueryType } from '../query-params';
 import { Constraint, Database, Table, TableColumn } from './../models/database';
@@ -177,12 +177,13 @@ export function buildMySQLDatabaseSchmea({
     return result;
 }
 
-export class MySQLConnection implements BaseConnection {
+export class MySQLConnection extends SqlConnection {
     protected conn: Connection;
     public dialect = new MySQLDialect();
     queryType = QueryType.positional;
 
     constructor(conn: Connection) {
+        super();
         this.conn = conn;
     }
 

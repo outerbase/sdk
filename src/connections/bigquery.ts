@@ -1,11 +1,11 @@
 import { QueryType } from '../query-params';
 import { Query, constructRawQuery } from '../query';
-import { Connection } from './index';
+import { Connection, SqlConnection } from './index';
 import { Database, Table, TableColumn } from '../models/database';
 import { BigQueryDialect } from '../query-builder/dialects/bigquery';
 import { BigQuery } from '@google-cloud/bigquery';
 
-export class BigQueryConnection implements Connection {
+export class BigQueryConnection extends SqlConnection {
     bigQuery: BigQuery;
 
     // Default query type to positional for BigQuery
@@ -21,6 +21,7 @@ export class BigQueryConnection implements Connection {
      * @param region - Region for your dataset
      */
     constructor(bigQuery: BigQuery) {
+        super();
         this.bigQuery = bigQuery;
     }
 

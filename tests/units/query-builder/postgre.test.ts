@@ -1,11 +1,11 @@
 import { describe, expect, test } from '@jest/globals';
-import { Connection, Outerbase } from '../../../src';
+import { Outerbase, SqlConnection } from '../../../src';
 import { DefaultDialect } from '../../../src/query-builder/dialects/default';
 
 function qb() {
     return Outerbase({
         dialect: new DefaultDialect(),
-    } as Connection);
+    } as SqlConnection);
 }
 
 describe('Query Builder - Postgre Dialect', () => {

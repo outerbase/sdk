@@ -1,8 +1,8 @@
-import { Outerbase } from '../../src';
+import { Outerbase, SqlConnection } from '../../src';
 import createTestClient from './create-test-connection';
 
 const { client: db, defaultSchema: DEFAULT_SCHEMA } = createTestClient();
-const qb = Outerbase(db);
+const qb = Outerbase(db as SqlConnection);
 
 beforeAll(async () => {
     await db.connect();
@@ -128,21 +128,18 @@ describe('Database Connection', () => {
         ]);
     });
 
-    // test('Rename table column', async () => {
-    //     await qb
-    //         .alterTable(`${DEFAULT_SCHEMA}.persons`)
-    //         .renameColumn('name', 'full_name')
-    //         .query();
+    test('Rename table column', async () => {
+        await db.renameColumn(DEFAULT_SCHEMA, 'persons', 'name', 'full_name');
 
-    //     const { data } = await qb
-    //         .select()
-    //         .from(`${DEFAULT_SCHEMA}.persons`)
-    //         .orderBy('id')
-    //         .query();
+        const { data } = await qb
+            .select()
+            .from(`${DEFAULT_SCHEMA}.persons`)
+            .orderBy('id')
+            .query();
 
-    //     expect(data).toEqual([
-    //         { id: 1, full_name: 'Visal In', age: 25 },
-    //         { id: 2, full_name: 'Outerbase', age: 30 },
-    //     ]);
-    // });
+        expect(data).toEqual([
+            { id: 1, full_name: 'Visal In', age: 25 },
+            { id: 2, full_name: 'Outerbase', age: 30 },
+        ]);
+    });
 });

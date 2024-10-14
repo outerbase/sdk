@@ -1,5 +1,5 @@
 import { Client } from 'pg';
-import { Connection, QueryResult } from '.';
+import { Connection, QueryResult, SqlConnection } from '.';
 import { Query } from '../query';
 import { AbstractDialect } from 'src/query-builder';
 import { PostgresDialect } from 'src/query-builder/dialects/postgres';
@@ -12,12 +12,13 @@ function replacePlaceholders(query: string): string {
     return query.replace(/\?/g, () => `$${index++}`);
 }
 
-export class PostgreSQLConnection implements Connection {
+export class PostgreSQLConnection extends SqlConnection {
     client: Client;
     dialect: AbstractDialect = new PostgresDialect();
     queryType: QueryType = QueryType.positional;
 
     constructor(pgClient: Client) {
+        super();
         this.client = pgClient;
     }
 
