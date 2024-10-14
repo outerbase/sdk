@@ -1,36 +1,40 @@
-import { QueryType } from '../query-params'
-import { Query, constructRawQuery } from '../query'
-import { Connection } from './index'
+import { QueryType } from '../query-params';
+import { Query, constructRawQuery } from '../query';
+import { Connection } from './index';
 import {
     Database,
     Table,
     TableColumn,
     TableIndex,
     TableIndexType,
-} from '../models/database'
-import { DuckDbDialect } from '../query-builder/dialects/duckdb'
-import duckDB from 'duckdb'
+} from '../models/database';
+import { DuckDbDialect } from '../query-builder/dialects/duckdb';
+import duckDB from 'duckdb';
 
 type DuckDBParameters = {
-    path: string
-    token: string
-}
+    path: string;
+    token: string;
+};
 
 export class DuckDBConnection implements Connection {
-    duckDB: duckDB.Database | undefined
-    connection: duckDB.Connection | undefined
+    duckDB: duckDB.Database | undefined;
+    connection: duckDB.Connection | undefined;
 
     // Default query type to positional for MotherDuck
-    queryType = QueryType.positional
+    queryType = QueryType.positional;
 
     // Default dialect for MotherDuck
-    dialect = new DuckDbDialect()
+    dialect = new DuckDbDialect();
 
     constructor(private _: DuckDBParameters) {
         this.duckDB = new duckDB.Database(_.path, {
             motherduck_token: _.token,
-        })
-        this.connection = this.duckDB.connect()
+        });
+        this.connection = this.duckDB.connect();
+    }
+
+    renameColumn(): Promise<void> {
+        throw new Error('Method not implemented.');
     }
 
     /**
@@ -40,7 +44,7 @@ export class DuckDBConnection implements Connection {
      * @returns Promise<any>
      */
     async connect(): Promise<any> {
-        return this.duckDB?.connect()
+        return this.duckDB?.connect();
     }
 
     /**
@@ -49,7 +53,7 @@ export class DuckDBConnection implements Connection {
      * @returns Promise<any>
      */
     async disconnect(): Promise<any> {
-        return this.duckDB?.close()
+        return this.duckDB?.close();
     }
 
     /**
@@ -67,11 +71,11 @@ export class DuckDBConnection implements Connection {
     async query(
         query: Query
     ): Promise<{ data: any; error: Error | null; query: string }> {
-        const connection = this.connection
-        if (!connection) throw new Error('No DuckDB connection was found.')
+        const connection = this.connection;
+        if (!connection) throw new Error('No DuckDB connection was found.');
 
-        let result = null
-        let error = null
+        let result = null;
+        let error = null;
 
         try {
             if (Array.isArray(query.parameters)) {
@@ -79,107 +83,107 @@ export class DuckDBConnection implements Connection {
                     connection,
                     query.query,
                     ...query.parameters
-                )
-                result = res
+                );
+                result = res;
             } else {
-                const { res } = await this.runQuery(connection, query.query)
-                result = res
+                const { res } = await this.runQuery(connection, query.query);
+                result = res;
             }
         } catch (e) {
-            error = e instanceof Error ? e : new Error(String(e))
+            error = e instanceof Error ? e : new Error(String(e));
         }
 
-        const rawSQL = constructRawQuery(query)
+        const rawSQL = constructRawQuery(query);
 
         return {
             data: result,
             error: error,
             query: rawSQL,
-        }
+        };
     }
 
     public async fetchDatabaseSchema(): Promise<Database> {
         type DuckDBTables = {
-            database: string
-            schema: string
-            name: string
-            column_names: string[]
-            column_types: string[]
-            temporary: boolean
-        }
+            database: string;
+            schema: string;
+            name: string;
+            column_names: string[];
+            column_types: string[];
+            temporary: boolean;
+        };
 
         type DuckDBSettingsRow = {
-            name: string
-            value: string
-            description: string
-            input_type: string
-            scope: string
-        }
+            name: string;
+            value: string;
+            description: string;
+            input_type: string;
+            scope: string;
+        };
 
         type DuckDBTableInfo = {
-            cid: number
-            name: string
-            type: string
-            notnull: boolean
-            dflt_value: string | null
-            pk: boolean
-        }
+            cid: number;
+            name: string;
+            type: string;
+            notnull: boolean;
+            dflt_value: string | null;
+            pk: boolean;
+        };
 
         const { data: currentDatabaseResponse, error: settingsError } =
             await this.query({
                 query: `SELECT * FROM duckdb_settings();`,
-            })
+            });
 
         if (settingsError || !currentDatabaseResponse) {
-            throw new Error('Failed to retrieve database settings.')
+            throw new Error('Failed to retrieve database settings.');
         }
 
         const currentDatabase = (currentDatabaseResponse as DuckDBSettingsRow[])
             .find((row) => row.name === 'temp_directory')
             ?.value?.split(':')?.[1]
-            ?.split('.')?.[0]
+            ?.split('.')?.[0];
 
         if (!currentDatabase) {
-            throw new Error('Current database could not be determined.')
+            throw new Error('Current database could not be determined.');
         }
 
         const { data: result, error: tableError } = await this.query({
             query: `PRAGMA show_tables_expanded;`,
-        })
+        });
 
         if (tableError || !result) {
-            throw new Error('Failed to retrieve tables.')
+            throw new Error('Failed to retrieve tables.');
         }
 
-        const tables = result as DuckDBTables[]
+        const tables = result as DuckDBTables[];
         const currentTables = tables.filter(
             (table) => table.database === currentDatabase
-        )
+        );
 
-        const schemaMap: Record<string, Record<string, Table>> = {}
+        const schemaMap: Record<string, Record<string, Table>> = {};
 
         for (const table of currentTables) {
             const { data: tableInfoResult, error: tableInfoError } =
                 await this.query({
                     query: `PRAGMA table_info('${table.database}.${table.schema}.${table.name}')`,
-                })
+                });
 
             if (tableInfoError || !tableInfoResult) {
                 throw new Error(
                     `Failed to retrieve table info for table: ${table.name}`
-                )
+                );
             }
 
-            const tableInfo = tableInfoResult as DuckDBTableInfo[]
+            const tableInfo = tableInfoResult as DuckDBTableInfo[];
 
-            const indexes: TableIndex[] = []
+            const indexes: TableIndex[] = [];
             const columns: TableColumn[] = tableInfo.map((column) => {
                 if (column.pk) {
                     indexes.push({
                         name: column.name,
                         type: TableIndexType.PRIMARY,
                         columns: [column.name],
-                    })
+                    });
                 }
 
                 return {
@@ -191,26 +195,26 @@ export class DuckDBConnection implements Connection {
                     primary: column.pk,
                     unique: column.pk, // Assuming PK is unique
                     references: [], // Foreign key references not supported by MotherDuck
-                }
-            })
+                };
+            });
 
             const currentTable: Table = {
                 name: table.name,
                 columns: columns,
                 indexes: indexes,
                 constraints: [], // Constraints are not available in MotherDuck
-            }
+            };
 
             // Ensure the schema exists in the schemaMap
             if (!schemaMap[table.schema]) {
-                schemaMap[table.schema] = {}
+                schemaMap[table.schema] = {};
             }
 
-            schemaMap[table.schema][table.name] = currentTable
+            schemaMap[table.schema][table.name] = currentTable;
         }
 
         // Return the schema map as a properly typed Database object
-        return schemaMap
+        return schemaMap;
     }
 
     runQuery = async (
@@ -221,19 +225,19 @@ export class DuckDBConnection implements Connection {
         return new Promise((resolve, reject) => {
             connection.prepare(query, (err, stmt) => {
                 if (err) {
-                    return reject(err)
+                    return reject(err);
                 }
 
                 stmt.all(...params, (err, res) => {
                     if (err) {
-                        stmt.finalize()
-                        return reject(err)
+                        stmt.finalize();
+                        return reject(err);
                     }
 
-                    resolve({ stmt, res })
-                    stmt.finalize()
-                })
-            })
-        })
-    }
+                    resolve({ stmt, res });
+                    stmt.finalize();
+                });
+            });
+        });
+    };
 }

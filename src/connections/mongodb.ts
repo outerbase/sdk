@@ -118,6 +118,10 @@ export class MongoDBConnection implements Connection {
         return this.client?.close();
     }
 
+    renameColumn(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+
     /**
      * Triggers a query action on the current Connection object.
      *
