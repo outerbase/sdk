@@ -101,7 +101,12 @@ describe('Database Connection', () => {
             .select()
             .from(`${DEFAULT_SCHEMA}.non_existing_table`)
             .query();
+
         expect(error).toBeTruthy();
+
+        // It should contain free text error message, instead of just
+        // some generic error message
+        expect(error?.message).toContain('non_existing_table');
     });
 
     test('Update data', async () => {
