@@ -285,7 +285,7 @@ export class MySQLConnection extends SqlConnection {
             // We cannot rename column in MySQL version less than 8 using RENAME COLUMN
             // We need to get the CREATE SCRIPT of the table
             const { data: createTableResponse } = await this.query<{
-                Create_Table: string;
+                'Create Table': string;
             }>({
                 query: `SHOW CREATE TABLE ${fullTableName}`,
             });
@@ -294,7 +294,7 @@ export class MySQLConnection extends SqlConnection {
             if (createTableResponse.length === 0) return;
 
             // Get the line of the column
-            const createTable = createTableResponse[0].Create_Table;
+            const createTable = createTableResponse[0]['Create Table'];
             const lists = createTable.split('\n');
             const columnLine = lists.find((line) =>
                 line
