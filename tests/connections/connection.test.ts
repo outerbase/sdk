@@ -96,6 +96,14 @@ describe('Database Connection', () => {
         ]);
     });
 
+    test('Select from non-existing table should return error', async () => {
+        const { error } = await qb
+            .select()
+            .from(`${DEFAULT_SCHEMA}.non_existing_table`)
+            .query();
+        expect(error).toBeTruthy();
+    });
+
     test('Update data', async () => {
         await qb
             .update({ name: 'Visal In' })
