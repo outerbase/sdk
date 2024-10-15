@@ -8,6 +8,7 @@ import {
     MySQLConnection,
     BigQueryConnection,
     TursoConnection,
+    CloudflareD1Connection,
 } from '../../src';
 
 export default function createTestClient(): {
@@ -62,6 +63,13 @@ export default function createTestClient(): {
         const client = new TursoConnection(
             createTursoConnection({ url: ':memory:' })
         );
+        return { client, defaultSchema: 'main' };
+    } else if (process.env.CONNECTION_TYPE === 'cloudflare') {
+        const client = new CloudflareD1Connection({
+            apiKey: process.env.CLOUDFLARE_API_KEY as string,
+            accountId: process.env.CLOUDFLARE_ACCOUNT_ID as string,
+            databaseId: process.env.CLOUDFLARE_DATABASE_ID as string,
+        });
         return { client, defaultSchema: 'main' };
     }
 

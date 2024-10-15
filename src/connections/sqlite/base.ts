@@ -1,137 +1,74 @@
-import {
-    Constraint,
-    ConstraintColumn,
-    TableIndex,
-    TableIndexType,
-    TableColumn,
-    Database,
-    Table,
-} from 'src/models/database';
+import { Database, Table } from 'src/models/database';
 import { Connection, SqlConnection } from '..';
-
 export abstract class SqliteBaseConnection extends SqlConnection {
     public async fetchDatabaseSchema(): Promise<Database> {
-        const exclude_tables = [
-            '_cf_kv',
-            'sqlite_schema',
-            'sqlite_temp_schema',
-        ];
-
-        const schemaMap: Record<string, Record<string, Table>> = {};
-
-        const { data } = await this.query({
-            query: `PRAGMA table_list`,
+        const { data: tableList } = await this.query<{
+            type: string;
+            name: string;
+            tbl_name: string;
+        }>({
+            query: `SELECT * FROM sqlite_master WHERE type = 'table' AND (name NOT LIKE 'sqlite_%' OR name NOT LIKE '_cf_%')`,
         });
 
-        const allTables = (
-            data as {
-                schema: string;
-                name: string;
-                type: string;
-            }[]
-        ).filter(
-            (row) =>
-                !row.name.startsWith('_lite') &&
-                !row.name.startsWith('sqlite_') &&
-                !exclude_tables.includes(row.name?.toLowerCase())
+        const { data: columnList } = await this.query<{
+            cid: number;
+            name: string;
+            type: string;
+            notnull: 0 | 1;
+            dflt_value: string | null;
+            pk: 0 | 1;
+            tbl_name: string;
+            ref_table_name: string | null;
+            ref_column_name: string | null;
+        }>({
+            query: `WITH master AS (SELECT tbl_name FROM sqlite_master WHERE type = 'table' AND tbl_name NOT LIKE 'sqlite_%' AND tbl_name NOT LIKE '_cf_%')
+SELECT columns.*, fk."table" AS ref_table_name, fk."to" AS ref_column_name 
+FROM
+  (SELECT fields.*, tbl_name FROM master CROSS JOIN pragma_table_info (master.tbl_name) fields) AS columns LEFT JOIN
+  (SELECT fk.*, tbl_name FROM master CROSS JOIN pragma_foreign_key_list (master.tbl_name) fk) AS fk 
+  ON fk."from" = columns.name AND fk.tbl_name = columns.tbl_name;`,
+        });
+
+        const tableLookup = tableList.reduce(
+            (acc, table) => {
+                acc[table.tbl_name] = {
+                    name: table.name,
+                    columns: [],
+                    indexes: [],
+                    constraints: [],
+                };
+                return acc;
+            },
+            {} as Record<string, Table>
         );
 
-        for (const table of allTables) {
-            if (exclude_tables.includes(table.name?.toLowerCase())) continue;
+        for (const column of columnList) {
+            if (!tableLookup[column.tbl_name]) continue;
 
-            const { data: pragmaData } = await this.query({
-                query: `PRAGMA table_info('${table.name}')`,
+            tableLookup[column.tbl_name].columns.push({
+                name: column.name,
+                type: column.type,
+                position: column.cid,
+                nullable: column.notnull === 0,
+                default: column.dflt_value,
+                primary: column.pk === 1,
+                unique: false,
+                references:
+                    column.ref_table_name && column.ref_column_name
+                        ? [
+                              {
+                                  table: column.ref_table_name,
+                                  column: column.ref_column_name,
+                              },
+                          ]
+                        : [],
             });
-
-            const tableData = pragmaData as {
-                cid: number;
-                name: string;
-                type: string;
-                notnull: 0 | 1;
-                dflt_value: string | null;
-                pk: 0 | 1;
-            }[];
-
-            const { data: fkConstraintResponse } = await this.query({
-                query: `PRAGMA foreign_key_list('${table.name}')`,
-            });
-
-            const fkConstraintData = (
-                fkConstraintResponse as {
-                    id: number;
-                    seq: number;
-                    table: string;
-                    from: string;
-                    to: string;
-                    on_update: 'NO ACTION' | unknown;
-                    on_delete: 'NO ACTION' | unknown;
-                    match: 'NONE' | unknown;
-                }[]
-            ).filter(
-                (row) =>
-                    !row.table.startsWith('_lite') &&
-                    !row.table.startsWith('sqlite_')
-            );
-
-            const constraints: Constraint[] = [];
-
-            if (fkConstraintData.length > 0) {
-                const fkConstraints: Constraint = {
-                    name: 'FOREIGN KEY',
-                    schema: table.schema,
-                    tableName: table.name,
-                    type: 'FOREIGN KEY',
-                    columns: [],
-                };
-
-                fkConstraintData.forEach((fkConstraint) => {
-                    const currentConstraint: ConstraintColumn = {
-                        columnName: fkConstraint.from,
-                    };
-                    fkConstraints.columns.push(currentConstraint);
-                });
-                constraints.push(fkConstraints);
-            }
-
-            const indexes: TableIndex[] = [];
-            const columns = tableData.map((column) => {
-                // Primary keys are ALWAYS considered indexes
-                if (column.pk === 1) {
-                    indexes.push({
-                        name: column.name,
-                        type: TableIndexType.PRIMARY,
-                        columns: [column.name],
-                    });
-                }
-
-                const currentColumn: TableColumn = {
-                    name: column.name,
-                    type: column.type,
-                    position: column.cid,
-                    nullable: column.notnull === 0,
-                    default: column.dflt_value,
-                    primary: column.pk === 1,
-                    unique: column.pk === 1,
-                    references: [],
-                };
-
-                return currentColumn;
-            });
-
-            const currentTable: Table = {
-                name: table.name,
-                columns: columns,
-                indexes: indexes,
-                constraints: constraints,
-            };
-
-            if (!schemaMap[table.schema]) {
-                schemaMap[table.schema] = {};
-            }
-
-            schemaMap[table.schema][table.name] = currentTable;
         }
 
-        return schemaMap;
+        // Sqlite default schema is "main", since we don't support
+        // ATTACH, we don't need to worry about other schemas
+        return {
+            main: tableLookup,
+        };
     }
 }
