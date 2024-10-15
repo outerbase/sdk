@@ -71,24 +71,18 @@ describe('Database Connection', () => {
     });
 
     test('Insert data', async () => {
-        // Insert data
-        await qb
-            .insert({ id: 1, name: 'Visal', age: 25 })
-            .into(`${DEFAULT_SCHEMA}.persons`)
-            .query();
-
-        await qb
-            .insert({ id: 2, name: 'Outerbase', age: 30 })
-            .into(`${DEFAULT_SCHEMA}.persons`)
-            .query();
+        await db.insertMany(DEFAULT_SCHEMA, 'persons', [
+            { id: 1, name: 'Visal', age: 25 },
+            { id: 2, name: 'Outerbase', age: 30 },
+        ]);
     });
 
     test('Select data', async () => {
-        const { data } = await qb
-            .select()
-            .from(`${DEFAULT_SCHEMA}.persons`)
-            .orderBy('id')
-            .query();
+        const { data } = await db.select(DEFAULT_SCHEMA, 'persons', {
+            orderBy: ['id'],
+            limit: 1000,
+            offset: 0,
+        });
 
         expect(data).toEqual([
             { id: 1, name: 'Visal', age: 25 },
@@ -97,10 +91,11 @@ describe('Database Connection', () => {
     });
 
     test('Select from non-existing table should return error', async () => {
-        const { error } = await qb
-            .select()
-            .from(`${DEFAULT_SCHEMA}.non_existing_table`)
-            .query();
+        const { error } = await db.select(
+            DEFAULT_SCHEMA,
+            'non_existing_table',
+            { limit: 1000, offset: 0 }
+        );
 
         expect(error).toBeTruthy();
 
@@ -110,17 +105,18 @@ describe('Database Connection', () => {
     });
 
     test('Update data', async () => {
-        await qb
-            .update({ name: 'Visal In' })
-            .into(`${DEFAULT_SCHEMA}.persons`)
-            .where({ id: 1 })
-            .query();
+        await db.update(
+            DEFAULT_SCHEMA,
+            'persons',
+            { name: 'Visal In' },
+            { id: 1 }
+        );
 
-        const { data } = await qb
-            .select()
-            .from(`${DEFAULT_SCHEMA}.persons`)
-            .orderBy('id')
-            .query();
+        const { data } = await db.select(DEFAULT_SCHEMA, 'persons', {
+            orderBy: ['id'],
+            limit: 1000,
+            offset: 0,
+        });
 
         expect(data).toEqual([
             { id: 1, name: 'Visal In', age: 25 },
@@ -138,11 +134,11 @@ describe('Database Connection', () => {
 
         expect(error).not.toBeTruthy();
 
-        const { data } = await qb
-            .select()
-            .from(`${DEFAULT_SCHEMA}.persons`)
-            .orderBy('id')
-            .query();
+        const { data } = await db.select(DEFAULT_SCHEMA, 'persons', {
+            orderBy: ['id'],
+            limit: 1000,
+            offset: 0,
+        });
 
         expect(data).toEqual([
             { id: 1, full_name: 'Visal In', age: 25 },

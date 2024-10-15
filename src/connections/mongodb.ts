@@ -1,6 +1,6 @@
 import { QueryType } from '../query-params';
 import { Query, constructRawQuery } from '../query';
-import { Connection, QueryResult } from './index';
+import { Connection, ConnectionSelectOptions, QueryResult } from './index';
 import {
     Database,
     Table,
@@ -119,6 +119,39 @@ export class MongoDBConnection implements Connection {
     }
 
     renameColumn(): Promise<QueryResult> {
+        throw new Error('Method not implemented.');
+    }
+
+    insert(
+        schemaName: string | undefined,
+        tableName: string,
+        data: Record<string, unknown>
+    ): Promise<QueryResult> {
+        throw new Error('Method not implemented.');
+    }
+
+    insertMany(
+        schemaName: string | undefined,
+        tableName: string,
+        data: Record<string, unknown>[]
+    ): Promise<QueryResult> {
+        throw new Error('Method not implemented.');
+    }
+
+    update(
+        schemaName: string | undefined,
+        tableName: string,
+        data: Record<string, unknown>,
+        where: Record<string, unknown>
+    ): Promise<QueryResult> {
+        throw new Error('Method not implemented.');
+    }
+
+    select(
+        schemaName: string,
+        tableName: string,
+        options: ConnectionSelectOptions
+    ): Promise<QueryResult> {
         throw new Error('Method not implemented.');
     }
 
