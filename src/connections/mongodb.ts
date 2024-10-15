@@ -9,14 +9,7 @@ import {
     TableIndexType,
 } from '../models/database';
 
-import {
-    MongoClient,
-    Db,
-    Document,
-    FindCursor,
-    Collection,
-    ObjectId,
-} from 'mongodb';
+import { MongoClient, Db, Document, Collection, ObjectId } from 'mongodb';
 import { PostgresDialect } from 'src/query-builder/dialects/postgres';
 // import { MongoDialect } from '../query-builder/dialects/mongo'
 
@@ -153,6 +146,20 @@ export class MongoDBConnection implements Connection {
         options: ConnectionSelectOptions
     ): Promise<QueryResult> {
         throw new Error('Method not implemented.');
+    }
+
+    async createTable(): Promise<QueryResult> {
+        // Mongodb does not have a schema, so we can't create a table
+        return { error: null, data: [], query: '' };
+    }
+
+    async dropTable(
+        schemaName: string | undefined,
+        tableName: string
+    ): Promise<QueryResult> {
+        if (!this.db) throw new Error('No MongoDB connection was found.');
+        await this.db.collection(tableName).drop();
+        return { error: null, data: [], query: '' };
     }
 
     /**

@@ -1,5 +1,5 @@
 import { Query } from '../query';
-import { Database } from '../models/database';
+import { Database, TableColumn } from '../models/database';
 import { AbstractDialect } from 'src/query-builder';
 import { Outerbase } from 'src/client';
 
@@ -53,6 +53,18 @@ export abstract class Connection {
         schemaName: string,
         tableName: string,
         options: ConnectionSelectOptions
+    ): Promise<QueryResult>;
+
+    // Changing schema operations
+    abstract dropTable(
+        schemaName: string | undefined,
+        tableName: string
+    ): Promise<QueryResult>;
+
+    abstract createTable(
+        schemaName: string | undefined,
+        tableName: string,
+        columns: Partial<TableColumn>[]
     ): Promise<QueryResult>;
 
     abstract renameColumn(
@@ -147,6 +159,39 @@ export abstract class SqlConnection extends Connection {
                 .update(data)
                 .into(schemaName ? `${schemaName}.${tableName}` : tableName)
                 .where(where)
+                .toQuery()
+        );
+    }
+
+    createTable(
+        schemaName: string | undefined,
+        tableName: string,
+        columns: Partial<TableColumn>[]
+    ): Promise<QueryResult> {
+        const qb = Outerbase(this).createTable(
+            schemaName ? `${schemaName}.${tableName}` : tableName
+        );
+
+        for (const column of columns) {
+            if (column.name && column.type) {
+                qb.column(column.name, column.type);
+            }
+        }
+
+        return this.query(qb.toQuery());
+    }
+
+    dropTable(
+        schemaName: string | undefined,
+        tableName: string
+    ): Promise<QueryResult> {
+        const qb = Outerbase(this);
+
+        return this.query(
+            qb
+                .dropTable(
+                    schemaName ? `${schemaName}.${tableName}` : tableName
+                )
                 .toQuery()
         );
     }

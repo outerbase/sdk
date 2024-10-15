@@ -1,14 +1,11 @@
-import { Outerbase, SqlConnection } from '../../src';
 import createTestClient from './create-test-connection';
-
 const { client: db, defaultSchema: DEFAULT_SCHEMA } = createTestClient();
-const qb = Outerbase(db as SqlConnection);
 
 beforeAll(async () => {
     await db.connect();
 
     // It is better to cleanup here in case any previous test failed
-    await qb.dropTable(`${DEFAULT_SCHEMA}.persons`).query();
+    await db.dropTable(DEFAULT_SCHEMA, 'persons');
 });
 
 afterAll(async () => {
@@ -18,19 +15,29 @@ afterAll(async () => {
 describe('Database Connection', () => {
     test('Create table', async () => {
         // Create testing table
-        await qb
-            .createTable(`${DEFAULT_SCHEMA}.persons`)
-            .column('id', 'INTEGER')
-            .column(
-                'name',
-                process.env.CONNECTION_TYPE === 'bigquery'
-                    ? 'STRING'
-                    : 'VARCHAR(255)'
-            )
-            .column('age', 'INTEGER')
-            .query();
+        await db.createTable(DEFAULT_SCHEMA, 'persons', [
+            { name: 'id', type: 'INTEGER' },
+            {
+                name: 'name',
+                type:
+                    process.env.CONNECTION_TYPE === 'bigquery'
+                        ? 'STRING'
+                        : 'VARCHAR(255)',
+            },
+            { name: 'age', type: 'INTEGER' },
+        ]);
     });
 
+    test('Insert data', async () => {
+        await db.insertMany(DEFAULT_SCHEMA, 'persons', [
+            { id: 1, name: 'Visal', age: 25 },
+            { id: 2, name: 'Outerbase', age: 30 },
+        ]);
+    });
+
+    // Check schema must be done AFTER insert data
+    // because some NoSQL database does not have schema
+    // their schema is based on the data in the collection
     test('Check the schema', async () => {
         if (db.fetchDatabaseSchema) {
             const schemas = await db.fetchDatabaseSchema();
@@ -70,13 +77,6 @@ describe('Database Connection', () => {
         expect(true).toBe(true);
     });
 
-    test('Insert data', async () => {
-        await db.insertMany(DEFAULT_SCHEMA, 'persons', [
-            { id: 1, name: 'Visal', age: 25 },
-            { id: 2, name: 'Outerbase', age: 30 },
-        ]);
-    });
-
     test('Select data', async () => {
         const { data } = await db.select(DEFAULT_SCHEMA, 'persons', {
             orderBy: ['id'],
@@ -99,7 +99,7 @@ describe('Database Connection', () => {
 
         expect(error).toBeTruthy();
 
-        // It should contain free text error message, instead of just
+        // It should contain friendly text error message, instead of just
         // some generic error message
         expect(error?.message).toContain('non_existing_table');
     });
