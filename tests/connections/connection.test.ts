@@ -12,6 +12,14 @@ afterAll(async () => {
     await db.disconnect();
 });
 
+function cleanup(data: Record<string, unknown>[]) {
+    // Remove some database specified fields
+    return data.map((d) => {
+        const { _id, ...rest } = d;
+        return rest;
+    });
+}
+
 describe('Database Connection', () => {
     test('Create table', async () => {
         // Create testing table
@@ -46,7 +54,17 @@ describe('Database Connection', () => {
             const expectedSchema = {
                 [DEFAULT_SCHEMA]: {
                     persons: {
-                        columns: ['age', 'id', 'name'],
+                        columns: [
+                            // MongoDB comes with _id by default
+                            process.env.CONNECTION_TYPE === 'mongodb'
+                                ? '_id'
+                                : undefined,
+
+                            // Actual columns
+                            'age',
+                            'id',
+                            'name',
+                        ].filter(Boolean),
                     },
                 },
             };
@@ -84,13 +102,16 @@ describe('Database Connection', () => {
             offset: 0,
         });
 
-        expect(data).toEqual([
+        expect(cleanup(data)).toEqual([
             { id: 1, name: 'Visal', age: 25 },
             { id: 2, name: 'Outerbase', age: 30 },
         ]);
     });
 
     test('Select from non-existing table should return error', async () => {
+        // MongoDB does not show error when selecting from non-existing collection
+        if (process.env.CONNECTION_TYPE === 'mongodb') return;
+
         const { error } = await db.select(
             DEFAULT_SCHEMA,
             'non_existing_table',
@@ -118,7 +139,7 @@ describe('Database Connection', () => {
             offset: 0,
         });
 
-        expect(data).toEqual([
+        expect(cleanup(data)).toEqual([
             { id: 1, name: 'Visal In', age: 25 },
             { id: 2, name: 'Outerbase', age: 30 },
         ]);
@@ -140,7 +161,7 @@ describe('Database Connection', () => {
             offset: 0,
         });
 
-        expect(data).toEqual([
+        expect(cleanup(data)).toEqual([
             { id: 1, full_name: 'Visal In', age: 25 },
             { id: 2, full_name: 'Outerbase', age: 30 },
         ]);

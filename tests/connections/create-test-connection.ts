@@ -9,7 +9,9 @@ import {
     BigQueryConnection,
     TursoConnection,
     CloudflareD1Connection,
+    MongoDBConnection,
 } from '../../src';
+import { MongoClient } from 'mongodb';
 
 export default function createTestClient(): {
     client: Connection;
@@ -71,6 +73,12 @@ export default function createTestClient(): {
             databaseId: process.env.CLOUDFLARE_DATABASE_ID as string,
         });
         return { client, defaultSchema: 'main' };
+    } else if (process.env.CONNECTION_TYPE === 'mongodb') {
+        const client = new MongoDBConnection(
+            new MongoClient(process.env.MONGODB_URI as string),
+            process.env.MONGODB_DB_NAME as string
+        );
+        return { client, defaultSchema: process.env.MONGODB_DB_NAME as string };
     }
 
     throw new Error('Invalid connection type');

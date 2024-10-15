@@ -148,3 +148,27 @@ jobs:
                   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
                   CLOUDFLARE_DATABASE_ID: ${{ secrets.CLOUDFLARE_DATABASE_ID }}
               run: npm run test:connection
+
+    test_mongodb:
+        name: 'MongoDB Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        services:
+            mongodb:
+                image: mongo
+                ports:
+                    - 27017:27017
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: mongodb
+                  MONGODB_URI: mongodb://localhost:27017
+                  MONGODB_DB_NAME: testing
+              run: npm run test:connection
