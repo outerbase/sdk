@@ -270,7 +270,7 @@ class QueryBuilderUpdate extends IQueryBuilder {
 }
 
 class QueryBuilderDelete extends IQueryBuilder {
-    state: QueryBuilderInternal = createBlankState(QueryBuilderAction.UPDATE);
+    state: QueryBuilderInternal = createBlankState(QueryBuilderAction.DELETE);
 
     constructor(connection: SqlConnection) {
         super(connection);
