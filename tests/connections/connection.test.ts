@@ -166,4 +166,18 @@ describe('Database Connection', () => {
             { id: 2, full_name: 'Outerbase', age: 30 },
         ]);
     });
+
+    test('Delete a row', async () => {
+        await db.delete(DEFAULT_SCHEMA, 'persons', { id: 1 });
+
+        const { data } = await db.select(DEFAULT_SCHEMA, 'persons', {
+            orderBy: ['id'],
+            limit: 1000,
+            offset: 0,
+        });
+
+        expect(cleanup(data)).toEqual([
+            { id: 2, full_name: 'Outerbase', age: 30 },
+        ]);
+    });
 });

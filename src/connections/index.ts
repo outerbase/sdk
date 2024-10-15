@@ -49,6 +49,12 @@ export abstract class Connection {
         where: Record<string, unknown>
     ): Promise<QueryResult>;
 
+    abstract delete(
+        schemaName: string,
+        tableName: string,
+        where: Record<string, unknown>
+    ): Promise<QueryResult>;
+
     abstract select(
         schemaName: string,
         tableName: string,
@@ -158,6 +164,22 @@ export abstract class SqlConnection extends Connection {
             qb
                 .update(data)
                 .into(schemaName ? `${schemaName}.${tableName}` : tableName)
+                .where(where)
+                .toQuery()
+        );
+    }
+
+    async delete(
+        schemaName: string,
+        tableName: string,
+        where: Record<string, unknown>
+    ): Promise<QueryResult> {
+        const qb = Outerbase(this);
+
+        return await this.query(
+            qb
+                .delete()
+                .from(schemaName ? `${schemaName}.${tableName}` : tableName)
                 .where(where)
                 .toQuery()
         );

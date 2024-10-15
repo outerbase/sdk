@@ -144,6 +144,19 @@ export class MongoDBConnection implements Connection {
         return { error: null, data: [], query: '' };
     }
 
+    async delete(
+        schemaName: string | undefined,
+        tableName: string,
+        where: Record<string, unknown>
+    ): Promise<QueryResult> {
+        await this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .deleteMany(where);
+
+        return { error: null, data: [], query: '' };
+    }
+
     async select(
         schemaName: string,
         tableName: string,

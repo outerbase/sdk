@@ -349,22 +349,24 @@ export abstract class AbstractDialect implements Dialect {
         };
     }
 
-    // delete(
-    //     builder: QueryBuilderInternal,
-    // ): Query {
-    //     // if (!builder.whereClauses || builder.whereClauses?.length === 0) {
-    //     //     return query
-    //     // }
+    delete(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
 
-    //     // const formattedTable = this.formatFromSchemaAndTable(
-    //     //     builder.schema,
-    //     //     builder.table || ''
-    //     // )
-    //     // query.query = `DELETE FROM ${formattedTable}`
-    //     // if (builder.whereClauses?.length > 0) {
-    //     //     query.query += ` WHERE ${builder.whereClauses.join(' AND ')}`
-    //     // }
+        if (!tableName) {
+            throw new Error('Table name is required to build a DELETE query.');
+        }
 
-    //     return ;
-    // }
+        const combinedParts = this.mergePart(
+            [
+                [`DELETE FROM ${this.escapeId(tableName)}`, []],
+                this.buildWherePart(builder.whereClauses),
+            ],
+            ' '
+        );
+
+        return {
+            query: combinedParts[0],
+            parameters: combinedParts[1],
+        };
+    }
 }

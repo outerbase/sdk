@@ -269,6 +269,31 @@ class QueryBuilderUpdate extends IQueryBuilder {
     }
 }
 
+class QueryBuilderDelete extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(QueryBuilderAction.UPDATE);
+
+    constructor(connection: SqlConnection) {
+        super(connection);
+    }
+
+    from(tableName: string) {
+        this.state.table = tableName;
+        return this;
+    }
+
+    where(conditions: Record<string, unknown>): QueryBuilderDelete;
+    where(
+        columName: string,
+        operator: string,
+        value: unknown
+    ): QueryBuilderDelete;
+    where(callback: WhereGenerator): QueryBuilderDelete;
+    where(...args: unknown[]) {
+        whereImplementation(this.state, args);
+        return this;
+    }
+}
+
 class QueryBuilderCreateTable extends IQueryBuilder {
     state: QueryBuilderInternal = createBlankState(
         QueryBuilderAction.CREATE_TABLE
@@ -352,6 +377,10 @@ class QueryBuilder {
         return new QueryBuilderUpdate(this.connection, data);
     }
 
+    delete() {
+        return new QueryBuilderDelete(this.connection);
+    }
+
     createTable(tableName: string) {
         return new QueryBuilderCreateTable(this.connection, tableName);
     }
@@ -420,14 +449,8 @@ function buildQueryString(
             return dialect.insert(queryBuilder);
         case QueryBuilderAction.UPDATE:
             return dialect.update(queryBuilder);
-        // case QueryBuilderAction.DELETE:
-        //     query.query = dialect.delete(queryBuilder, queryType, query).query;
-        //     query.parameters = dialect.delete(
-        //         queryBuilder,
-        //         queryType,
-        //         query
-        //     ).parameters;
-        //     break;
+        case QueryBuilderAction.DELETE:
+            return dialect.delete(queryBuilder);
         case QueryBuilderAction.CREATE_TABLE:
             return dialect.createTable(queryBuilder);
         case QueryBuilderAction.DELETE_TABLE:
