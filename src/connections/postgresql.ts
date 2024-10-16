@@ -6,6 +6,7 @@ import { PostgresDialect } from 'src/query-builder/dialects/postgres';
 import { QueryType } from 'src/query-params';
 import { Database } from 'src/models/database';
 import { buildMySQLDatabaseSchmea } from './mysql';
+import { transformArrayBasedResult } from 'src/utils/transformer';
 
 function replacePlaceholders(query: string): string {
     let index = 1;
@@ -34,18 +35,22 @@ export class PostgreSQLConnection extends SqlConnection {
         query: Query
     ): Promise<QueryResult<T>> {
         try {
-            const { rows } = await this.client.query(
-                query.parameters?.length === 0
-                    ? query.query
-                    : replacePlaceholders(query.query),
-                query.parameters as unknown[]
-            );
+            const { rows, fields } = await this.client.query({
+                text:
+                    query.parameters?.length === 0
+                        ? query.query
+                        : replacePlaceholders(query.query),
+                rowMode: 'array',
+                values: query.parameters as unknown[],
+            });
 
-            return {
-                data: rows,
-                error: null,
-                query: query.query,
-            };
+            return transformArrayBasedResult(
+                fields,
+                (field) => ({
+                    name: field.name,
+                }),
+                rows
+            ) as QueryResult<T>;
         } catch (e) {
             if (e instanceof Error) {
                 return {
