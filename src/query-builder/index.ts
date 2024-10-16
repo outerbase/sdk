@@ -13,7 +13,7 @@ interface Dialect {
     select(builder: QueryBuilderInternal): Query;
     insert(builder: QueryBuilderInternal): Query;
     update(builder: QueryBuilderInternal): Query;
-    // delete(builder: QueryBuilderInternal): Query;
+    delete(builder: QueryBuilderInternal): Query;
     createTable(builder: QueryBuilderInternal): Query;
     dropTable(builder: QueryBuilderInternal): Query;
     renameColumn(builder: QueryBuilderInternal): Query;
@@ -32,6 +32,10 @@ export enum ColumnDataType {
 }
 
 export abstract class AbstractDialect implements Dialect {
+    // Various flags to help customize the dialect
+    protected AUTO_INCREMENT_KEYWORD = 'AUTO_INCREMENT';
+    protected SUPPORT_COLUMN_COMMENT = true;
+
     escapeId(identifier: string): string {
         return identifier
             .split('.')
@@ -189,12 +193,44 @@ export abstract class AbstractDialect implements Dialect {
         ];
     }
 
+    // This is generic implementation of column definition,
     protected buildColumnDefinition(def: TableColumnDefinition): string {
+        const referencePart = def.references
+            ? [
+                  `REFERENCES ${this.escapeId(def.references.table)}(${def.references.column.map((c) => this.escapeId(c)).join(', ')})`,
+                  def.references.match ? `MATCH ${def.references.match}` : '',
+                  def.references.onDelete
+                      ? `ON DELETE ${def.references.onDelete}`
+                      : '',
+                  def.references.onUpdate
+                      ? `ON UPDATE ${def.references.onUpdate}`
+                      : '',
+              ]
+                  .filter(Boolean)
+                  .join(' ')
+            : '';
+
         return [
             def.type,
             def.nullable === false ? 'NOT NULL' : '',
+            def.invisible ? 'INVISIBLE' : '', // This is for MySQL case
             def.primaryKey ? 'PRIMARY KEY' : '',
+            def.unique ? 'UNIQUE' : '',
             def.default ? `DEFAULT ${def.default}` : '',
+            def.defaultExpression ? `DEFAULT (${def.defaultExpression})` : '',
+            def.autoIncrement ? this.AUTO_INCREMENT_KEYWORD : '',
+            def.collate ? `COLLATE ${def.collate}` : '',
+            def.generatedExpression
+                ? `GENERATED ALWAYS AS (${def.generatedExpression})`
+                : '',
+            def.generatedExpression && def.generatedType
+                ? def.generatedType
+                : '',
+            def.checkExpression ? `CHECK (${def.checkExpression})` : '',
+            referencePart,
+            def.comment && this.SUPPORT_COLUMN_COMMENT
+                ? `COMMENT '${def.comment}'`
+                : '',
         ]
             .filter(Boolean)
             .join(' ');

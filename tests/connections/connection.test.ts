@@ -24,15 +24,17 @@ describe('Database Connection', () => {
     test('Create table', async () => {
         // Create testing table
         await db.createTable(DEFAULT_SCHEMA, 'persons', [
-            { name: 'id', type: 'INTEGER' },
+            { name: 'id', definition: { type: 'INTEGER' } },
             {
                 name: 'name',
-                type:
-                    process.env.CONNECTION_TYPE === 'bigquery'
-                        ? 'STRING'
-                        : 'VARCHAR(255)',
+                definition: {
+                    type:
+                        process.env.CONNECTION_TYPE === 'bigquery'
+                            ? 'STRING'
+                            : 'VARCHAR(255)',
+                },
             },
-            { name: 'age', type: 'INTEGER' },
+            { name: 'age', definition: { type: 'INTEGER' } },
         ]);
     });
 

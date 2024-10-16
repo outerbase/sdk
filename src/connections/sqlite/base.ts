@@ -1,6 +1,10 @@
 import { Database, Table, TableColumn } from 'src/models/database';
-import { Connection, SqlConnection } from '..';
+import { SqlConnection } from '..';
+import { AbstractDialect } from 'src/query-builder';
+import { SqliteDialect } from 'src/query-builder/dialects/sqlite-dialect';
 export abstract class SqliteBaseConnection extends SqlConnection {
+    dialect: AbstractDialect = new SqliteDialect();
+
     public async fetchDatabaseSchema(): Promise<Database> {
         const { data: tableList } = await this.query<{
             type: string;
