@@ -203,8 +203,11 @@ export class MySQLConnection extends SqlConnection {
                 error: QueryError | null;
                 fields: FieldPacket[];
             }>((r) =>
-                this.conn.execute(
-                    { sql: query.query, rowsAsArray: true },
+                this.conn.query(
+                    {
+                        sql: query.query,
+                        rowsAsArray: true,
+                    },
                     query.parameters,
                     (error, result, fields) => {
                         if (Array.isArray(result)) {
