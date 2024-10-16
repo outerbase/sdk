@@ -117,7 +117,7 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
         if (!query) throw new Error('A SQL query was not provided');
 
         const response = await fetch(
-            `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query/raw`,
+            `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/raw`,
             {
                 method: 'POST',
                 headers: {
