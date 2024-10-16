@@ -9,8 +9,15 @@ export type OperationResponse = {
     error: Error | null;
 };
 
+export interface QueryResultHeader {
+    name: string;
+    displayName: string;
+    type?: string;
+    tableName?: string;
+}
 export interface QueryResult<T = Record<string, unknown>> {
     data: T[];
+    headers?: QueryResultHeader[];
     error: Error | null;
     query: string;
 }
@@ -28,6 +35,8 @@ export abstract class Connection {
 
     // Retrieve metadata about the database, useful for introspection.
     abstract fetchDatabaseSchema(): Promise<Database>;
+
+    abstract raw(query: string): Promise<QueryResult>;
 
     // Connection common operations that will be used by Outerbase
     abstract insert(
@@ -87,6 +96,10 @@ export abstract class SqlConnection extends Connection {
     abstract query<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>>;
+
+    async raw(query: string): Promise<QueryResult> {
+        return await this.query({ query });
+    }
 
     async select(
         schemaName: string,

@@ -1,9 +1,15 @@
-import { QueryError, type Connection, type RowDataPacket } from 'mysql2';
+import {
+    FieldPacket,
+    QueryError,
+    type Connection,
+    type QueryResult as MySQLQueryResult,
+} from 'mysql2';
 import { QueryResult, SqlConnection } from '.';
 import { constructRawQuery, Query } from '../query';
 import { QueryType } from '../query-params';
 import { Constraint, Database, Table, TableColumn } from './../models/database';
 import { MySQLDialect } from './../query-builder/dialects/mysql';
+import { transformArrayBasedResult } from 'src/utils/transformer';
 
 interface MySQLSchemaResult {
     SCHEMA_NAME: string;
@@ -192,21 +198,23 @@ export class MySQLConnection extends SqlConnection {
         query: Query
     ): Promise<QueryResult<T>> {
         try {
-            const { rows, error } = await new Promise<{
-                rows: RowDataPacket[];
+            const { fields, rows, error } = await new Promise<{
+                rows: MySQLQueryResult;
                 error: QueryError | null;
+                fields: FieldPacket[];
             }>((r) =>
-                this.conn.query(
-                    query.query,
+                this.conn.execute(
+                    { sql: query.query, rowsAsArray: true },
                     query.parameters,
-                    (error, result) => {
+                    (error, result, fields) => {
                         if (Array.isArray(result)) {
                             r({
-                                rows: (result as RowDataPacket[]) ?? [],
+                                rows: (result as MySQLQueryResult) ?? [],
+                                fields: fields,
                                 error,
                             });
                         }
-                        return r({ rows: [], error });
+                        return r({ rows: [], error, fields: [] });
                     }
                 )
             );
@@ -218,11 +226,16 @@ export class MySQLConnection extends SqlConnection {
                     query: constructRawQuery(query),
                 };
             } else {
-                return {
-                    data: rows.map((r) => ({ ...r }) as T),
-                    error: null,
-                    query: constructRawQuery(query),
-                };
+                return transformArrayBasedResult(
+                    fields,
+                    (header) => {
+                        return {
+                            name: header.name,
+                            tableName: header.table,
+                        };
+                    },
+                    rows as unknown[][]
+                ) as QueryResult<T>;
             }
         } catch {
             return {

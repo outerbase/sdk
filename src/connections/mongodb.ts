@@ -90,6 +90,10 @@ export class MongoDBConnection implements Connection {
         return this.client.close();
     }
 
+    raw(query: string): Promise<QueryResult> {
+        throw new Error('Method not implemented.');
+    }
+
     async renameColumn(
         schemaName: string | undefined,
         tableName: string,
