@@ -1,9 +1,13 @@
 import { QueryType } from '../query-params';
 import { Query, constructRawQuery } from '../query';
-import { Connection, SqlConnection } from './index';
+import { Connection, QueryResult, SqlConnection } from './index';
 import { Database, Table, TableColumn } from '../models/database';
 import { BigQueryDialect } from '../query-builder/dialects/bigquery';
 import { BigQuery } from '@google-cloud/bigquery';
+import {
+    createErrorResult,
+    transformObjectBasedResultFirstRow,
+} from 'src/utils/transformer';
 
 export class BigQueryConnection extends SqlConnection {
     bigQuery: BigQuery;
@@ -60,9 +64,9 @@ export class BigQueryConnection extends SqlConnection {
      * @param parameters - An object containing the parameters to be used in the query.
      * @returns Promise<{ data: any, error: Error | null }>
      */
-    async query(
+    async query<T = Record<string, unknown>>(
         query: Query
-    ): Promise<{ data: any; error: Error | null; query: string }> {
+    ): Promise<QueryResult<T>> {
         const raw = constructRawQuery(query);
         try {
             const options = {
@@ -72,26 +76,13 @@ export class BigQueryConnection extends SqlConnection {
             };
 
             const [rows] = await this.bigQuery.query(options);
-
-            return {
-                data: rows,
-                error: null,
-                query: raw,
-            };
+            return transformObjectBasedResultFirstRow(rows) as QueryResult<T>;
         } catch (error) {
             if (error instanceof Error) {
-                return {
-                    data: null,
-                    error: error,
-                    query: raw,
-                };
+                return createErrorResult(error.message) as QueryResult<T>;
             }
 
-            return {
-                data: null,
-                error: new Error('Unexpected Error'),
-                query: raw,
-            };
+            return createErrorResult('Unexpected Error') as QueryResult<T>;
         }
     }
 

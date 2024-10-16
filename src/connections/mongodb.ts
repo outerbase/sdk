@@ -1,5 +1,3 @@
-import { QueryType } from '../query-params';
-import { Query, constructRawQuery } from '../query';
 import { Connection, ConnectionSelectOptions, QueryResult } from './index';
 import {
     Database,
@@ -11,7 +9,10 @@ import {
 
 import { MongoClient, Db, Document, Collection, ObjectId } from 'mongodb';
 import { PostgresDialect } from 'src/query-builder/dialects/postgres';
-import { transformObjectBasedResult } from 'src/utils/transformer';
+import {
+    createOkResult,
+    transformObjectBasedResult,
+} from 'src/utils/transformer';
 // import { MongoDialect } from '../query-builder/dialects/mongo'
 
 function isValidObjectId(value: string) {
@@ -106,7 +107,7 @@ export class MongoDBConnection implements Connection {
             .collection(tableName)
             .updateMany({}, { $rename: { [columnName]: newColumnName } });
 
-        return { error: null, data: [], query: '' };
+        return createOkResult();
     }
 
     async insert(
@@ -119,7 +120,7 @@ export class MongoDBConnection implements Connection {
             .collection(tableName)
             .insertOne(data);
 
-        return { error: null, data: [], query: '' };
+        return createOkResult();
     }
 
     async insertMany(
@@ -132,7 +133,7 @@ export class MongoDBConnection implements Connection {
             .collection(tableName)
             .insertMany(data);
 
-        return { error: null, data: [], query: '' };
+        return createOkResult();
     }
 
     async update(
@@ -146,7 +147,7 @@ export class MongoDBConnection implements Connection {
             .collection(tableName)
             .updateMany(where, { $set: data });
 
-        return { error: null, data: [], query: '' };
+        return createOkResult();
     }
 
     async delete(
@@ -159,7 +160,7 @@ export class MongoDBConnection implements Connection {
             .collection(tableName)
             .deleteMany(where);
 
-        return { error: null, data: [], query: '' };
+        return createOkResult();
     }
 
     async select(
@@ -217,7 +218,7 @@ export class MongoDBConnection implements Connection {
 
     async createTable(): Promise<QueryResult> {
         // Mongodb does not have a schema, so we can't create a table
-        return { error: null, data: [], query: '' };
+        return createOkResult();
     }
 
     async dropTable(
@@ -229,7 +230,7 @@ export class MongoDBConnection implements Connection {
             .collection(tableName)
             .drop();
 
-        return { error: null, data: [], query: '' };
+        return createOkResult();
     }
 
     public async fetchDatabaseSchema(): Promise<Database> {

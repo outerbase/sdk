@@ -17,7 +17,7 @@ export interface QueryResultHeader {
 }
 export interface QueryResult<T = Record<string, unknown>> {
     data: T[];
-    headers?: QueryResultHeader[];
+    headers: QueryResultHeader[];
     error: Error | null;
     query: string;
 }
@@ -162,7 +162,7 @@ export abstract class SqlConnection extends Connection {
             );
         }
 
-        return { data: [], error: null, query: '' };
+        return { data: [], error: null, query: '', headers: [] };
     }
 
     async update(

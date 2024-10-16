@@ -6,7 +6,10 @@ import { PostgresDialect } from 'src/query-builder/dialects/postgres';
 import { QueryType } from 'src/query-params';
 import { Database } from 'src/models/database';
 import { buildMySQLDatabaseSchmea } from './mysql';
-import { transformArrayBasedResult } from 'src/utils/transformer';
+import {
+    createErrorResult,
+    transformArrayBasedResult,
+} from 'src/utils/transformer';
 
 function replacePlaceholders(query: string): string {
     let index = 1;
@@ -53,17 +56,9 @@ export class PostgreSQLConnection extends SqlConnection {
             ) as QueryResult<T>;
         } catch (e) {
             if (e instanceof Error) {
-                return {
-                    data: [],
-                    error: { message: e.message, name: e.name },
-                    query: query.query,
-                };
+                return createErrorResult(e.message) as QueryResult<T>;
             }
-            return {
-                data: [],
-                error: { message: 'Unknown Error', name: 'Error' },
-                query: query.query,
-            };
+            return createErrorResult('Unknown error') as QueryResult<T>;
         }
     }
 

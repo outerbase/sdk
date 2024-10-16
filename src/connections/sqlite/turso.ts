@@ -36,6 +36,7 @@ export class TursoConnection extends SqliteBaseConnection {
                 }) as unknown as T[],
                 error: null,
                 query: query.query,
+                headers: [],
             };
         } catch (e) {
             if (e instanceof Error) {
@@ -43,12 +44,14 @@ export class TursoConnection extends SqliteBaseConnection {
                     data: [],
                     error: { message: e.message, name: e.name },
                     query: query.query,
+                    headers: [],
                 };
             } else {
                 return {
                     data: [],
                     error: { message: 'Unknown error', name: 'Unknown' },
                     query: query.query,
+                    headers: [],
                 };
             }
         }

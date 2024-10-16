@@ -9,7 +9,10 @@ import { constructRawQuery, Query } from '../query';
 import { QueryType } from '../query-params';
 import { Constraint, Database, Table, TableColumn } from './../models/database';
 import { MySQLDialect } from './../query-builder/dialects/mysql';
-import { transformArrayBasedResult } from 'src/utils/transformer';
+import {
+    createErrorResult,
+    transformArrayBasedResult,
+} from 'src/utils/transformer';
 
 interface MySQLSchemaResult {
     SCHEMA_NAME: string;
@@ -223,11 +226,7 @@ export class MySQLConnection extends SqlConnection {
             );
 
             if (error) {
-                return {
-                    data: [],
-                    error: { message: error.message, name: error.name },
-                    query: constructRawQuery(query),
-                };
+                return createErrorResult(error.message) as QueryResult<T>;
             } else {
                 return transformArrayBasedResult(
                     fields,
@@ -241,11 +240,7 @@ export class MySQLConnection extends SqlConnection {
                 ) as QueryResult<T>;
             }
         } catch {
-            return {
-                error: { message: 'Unknown Error', name: 'Error' },
-                data: [],
-                query: '',
-            };
+            return createErrorResult('Unknown error') as QueryResult<T>;
         }
     }
 
@@ -309,11 +304,7 @@ export class MySQLConnection extends SqlConnection {
 
             // Cannot rename column if the table does not exist
             if (createTableResponse.length === 0)
-                return {
-                    error: { message: 'Table does not exist', name: 'Error' },
-                    data: [],
-                    query: '',
-                };
+                return createErrorResult('Table does not exist');
 
             // Get the line of the column
             const createTable = createTableResponse[0]['Create Table'];
@@ -325,12 +316,7 @@ export class MySQLConnection extends SqlConnection {
                     .startsWith(this.dialect.escapeId(columnName).toLowerCase())
             );
 
-            if (!columnLine)
-                return {
-                    error: { message: 'Column does not exist', name: 'Error' },
-                    data: [],
-                    query: '',
-                };
+            if (!columnLine) return createErrorResult('Column does not exist');
 
             const [columnNamePart, ...columnDefinitions] = columnLine
                 .trim()

@@ -32,6 +32,32 @@ export function transformObjectBasedResult(
     };
 }
 
+export function transformObjectBasedResultFirstRow(
+    arr: Record<string, unknown>[]
+): QueryResult {
+    if (arr.length === 0) {
+        return {
+            data: [],
+            headers: [],
+            error: null,
+            query: '',
+        };
+    }
+
+    const row = arr[0];
+    const columns: QueryResultHeader[] = [];
+
+    return {
+        data: arr,
+        headers: Object.keys(row).map((key) => ({
+            name: key,
+            displayName: key,
+        })),
+        error: null,
+        query: '',
+    };
+}
+
 /**
  * Transforms the array based result into our own query result format
  */
@@ -89,5 +115,23 @@ export function transformArrayBasedResult<HeaderType>(
         headers: headerMap,
         error: null,
         query: '',
+    };
+}
+
+export function createErrorResult(message: string): QueryResult {
+    return {
+        data: [],
+        error: { message, name: 'Error' },
+        query: '',
+        headers: [],
+    };
+}
+
+export function createOkResult() {
+    return {
+        data: [],
+        error: null,
+        query: '',
+        headers: [],
     };
 }

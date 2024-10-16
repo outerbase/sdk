@@ -1,5 +1,5 @@
 import { QueryType } from '../../query-params';
-import { Query, constructRawQuery } from '../../query';
+import { Query } from '../../query';
 import { DefaultDialect } from '../../query-builder/dialects/default';
 import { SqliteBaseConnection } from './base';
 import {
@@ -12,6 +12,7 @@ import {
     TableIndexType,
 } from 'src/models/database';
 import { transformArrayBasedResult } from 'src/utils/transformer';
+import { QueryResult } from '..';
 
 interface CloudflareResult {
     results: {
@@ -106,9 +107,9 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
      * @param parameters - An object containing the parameters to be used in the query.
      * @returns Promise<{ data: any, error: Error | null }>
      */
-    async query(
+    async query<T = Record<string, unknown>>(
         query: Query
-    ): Promise<{ data: any; error: Error | null; query: string }> {
+    ): Promise<QueryResult<T>> {
         if (!this.apiKey) throw new Error('Cloudflare API key is not set');
         if (!this.accountId)
             throw new Error('Cloudflare account ID is not set');
@@ -139,7 +140,7 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
                 items.columns,
                 (column) => ({ name: column }),
                 items.rows
-            );
+            ) as QueryResult<T>;
         }
 
         return {
@@ -148,6 +149,7 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
                 json.error ?? json.errors?.map((e) => e.message).join(', ')
             ),
             query: '',
+            headers: [],
         };
     }
 

@@ -2,6 +2,7 @@ import { QueryType } from '../../query-params';
 import { Query, constructRawQuery } from '../../query';
 import { DefaultDialect } from '../../query-builder/dialects/default';
 import { SqliteBaseConnection } from './base';
+import { QueryResult } from '..';
 
 export type StarbaseConnectionDetails = {
     url: string;
@@ -71,9 +72,9 @@ export class StarbaseConnection extends SqliteBaseConnection {
      * @param parameters - An object containing the parameters to be used in the query.
      * @returns Promise<{ data: any, error: Error | null }>
      */
-    async query(
+    async query<T = Record<string, unknown>>(
         query: Query
-    ): Promise<{ data: any; error: Error | null; query: string }> {
+    ): Promise<QueryResult<T>> {
         if (!this.url) throw new Error('Starbase URL is not set');
         if (!this.apiKey) throw new Error('Starbase API key is not set');
         if (!query) throw new Error('A SQL query was not provided');
@@ -100,6 +101,7 @@ export class StarbaseConnection extends SqliteBaseConnection {
                 data: items,
                 error: null,
                 query: rawSQL,
+                headers: [],
             };
         }
 
@@ -107,6 +109,7 @@ export class StarbaseConnection extends SqliteBaseConnection {
             data: [],
             error: Error('Unknown operation error'),
             query: rawSQL,
+            headers: [],
         };
     }
 }
