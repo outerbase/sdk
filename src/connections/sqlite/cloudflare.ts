@@ -32,7 +32,7 @@ interface CloudflareResponse {
     success?: boolean;
     result: CloudflareResult[];
     error?: string;
-    errors?: string[];
+    errors?: { code: number; message: string }[];
 }
 
 export type CloudflareD1ConnectionDetails = {
@@ -135,28 +135,19 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
 
         if (json.success) {
             const items = json.result[0].results;
-            const rawSQL = constructRawQuery(query);
-
-            return {
-                data: transformArrayBasedResult(
-                    items.columns,
-                    (column) => ({ name: column }),
-                    items.rows
-                ),
-                error: null,
-                query: rawSQL,
-                // There's additional metadata here we could pass in the future
-                // meta: json.meta,
-            };
-        } else {
+            return transformArrayBasedResult(
+                items.columns,
+                (column) => ({ name: column }),
+                items.rows
+            );
         }
-
-        const rawSQL = constructRawQuery(query);
 
         return {
             data: [],
-            error: new Error(json.error ?? json.errors?.join(', ')),
-            query: rawSQL,
+            error: new Error(
+                json.error ?? json.errors?.map((e) => e.message).join(', ')
+            ),
+            query: '',
         };
     }
 
