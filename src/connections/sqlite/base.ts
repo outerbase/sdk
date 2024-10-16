@@ -1,4 +1,4 @@
-import { Database, Table } from 'src/models/database';
+import { Database, Table, TableColumn } from 'src/models/database';
 import { Connection, SqlConnection } from '..';
 export abstract class SqliteBaseConnection extends SqlConnection {
     public async fetchDatabaseSchema(): Promise<Database> {
@@ -47,22 +47,22 @@ FROM
 
             tableLookup[column.tbl_name].columns.push({
                 name: column.name,
-                type: column.type,
                 position: column.cid,
-                nullable: column.notnull === 0,
-                default: column.dflt_value,
-                primary: column.pk === 1,
-                unique: false,
-                references:
-                    column.ref_table_name && column.ref_column_name
-                        ? [
-                              {
+                definition: {
+                    type: column.type,
+                    nullable: column.notnull === 0,
+                    default: column.dflt_value,
+                    primaryKey: column.pk === 1,
+                    unique: false,
+                    references:
+                        column.ref_table_name && column.ref_column_name
+                            ? {
                                   table: column.ref_table_name,
                                   column: column.ref_column_name,
-                              },
-                          ]
-                        : [],
-            });
+                              }
+                            : undefined,
+                },
+            } as TableColumn);
         }
 
         // Sqlite default schema is "main", since we don't support

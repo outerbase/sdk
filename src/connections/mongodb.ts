@@ -256,13 +256,14 @@ export class MongoDBConnection implements Connection {
                 )) {
                     const column: TableColumn = {
                         name: fieldName,
-                        type: typeof value,
+                        definition: {
+                            type: typeof value,
+                            nullable: true,
+                            default: null,
+                            primaryKey: fieldName === '_id',
+                            unique: fieldName === '_id',
+                        },
                         position: position++,
-                        nullable: true,
-                        default: null,
-                        primary: fieldName === '_id',
-                        unique: fieldName === '_id',
-                        references: [],
                     };
                     columns.push(column);
                 }

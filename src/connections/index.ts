@@ -188,16 +188,14 @@ export abstract class SqlConnection extends Connection {
     createTable(
         schemaName: string | undefined,
         tableName: string,
-        columns: Partial<TableColumn>[]
+        columns: TableColumn[]
     ): Promise<QueryResult> {
         const qb = Outerbase(this).createTable(
             schemaName ? `${schemaName}.${tableName}` : tableName
         );
 
         for (const column of columns) {
-            if (column.name && column.type) {
-                qb.column(column.name, column.type);
-            }
+            qb.column(column.name, column.definition);
         }
 
         return this.query(qb.toQuery());

@@ -1,3 +1,4 @@
+import { TableColumnDefinition } from 'src/models/database';
 import {
     OrderByClause,
     QueryBuilderInternal,
@@ -188,6 +189,17 @@ export abstract class AbstractDialect implements Dialect {
         ];
     }
 
+    protected buildColumnDefinition(def: TableColumnDefinition): string {
+        return [
+            def.type,
+            def.nullable === false ? 'NOT NULL' : '',
+            def.primaryKey ? 'PRIMARY KEY' : '',
+            def.default ? `DEFAULT ${def.default}` : '',
+        ]
+            .filter(Boolean)
+            .join(' ');
+    }
+
     select(builder: QueryBuilderInternal): Query {
         const tableName = builder.table;
 
@@ -279,18 +291,17 @@ export abstract class AbstractDialect implements Dialect {
 
         const columns =
             builder?.columns?.map((column) => {
-                if (!column.type)
-                    throw new Error('Column type is required to create table.');
+                if (!column.definition)
+                    throw new Error(
+                        'Column definition is required to create table.'
+                    );
 
                 if (!column.name)
                     throw new Error('Column name is required to create table.');
 
                 return [
                     this.escapeId(column.name),
-                    column.type,
-                    !column.nullable ? 'NOT NULL' : '',
-                    column.primaryKey ? 'PRIMARY KEY' : '',
-                    column.default ? `DEFAULT ${column.default}` : '',
+                    this.buildColumnDefinition(column.definition),
                 ]
                     .filter(Boolean)
                     .join(' ');
@@ -325,7 +336,7 @@ export abstract class AbstractDialect implements Dialect {
 
         if (!tableName) {
             throw new Error(
-                'Table name is required to build a CREATE TABLE query.'
+                'Table name is required to build a RENAME COLUMN query.'
             );
         }
 
@@ -335,7 +346,7 @@ export abstract class AbstractDialect implements Dialect {
 
         const column = builder.columns[0];
 
-        if (!column.oldName) {
+        if (!column.name) {
             throw new Error('Old column name is required to rename.');
         }
 
@@ -344,7 +355,7 @@ export abstract class AbstractDialect implements Dialect {
         }
 
         return {
-            query: `ALTER TABLE ${this.escapeId(tableName)} RENAME COLUMN ${this.escapeId(column.oldName)} TO ${this.escapeId(column.newName)}`,
+            query: `ALTER TABLE ${this.escapeId(tableName)} RENAME COLUMN ${this.escapeId(column.name)} TO ${this.escapeId(column.newName)}`,
             parameters: [],
         };
     }

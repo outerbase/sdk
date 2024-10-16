@@ -98,13 +98,14 @@ export function buildMySQLDatabaseSchmea({
 
         const columnObject = {
             name: column.COLUMN_NAME,
-            type: column.COLUMN_TYPE,
             position: column.ORDINAL_POSITION,
-            nullable: column.IS_NULLABLE === 'YES',
-            default: column.COLUMN_DEFAULT,
-            primary: column.COLUMN_KEY === 'PRI',
-            unique: column.EXTRA === 'UNI',
-            references: [],
+            definition: {
+                type: column.COLUMN_TYPE,
+                nullable: column.IS_NULLABLE === 'YES',
+                default: column.COLUMN_DEFAULT,
+                primary: column.COLUMN_KEY === 'PRI',
+                unique: column.EXTRA === 'UNI',
+            },
         } as TableColumn;
 
         columnLookup[
@@ -163,10 +164,10 @@ export function buildMySQLDatabaseSchmea({
                     constraintColumn.COLUMN_NAME
             ];
         if (currentColumn && constraintColumn.REFERENCED_COLUMN_NAME) {
-            currentColumn.references.push({
+            currentColumn.definition.references = {
                 table: constraintColumn.REFERENCED_TABLE_NAME,
-                column: constraintColumn.REFERENCED_COLUMN_NAME,
-            });
+                column: [constraintColumn.REFERENCED_COLUMN_NAME],
+            };
         }
 
         constraint.columns.push({

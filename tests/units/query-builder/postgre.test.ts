@@ -234,9 +234,9 @@ describe('Query Builder - Postgre Dialect', () => {
         // Create table test for postgresql
         const { query } = qb()
             .createTable('persons')
-            .column('id', 'SERIAL', { primaryKey: true })
-            .column('first_name', 'VARCHAR(50)')
-            .column('last_name', 'VARCHAR(50)')
+            .column('id', { type: 'SERIAL', primaryKey: true })
+            .column('first_name', { type: 'VARCHAR(50)' })
+            .column('last_name', { type: 'VARCHAR(50)' })
             .toQuery();
 
         expect(query).toBe(

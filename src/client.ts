@@ -2,6 +2,7 @@ import { SqlConnection, QueryResult } from './connections';
 import { Query } from './query';
 import { QueryType } from './query-params';
 import { AbstractDialect, ColumnDataType } from './query-builder';
+import { TableColumnDefinition } from './models/database';
 
 export enum QueryBuilderAction {
     SELECT = 'select',
@@ -53,12 +54,9 @@ export interface QueryBuilderInternal {
 
     // Used when column names and type are required, such as CREATE TABLE
     columns: {
-        default?: string;
-        primaryKey?: boolean;
-        nullable?: boolean;
-        name?: string;
-        type?: ColumnDataType | string;
-        oldName?: string;
+        name: string;
+        definition?: TableColumnDefinition;
+        // When you want to rename a column
         newName?: string;
     }[];
 
@@ -304,17 +302,8 @@ class QueryBuilderCreateTable extends IQueryBuilder {
         this.state.table = tableName;
     }
 
-    column(
-        columnName: string,
-        type: string,
-        options?: { nullable?: boolean; default?: string; primaryKey?: boolean }
-    ) {
-        this.state.columns.push({
-            name: columnName,
-            type,
-            nullable: true, // Most database when creating a table, the column is nullable by default
-            ...options,
-        });
+    column(name: string, definition: TableColumnDefinition) {
+        this.state.columns.push({ name, definition });
         return this;
     }
 }
@@ -350,7 +339,7 @@ class QueryBuilderAlterTable extends IQueryBuilder {
         this.state.action = QueryBuilderAction.RENAME_COLUMNS;
         this.state.columns = [
             {
-                oldName: columnName,
+                name: columnName,
                 newName: newColumnName,
             },
         ];

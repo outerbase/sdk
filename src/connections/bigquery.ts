@@ -122,13 +122,14 @@ export class BigQueryConnection extends SqlConnection {
                     (field: any, index: number): TableColumn => {
                         return {
                             name: field.name,
-                            type: field.type,
                             position: index,
-                            nullable: field.mode === 'NULLABLE',
-                            default: null, // BigQuery does not support default values in the schema metadata
-                            primary: false, // BigQuery does not have a concept of primary keys
-                            unique: false, // BigQuery does not have a concept of unique constraints
-                            references: [], // BigQuery does not support foreign keys
+                            definition: {
+                                type: field.type,
+                                nullable: field.mode === 'NULLABLE',
+                                default: null, // BigQuery does not support default values in the schema metadata
+                                primaryKey: false, // BigQuery does not have a concept of primary keys
+                                unique: false, // BigQuery does not have a concept of unique constraints
+                            },
                         };
                     }
                 );

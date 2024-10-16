@@ -255,13 +255,14 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
 
                 const currentColumn: TableColumn = {
                     name: column.name,
-                    type: column.type,
                     position: column.cid,
-                    nullable: column.notnull === 0,
-                    default: column.dflt_value,
-                    primary: column.pk === 1,
-                    unique: column.pk === 1,
-                    references: [],
+                    definition: {
+                        type: column.type,
+                        nullable: column.notnull === 0,
+                        default: column.dflt_value,
+                        primaryKey: column.pk === 1,
+                        unique: column.pk === 1,
+                    },
                 };
 
                 return currentColumn;
