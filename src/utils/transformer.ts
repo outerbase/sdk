@@ -1,5 +1,40 @@
+/**
+ * Provides several functions to help transform common
+ * database result format into our own query result formation
+ */
+
 import { QueryResult, QueryResultHeader } from 'src/connections';
 
+export function transformObjectBasedResult(
+    arr: Record<string, unknown>[]
+): QueryResult {
+    const usedColumnName = new Set();
+    const columns: QueryResultHeader[] = [];
+
+    // Build the headers based on rows
+    arr.forEach((row) => {
+        Object.keys(row).forEach((key) => {
+            if (!usedColumnName.has(key)) {
+                usedColumnName.add(key);
+                columns.push({
+                    name: key,
+                    displayName: key,
+                });
+            }
+        });
+    });
+
+    return {
+        data: arr,
+        headers: columns,
+        error: null,
+        query: '',
+    };
+}
+
+/**
+ * Transforms the array based result into our own query result format
+ */
 export function transformArrayBasedResult<HeaderType>(
     headers: HeaderType[],
     headersMapper: (header: HeaderType) => {

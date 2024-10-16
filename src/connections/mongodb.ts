@@ -11,6 +11,7 @@ import {
 
 import { MongoClient, Db, Document, Collection, ObjectId } from 'mongodb';
 import { PostgresDialect } from 'src/query-builder/dialects/postgres';
+import { transformObjectBasedResult } from 'src/utils/transformer';
 // import { MongoDialect } from '../query-builder/dialects/mongo'
 
 function isValidObjectId(value: string) {
@@ -211,8 +212,7 @@ export class MongoDBConnection implements Connection {
         }
 
         const data = await query.toArray();
-
-        return { error: null, data, query: '' };
+        return transformObjectBasedResult(data);
     }
 
     async createTable(): Promise<QueryResult> {

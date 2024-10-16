@@ -11,29 +11,29 @@ import {
     TableIndex,
     TableIndexType,
 } from 'src/models/database';
+import { transformArrayBasedResult } from 'src/utils/transformer';
 
-interface SuccessResponse {
-    result: Record<string, any>[]; // Array of objects representing results
-    success: true;
+interface CloudflareResult {
+    results: {
+        columns: string[];
+        rows: unknown[][];
+    };
+
     meta: {
-        served_by: string;
         duration: number;
         changes: number;
         last_row_id: number;
-        changed_db: boolean;
-        size_after: number;
         rows_read: number;
         rows_written: number;
     };
 }
-interface ErrorResponse {
-    result: []; // Empty result on error
-    success: false;
-    errors: { code: number; message: string }[]; // Array of errors
-    messages: any[]; // You can adjust this type based on your use case
-}
 
-type APIResponse = SuccessResponse | ErrorResponse;
+interface CloudflareResponse {
+    success?: boolean;
+    result: CloudflareResult[];
+    error?: string;
+    errors?: string[];
+}
 
 export type CloudflareD1ConnectionDetails = {
     apiKey: string;
@@ -117,7 +117,7 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
         if (!query) throw new Error('A SQL query was not provided');
 
         const response = await fetch(
-            `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query`,
+            `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/d1/database/${this.databaseId}/query/raw`,
             {
                 method: 'POST',
                 headers: {
@@ -131,27 +131,31 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
             }
         );
 
-        const json: APIResponse = await response.json();
+        const json: CloudflareResponse = await response.json();
 
         if (json.success) {
             const items = json.result[0].results;
             const rawSQL = constructRawQuery(query);
 
             return {
-                data: items,
+                data: transformArrayBasedResult(
+                    items.columns,
+                    (column) => ({ name: column }),
+                    items.rows
+                ),
                 error: null,
                 query: rawSQL,
                 // There's additional metadata here we could pass in the future
                 // meta: json.meta,
             };
+        } else {
         }
 
-        const error = json.errors.map((error) => error.message).join(', ');
         const rawSQL = constructRawQuery(query);
 
         return {
             data: [],
-            error: new Error(error),
+            error: new Error(json.error ?? json.errors?.join(', ')),
             query: rawSQL,
         };
     }
