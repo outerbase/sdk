@@ -426,11 +426,6 @@ function buildQueryString(
     queryType: QueryType,
     dialect: AbstractDialect
 ): Query {
-    const query: Query = {
-        query: '',
-        parameters: queryType === QueryType.named ? {} : [],
-    };
-
     switch (queryBuilder.action) {
         case QueryBuilderAction.SELECT:
             return dialect.select(queryBuilder);
@@ -478,6 +473,4 @@ function buildQueryString(
         default:
             throw new Error('Invalid action');
     }
-
-    return query;
 }

@@ -1,5 +1,6 @@
 import { Client as PgClient } from 'pg';
 import { BigQuery } from '@google-cloud/bigquery';
+import duckDB from 'duckdb';
 import { createClient as createTursoConnection } from '@libsql/client';
 import { createConnection as createMySqlConnection } from 'mysql2';
 import {
@@ -10,6 +11,7 @@ import {
     TursoConnection,
     CloudflareD1Connection,
     MongoDBConnection,
+    DuckDBConnection,
 } from '../../src';
 import { MongoClient } from 'mongodb';
 
@@ -79,6 +81,15 @@ export default function createTestClient(): {
             process.env.MONGODB_DB_NAME as string
         );
         return { client, defaultSchema: process.env.MONGODB_DB_NAME as string };
+    } else if (process.env.CONNECTION_TYPE === 'motherduck') {
+        const client = new DuckDBConnection(
+            process.env.MOTHERDUCK_PATH
+                ? new duckDB.Database(process.env.MOTHERDUCK_PATH, {
+                      motherduck_token: process.env.MOTHERDUCK_TOKEN as string,
+                  })
+                : new duckDB.Database(':memory:')
+        );
+        return { client, defaultSchema: 'main' };
     }
 
     throw new Error('Invalid connection type');

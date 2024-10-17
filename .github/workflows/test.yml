@@ -172,3 +172,21 @@ jobs:
                   MONGODB_URI: mongodb://localhost:27017
                   MONGODB_DB_NAME: testing
               run: npm run test:connection
+
+    test_motherduck:
+        name: 'Motherduck Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: motherduck
+                  MOTHERDUCK_PATH: ${{ secrets.MOTHERDUCK_PATH }}
+                  MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+              run: npm run test:connection

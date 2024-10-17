@@ -55,7 +55,7 @@
         "typescript": "^5.4.5",
         "@google-cloud/bigquery": "^7.9.0",
         "@neondatabase/serverless": "^0.9.3",
-        "duckdb": "^1.0.0",
+        "duckdb": "^1.1.1",
         "ws": "^8.17.1",
         "mongodb": "^6.9.0"
     }

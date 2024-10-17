@@ -1,4 +1,4 @@
-import { Client } from '@libsql/client';
+import { Client, InValue } from '@libsql/client';
 
 import { AbstractDialect } from 'src/query-builder';
 import { QueryResult } from '..';
@@ -21,7 +21,7 @@ export class TursoConnection extends SqliteBaseConnection {
         try {
             const result = await this.client.execute({
                 sql: query.query,
-                args: query.parameters ?? [],
+                args: (query.parameters ?? []) as InValue[],
             });
 
             return {
