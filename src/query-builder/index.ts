@@ -10,6 +10,8 @@ import { Query } from '../query';
 
 interface Dialect {
     escapeId(identifier: string): string;
+    escapeValue(value: unknown): string;
+
     select(builder: QueryBuilderInternal): Query;
     insert(builder: QueryBuilderInternal): Query;
     update(builder: QueryBuilderInternal): Query;
@@ -47,6 +49,17 @@ export abstract class AbstractDialect implements Dialect {
                 return '"' + str.replace(/"/g, '""') + '"';
             })
             .join('.');
+    }
+
+    escapeValue(value: unknown): string {
+        if (value === undefined) return 'DEFAULT';
+        if (value === null) return 'NULL';
+        if (typeof value === 'string') return `'${value.replace(/'/g, `''`)}'`;
+        if (typeof value === 'number') return value.toString();
+        if (typeof value === 'bigint') return value.toString();
+
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        throw new Error(value.toString() + ' is unrecongize type of value');
     }
 
     protected removeEmptyValues(
@@ -219,7 +232,7 @@ export abstract class AbstractDialect implements Dialect {
             def.invisible ? 'INVISIBLE' : '', // This is for MySQL case
             def.primaryKey ? 'PRIMARY KEY' : '',
             def.unique ? 'UNIQUE' : '',
-            def.default ? `DEFAULT ${def.default}` : '',
+            def.default ? `DEFAULT ${this.escapeValue(def.default)}` : '',
             def.defaultExpression ? `DEFAULT (${def.defaultExpression})` : '',
             def.autoIncrement ? this.AUTO_INCREMENT_KEYWORD : '',
             def.collate ? `COLLATE ${def.collate}` : '',

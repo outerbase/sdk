@@ -109,11 +109,19 @@ function buildWhereClause(args: unknown[]): WhereCondition | WhereClaues {
         };
 
         for (const key in conditions) {
-            whereClause.conditions.push({
-                column: key,
-                value: conditions[key],
-                operator: '=',
-            });
+            if (conditions[key] === null) {
+                whereClause.conditions.push({
+                    column: key,
+                    value: conditions[key],
+                    operator: 'IS',
+                });
+            } else {
+                whereClause.conditions.push({
+                    column: key,
+                    value: conditions[key],
+                    operator: '=',
+                });
+            }
         }
 
         if (whereClause.conditions.length === 1) {

@@ -67,7 +67,6 @@ export class BigQueryConnection extends SqlConnection {
     async query<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>> {
-        const raw = constructRawQuery(query);
         try {
             const options = {
                 query: query.query,

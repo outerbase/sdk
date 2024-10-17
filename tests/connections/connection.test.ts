@@ -186,14 +186,20 @@ describe('Database Connection', () => {
         expect(error).not.toBeTruthy();
 
         // Need to update email because MongoDB does not have schema
-        await db.update(
-            DEFAULT_SCHEMA,
-            'persons',
-            {
-                email: 'test@outerbase.com',
-            },
-            {}
-        );
+        if (process.env.CONNECTION_TYPE === 'bigquery') {
+            await db.raw(
+                `UPDATE persons SET email = 'test@outerbase.com' WHERE TRUE;`
+            );
+        } else {
+            await db.update(
+                DEFAULT_SCHEMA,
+                'persons',
+                {
+                    email: 'test@outerbase.com',
+                },
+                {}
+            );
+        }
 
         const { data } = await db.select(DEFAULT_SCHEMA, 'persons', {
             orderBy: ['id'],
