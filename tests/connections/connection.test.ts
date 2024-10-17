@@ -188,7 +188,7 @@ describe('Database Connection', () => {
         // Need to update email because MongoDB does not have schema
         if (process.env.CONNECTION_TYPE === 'bigquery') {
             await db.raw(
-                `UPDATE persons SET email = 'test@outerbase.com' WHERE TRUE;`
+                `UPDATE \`${DEFAULT_SCHEMA}.persons\` SET email = 'test@outerbase.com' WHERE TRUE;`
             );
         } else {
             await db.update(
