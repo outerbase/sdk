@@ -5,6 +5,7 @@ beforeAll(async () => {
     await db.connect();
 
     // It is better to cleanup here in case any previous test failed
+    await db.dropTable(DEFAULT_SCHEMA, 'persons');
     await db.dropTable(DEFAULT_SCHEMA, 'people');
 });
 
@@ -244,7 +245,12 @@ describe('Database Connection', () => {
         });
 
         expect(cleanup(data)).toEqual([
-            { id: 2, full_name: 'Outerbase', age: 30 },
+            {
+                id: 2,
+                full_name: 'Outerbase',
+                age: 30,
+                email: 'test@outerbase.com',
+            },
         ]);
     });
 });
