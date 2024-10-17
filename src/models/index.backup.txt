@@ -1,6 +1,10 @@
-import { Connection } from "src/connections";
-import { Outerbase, equals } from "../client";
-import { getColumnValueFromName, getColumnValueFromProperty, getPrimaryKeys } from "./decorators";
+import { Connection } from 'src/connections';
+import { Outerbase } from '../client';
+import {
+    getColumnValueFromName,
+    getColumnValueFromProperty,
+    getPrimaryKeys,
+} from './decorators';
 
 const RESERVED_PROPERTIES = ['_name', '_schema', '_original', '_connection'];
 
@@ -11,9 +15,9 @@ export class BaseTable {
     _connection?: Connection;
 
     constructor(_: {
-        _name: string,
-        _schema?: string,
-        _original?: Record<string, any>
+        _name: string;
+        _schema?: string;
+        _original?: Record<string, any>;
     }) {
         this._name = _._name;
         this._schema = _._schema;
@@ -22,10 +26,10 @@ export class BaseTable {
 
     /**
      * Attaches a connection object to the model. This enables the model to perform
-     * actions on the database utilizing the query builder. See `pull`, `update`, 
+     * actions on the database utilizing the query builder. See `pull`, `update`,
      * `insert`, and `delete` methods for examples.
-     * 
-     * @param connection 
+     *
+     * @param connection
      */
     attachConnection(connection: Connection) {
         this._connection = connection;
@@ -34,7 +38,7 @@ export class BaseTable {
     /**
      * Constructs the where clause for the current model based on the primary keys.
      * This WHERE clause is used to uniquely map to this specific model in the database.
-     * 
+     *
      * @returns string[]
      */
     getCurrentWhereClause(): string[] {
@@ -48,19 +52,20 @@ export class BaseTable {
             throw new Error('No primary keys found');
         }
 
-        return primaryKeys.map((key) => {
-            const columnValue = getColumnValueFromName(this.constructor, key)
-            if (columnValue === null) return '';
+        return [];
+        // return primaryKeys.map((key) => {
+        //     const columnValue = getColumnValueFromName(this.constructor, key)
+        //     if (columnValue === null) return ''
 
-            return equals(key, this._original?.[columnValue]);
-        });
+        //     return equals(key, this._original?.[columnValue])
+        // })
     }
 
     /**
      * Returns the current values of the model. If `omitPrimaryKeys` is true, the primary
      * keys will be omitted from the returned object. Use this to get the current values
      * of the model to be used in an update query.
-     * 
+     *
      * @param _ An object with a boolean value to omit primary keys from the current values.
      * @returns Record<string, any>
      */
@@ -86,11 +91,14 @@ export class BaseTable {
 
         let object: Record<string, any> = {};
         columns.forEach((key) => {
-            const columnName = getColumnValueFromProperty(this.constructor, key);
+            const columnName = getColumnValueFromProperty(
+                this.constructor,
+                key
+            );
 
             if (columnName) {
                 object[columnName] = this._original?.[columnName];
-                console.log(columnName + ' = ' + this._original?.[columnName])
+                console.log(columnName + ' = ' + this._original?.[columnName]);
             }
         });
 
@@ -101,19 +109,19 @@ export class BaseTable {
      * Converts a string to camel case. For most of the model properties, the column
      * names are usually stored in snake case in the database. This method converts
      * the snake case column names to camel case for use in the model.
-     * 
-     * @param str 
+     *
+     * @param str
      * @returns string
      */
     stringToCamelCase(str: string) {
-        return str?.replace(/[-_](.)/g, (_, c) => c?.toUpperCase())
+        return str?.replace(/[-_](.)/g, (_, c) => c?.toUpperCase());
     }
 
     /**
      * Fetches the latest version of this model from the database.
      * When you want to make sure this model represents the latest
      * version of the data in the database, you can call this method.
-     * 
+     *
      * @returns Promise<void>
      */
     async pull(): Promise<void> {
@@ -122,22 +130,22 @@ export class BaseTable {
         }
 
         const conditions = this.getCurrentWhereClause();
-        const db = Outerbase(this._connection)
+        const db = Outerbase(this._connection);
 
-        let { data, error } = await db
-            .selectFrom([
-                { schema: this._schema, table: this._name, columns: ['*'] },
-            ])
-            .where(conditions)
-            .limit(1)
-            .query()
+        // let { data, error } = await db
+        //     .selectFrom([
+        //         { schema: this._schema, table: this._name, columns: ['*'] },
+        //     ])
+        //     //.where(conditions)
+        //     .limit(1)
+        //     .query();
 
         // If an error occurs, exit early.
-        if (error) return
+        // if (error) return;
 
-        // The response from the query builder call above is an array of results
-        // that match the query. We only want the first result.
-        this._original = data[0];
+        // // The response from the query builder call above is an array of results
+        // // that match the query. We only want the first result.
+        // this._original = data[0];
 
         for (let key in this._original) {
             if (typeof this._original[key] === 'function') {
@@ -163,7 +171,7 @@ export class BaseTable {
     /**
      * Deletes the current model from the database. This method will delete the
      * model from the database based on the primary keys of the model.
-     * 
+     *
      * @returns Promise<any>
      */
     async delete(): Promise<any> {
@@ -172,20 +180,20 @@ export class BaseTable {
         }
 
         const conditions = this.getCurrentWhereClause();
-        const db = Outerbase(this._connection)
+        const db = Outerbase(this._connection);
 
-        const { data } = await db
-            .deleteFrom(this._name)
-            .where(conditions)
-            .query()
+        // const { data } = await db
+        //     .deleteFrom(this._name)
+        //     // .where(conditions)
+        //     .query();
 
-        return data;
+        //return data;
     }
 
     /**
      * Updates the current model in the database. This method will update the
      * model in the database based on the primary keys of the model.
-     * 
+     *
      * @returns Promise<any>
      */
     async update(): Promise<any> {
@@ -194,30 +202,30 @@ export class BaseTable {
         }
 
         const conditions = this.getCurrentWhereClause();
-        const db = Outerbase(this._connection)
+        const db = Outerbase(this._connection);
         const currentValues = this.getCurrentValues({ omitPrimaryKeys: true });
 
-        let { data, error } = await db
-            .update(currentValues)
-            .into(this._name)
-            .where(conditions)
-            .query();
+        // let { data, error } = await db
+        //     .update(currentValues)
+        //     .into(this._name)
+        //     // .where(conditions)
+        //     .query();
 
         // Update the original data with the new data
-        if (!error) {
-            this._original = {
-                ...this._original,
-                ...currentValues
-            };
-        }
+        // if (!error) {
+        //     this._original = {
+        //         ...this._original,
+        //         ...currentValues,
+        //     };
+        // }
 
-        return data;
+        // return data;
     }
 
     /**
      * Inserts the current model into the database. This method will insert the
      * model into the database.
-     * 
+     *
      * @returns Promise<any>
      */
     async insert(): Promise<any> {
@@ -225,14 +233,14 @@ export class BaseTable {
             throw new Error('Connection not attached');
         }
 
-        const db = Outerbase(this._connection)
+        const db = Outerbase(this._connection);
 
-        let { data } = await db
-            .insert(this.getCurrentValues({ omitPrimaryKeys: true }))
-            .into(this._name)
-            .returning(['*'])
-            .query();
+        // let { data } = await db
+        //     .insert(this.getCurrentValues({ omitPrimaryKeys: true }))
+        //     .into(this._name)
+        //     //.returning(['*'])
+        //     .query();
 
-        return data;
+        // return data;
     }
 }

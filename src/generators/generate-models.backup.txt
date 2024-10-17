@@ -1,53 +1,53 @@
 #!/usr/bin/env node
-import pkg from 'handlebars'
-const { compile } = pkg
-import { promises as fs } from 'fs'
-import { API_URL } from '../connections/outerbase'
+import pkg from 'handlebars';
+const { compile } = pkg;
+import { promises as fs } from 'fs';
+import { API_URL } from '../connections/outerbase.backup';
 
-const path = require('path')
-const handlebars = require('handlebars')
+const path = require('path');
+const handlebars = require('handlebars');
 
 handlebars.registerHelper('capitalize', function (str: string) {
-    return str?.charAt(0).toUpperCase() + str?.slice(1)
-})
+    return str?.charAt(0).toUpperCase() + str?.slice(1);
+});
 
 handlebars.registerHelper('camelCase', function (str: string) {
-    return str?.replace(/[-_](.)/g, (_, c) => c?.toUpperCase())
-})
+    return str?.replace(/[-_](.)/g, (_, c) => c?.toUpperCase());
+});
 
-handlebars.registerHelper('neq', (a: any, b: any) => a !== b)
+handlebars.registerHelper('neq', (a: any, b: any) => a !== b);
 
 function parseArgs(args: any[]): { API_KEY?: string; PATH?: string } {
-    const argsMap: Record<string, any> = {}
+    const argsMap: Record<string, any> = {};
     args.slice(2).forEach((arg: { split: (arg0: string) => [any, any] }) => {
-        const [key, value] = arg.split('=')
-        argsMap[key] = value
-    })
+        const [key, value] = arg.split('=');
+        argsMap[key] = value;
+    });
 
-    return argsMap
+    return argsMap;
 }
 
 async function main() {
-    const args = parseArgs(process.argv)
-    const apiKey = args.API_KEY || ''
-    const folderPath = args.PATH || './'
+    const args = parseArgs(process.argv);
+    const apiKey = args.API_KEY || '';
+    const folderPath = args.PATH || './';
 
     try {
-        await fs.mkdir(folderPath, { recursive: true })
+        await fs.mkdir(folderPath, { recursive: true });
 
         // Load templates
         const modelTemplateSource = await fs.readFile(
             path.resolve(__dirname, 'model-template.handlebars'),
             'utf-8'
-        )
+        );
         const indexTemplateSource = await fs.readFile(
             path.resolve(__dirname, 'index-template.handlebars'),
             'utf-8'
-        )
+        );
 
         // Compile templates
-        const modelTemplate = compile(modelTemplateSource)
-        const indexTemplate = compile(indexTemplateSource)
+        const modelTemplate = compile(modelTemplateSource);
+        const indexTemplate = compile(indexTemplateSource);
 
         const response = await fetch(`${API_URL}/api/v1/ezql/schema`, {
             method: 'GET',
@@ -55,23 +55,23 @@ async function main() {
                 'Content-Type': 'application/json',
                 'X-Source-Token': apiKey,
             },
-        })
+        });
 
-        let json = await response.json()
-        let schemaResponse = json.response
-        let tables: Array<any> = []
+        let json = await response.json();
+        let schemaResponse = json.response;
+        let tables: Array<any> = [];
 
-        const deletedPathsMap: Record<string, any> = {}
+        const deletedPathsMap: Record<string, any> = {};
 
         for (let key in schemaResponse) {
-            let isPublic = key.toLowerCase() === 'public'
+            let isPublic = key.toLowerCase() === 'public';
 
             if (Array.isArray(schemaResponse[key])) {
                 for (let table of schemaResponse[key]) {
-                    if (table.type !== 'table') continue
+                    if (table.type !== 'table') continue;
 
                     // References will capture all columns that have foreign key constraints in this table
-                    table.references = []
+                    table.references = [];
 
                     // Loop through all columns in the table
                     for (let column of table.columns) {
@@ -80,21 +80,21 @@ async function main() {
                                 constraint.type?.toUpperCase() ===
                                     'PRIMARY KEY' &&
                                 constraint.column === column.name
-                        )
-                        column.primary = isPrimaryKey ? true : false
+                        );
+                        column.primary = isPrimaryKey ? true : false;
 
                         const isUnique = table.constraints?.find(
                             (constraint: { type: string; column: any }) =>
                                 constraint.type?.toUpperCase() === 'UNIQUE' &&
                                 constraint.column === column.name
-                        )
-                        column.unique = isUnique ? true : false
+                        );
+                        column.unique = isUnique ? true : false;
 
                         const foreignKey = table.constraints?.find(
                             (constraint: {
-                                type: string
-                                column: any
-                                columns: string | any[]
+                                type: string;
+                                column: any;
+                                columns: string | any[];
                             }) => {
                                 if (
                                     constraint.type?.toUpperCase() ===
@@ -102,27 +102,27 @@ async function main() {
                                     constraint.column === column.name &&
                                     constraint.columns?.length > 0
                                 ) {
-                                    const firstColumn = constraint.columns[0]
+                                    const firstColumn = constraint.columns[0];
 
                                     const referenceExists =
                                         table.references.some(
                                             (ref: {
-                                                name: string
-                                                table: any
-                                                schema: any
+                                                name: string;
+                                                table: any;
+                                                schema: any;
                                             }) =>
                                                 ref.name === firstColumn.name &&
                                                 ref.table ===
                                                     firstColumn.table &&
                                                 ref.schema ===
                                                     firstColumn.schema
-                                        )
+                                        );
                                     if (!referenceExists) {
                                         table.references.push({
                                             name: firstColumn.name,
                                             table: firstColumn.table,
                                             schema: firstColumn.schema,
-                                        })
+                                        });
                                     }
                                 }
 
@@ -130,14 +130,14 @@ async function main() {
                                     constraint.type?.toUpperCase() ===
                                         'FOREIGN KEY' &&
                                     constraint.column === column.name
-                                )
+                                );
                             }
-                        )
+                        );
                         column.reference = foreignKey?.columns[0]?.table
                             ? foreignKey?.columns[0]?.table
-                            : undefined
+                            : undefined;
 
-                        let currentType = column.type?.toLowerCase()
+                        let currentType = column.type?.toLowerCase();
 
                         // Convert `currentType` from database column types to TypeScript types
                         switch (column.type?.toLowerCase()) {
@@ -150,15 +150,15 @@ async function main() {
                                 currentType =
                                     column.type?.toLowerCase() === 'bigint'
                                         ? 'bigint'
-                                        : 'number'
-                                break
+                                        : 'number';
+                                break;
                             case 'decimal':
                             case 'numeric':
                             case 'float':
                             case 'double':
                             case 'real':
-                                currentType = 'number'
-                                break
+                                currentType = 'number';
+                                break;
                             case 'varchar':
                             case 'char':
                             case 'character varying':
@@ -166,92 +166,92 @@ async function main() {
                             case 'tinytext':
                             case 'mediumtext':
                             case 'longtext':
-                                currentType = 'string'
-                                break
+                                currentType = 'string';
+                                break;
                             case 'timestamp':
                             case 'datetime':
                             case 'date':
                             case 'time':
-                                currentType = 'Date'
-                                break
+                                currentType = 'Date';
+                                break;
                             case 'boolean':
-                                currentType = 'boolean'
-                                break
+                                currentType = 'boolean';
+                                break;
                             case 'json':
                             case 'jsonb':
-                                currentType = 'Record<string, any>'
-                                break
+                                currentType = 'Record<string, any>';
+                                break;
                             case 'binary':
                             case 'varbinary':
                             case 'blob':
                             case 'tinyblob':
                             case 'mediumblob':
                             case 'longblob':
-                                currentType = 'Blob'
-                                break
+                                currentType = 'Blob';
+                                break;
                             case 'enum':
                             case 'set':
-                                currentType = 'string'
-                                break
+                                currentType = 'string';
+                                break;
                             case 'uuid':
-                                currentType = 'string'
-                                break
+                                currentType = 'string';
+                                break;
                             case 'bit':
-                                currentType = 'number'
-                                break
+                                currentType = 'number';
+                                break;
                             case 'array':
-                                currentType = 'any[]'
-                                break
+                                currentType = 'any[]';
+                                break;
                             case 'geometry':
                             case 'geography':
-                                currentType = 'GeoJSON.Geometry'
-                                break
+                                currentType = 'GeoJSON.Geometry';
+                                break;
                             default:
-                                currentType = 'any'
-                                break
+                                currentType = 'any';
+                                break;
                         }
 
-                        column.type = currentType
+                        column.type = currentType;
                     }
 
                     const currentFolderPath =
-                        folderPath + `${isPublic ? '' : '/' + key}`
-                    const model = modelTemplate(table)
+                        folderPath + `${isPublic ? '' : '/' + key}`;
+                    const model = modelTemplate(table);
                     const modelPath = path.resolve(
                         currentFolderPath,
                         `${table.name}.ts`
-                    )
+                    );
 
                     // Remove the existing models directory and create a new one if it doesn't exist
                     // but only if it hasn't been deleted already.
                     if (!deletedPathsMap[currentFolderPath]) {
-                        await fs.rmdir(currentFolderPath, { recursive: true })
-                        deletedPathsMap[currentFolderPath] = true
+                        await fs.rmdir(currentFolderPath, { recursive: true });
+                        deletedPathsMap[currentFolderPath] = true;
                     }
-                    
-                    await fs.mkdir(currentFolderPath, { recursive: true })
-                    await fs.writeFile(modelPath, model)
+
+                    await fs.mkdir(currentFolderPath, { recursive: true });
+                    await fs.writeFile(modelPath, model);
 
                     tables.push({
                         name: isPublic ? table.name : `${key}/${table.name}`,
-                    })
+                    });
                 }
             }
         }
 
-        console.log('Generated models for tables:', tables)
+        console.log('Generated models for tables:', tables);
 
         // Generate index file
-        const index = indexTemplate({ tables: tables })
-        const indexPath = path.resolve(folderPath, 'index.ts')
+        const index = indexTemplate({ tables: tables });
+        const indexPath = path.resolve(folderPath, 'index.ts');
 
         // Write generated files
-        await fs.writeFile(indexPath, index)
+        await fs.writeFile(indexPath, index);
 
-        console.log('Models generated successfully')
+        console.log('Models generated successfully');
     } catch (error) {
-        console.error('Error generating models:', error)
+        console.error('Error generating models:', error);
     }
 }
 
-main()
+main();

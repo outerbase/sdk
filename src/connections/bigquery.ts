@@ -1,25 +1,22 @@
-import { QueryType } from '../query-params'
-import { Query, constructRawQuery } from '../query'
-import { Connection } from './index'
-import { Database, Table, TableColumn } from '../models/database'
-import { BigQueryDialect } from '../query-builder/dialects/bigquery'
+import { QueryType } from '../query-params';
+import { Query, constructRawQuery } from '../query';
+import { Connection, QueryResult, SqlConnection } from './index';
+import { Database, Table, TableColumn } from '../models/database';
+import { BigQueryDialect } from '../query-builder/dialects/bigquery';
+import { BigQuery } from '@google-cloud/bigquery';
+import {
+    createErrorResult,
+    transformObjectBasedResultFirstRow,
+} from 'src/utils/transformer';
 
-import { BigQuery } from '@google-cloud/bigquery'
-
-type BigQueryParameters = {
-    keyFileName: string
-    region: string
-}
-
-export class BigQueryConnection implements Connection {
-    bigQuery: BigQuery
-    bigQueryRegion: string
+export class BigQueryConnection extends SqlConnection {
+    bigQuery: BigQuery;
 
     // Default query type to positional for BigQuery
-    queryType = QueryType.positional
+    queryType = QueryType.positional;
 
     // Default dialect for BigQuery
-    dialect = new BigQueryDialect()
+    dialect = new BigQueryDialect();
 
     /**
      * Creates a new BigQuery object.
@@ -27,13 +24,9 @@ export class BigQueryConnection implements Connection {
      * @param keyFileName - Path to a .json, .pem, or .p12 key file.
      * @param region - Region for your dataset
      */
-    constructor(private _: BigQueryParameters) {
-        const bigQuery = new BigQuery({
-            keyFilename: _.keyFileName,
-        })
-
-        this.bigQueryRegion = _.region
-        this.bigQuery = bigQuery
+    constructor(bigQuery: BigQuery) {
+        super();
+        this.bigQuery = bigQuery;
     }
 
     /**
@@ -45,7 +38,7 @@ export class BigQueryConnection implements Connection {
      * @returns Promise<any>
      */
     async connect(): Promise<any> {
-        return Promise.resolve()
+        return Promise.resolve();
     }
 
     /**
@@ -56,7 +49,7 @@ export class BigQueryConnection implements Connection {
      * @returns Promise<any>
      */
     async disconnect(): Promise<any> {
-        return Promise.resolve()
+        return Promise.resolve();
     }
 
     /**
@@ -71,90 +64,77 @@ export class BigQueryConnection implements Connection {
      * @param parameters - An object containing the parameters to be used in the query.
      * @returns Promise<{ data: any, error: Error | null }>
      */
-    async query(
+    async query<T = Record<string, unknown>>(
         query: Query
-    ): Promise<{ data: any; error: Error | null; query: string }> {
-        const raw = constructRawQuery(query)
+    ): Promise<QueryResult<T>> {
         try {
             const options = {
                 query: query.query,
                 params: query.parameters,
                 useLegacySql: false,
-            }
+            };
 
-            const [rows] = await this.bigQuery.query(options)
-
-            return {
-                data: rows,
-                error: null,
-                query: raw,
-            }
+            const [rows] = await this.bigQuery.query(options);
+            return transformObjectBasedResultFirstRow(rows) as QueryResult<T>;
         } catch (error) {
             if (error instanceof Error) {
-                return {
-                    data: null,
-                    error: error,
-                    query: raw,
-                }
+                return createErrorResult(error.message) as QueryResult<T>;
             }
 
-            return {
-                data: null,
-                error: new Error('Unexpected Error'),
-                query: raw,
-            }
+            return createErrorResult('Unexpected Error') as QueryResult<T>;
         }
     }
 
     public async fetchDatabaseSchema(): Promise<Database> {
-        const database: Database = {}
+        const database: Database = {};
 
         // Fetch all datasets
-        const [datasets] = await this.bigQuery.getDatasets()
+        const [datasets] = await this.bigQuery.getDatasets();
         if (datasets.length === 0) {
-            throw new Error('No datasets found in the project.')
+            throw new Error('No datasets found in the project.');
         }
 
         // Iterate over each dataset
         for (const dataset of datasets) {
-            const datasetId = dataset.id
-            if (!datasetId) continue
+            const datasetId = dataset.id;
+            if (!datasetId) continue;
 
-            const [tables] = await dataset.getTables()
+            const [tables] = await dataset.getTables();
 
             if (!database[datasetId]) {
-                database[datasetId] = {} // Initialize schema in the database
+                database[datasetId] = {}; // Initialize schema in the database
             }
 
             for (const table of tables) {
-                const [metadata] = await table.getMetadata()
+                const [metadata] = await table.getMetadata();
 
                 const columns = metadata.schema.fields.map(
                     (field: any, index: number): TableColumn => {
                         return {
                             name: field.name,
-                            type: field.type,
                             position: index,
-                            nullable: field.mode === 'NULLABLE',
-                            default: null, // BigQuery does not support default values in the schema metadata
-                            primary: false, // BigQuery does not have a concept of primary keys
-                            unique: false, // BigQuery does not have a concept of unique constraints
-                            references: [], // BigQuery does not support foreign keys
-                        }
+                            definition: {
+                                type: field.type,
+                                nullable: field.mode === 'NULLABLE',
+                                default: null, // BigQuery does not support default values in the schema metadata
+                                primaryKey: false, // BigQuery does not have a concept of primary keys
+                                unique: false, // BigQuery does not have a concept of unique constraints
+                            },
+                        };
                     }
-                )
+                );
 
                 const currentTable: Table = {
                     name: table.id ?? '',
                     columns: columns,
                     indexes: [], // BigQuery does not support indexes
                     constraints: [], // BigQuery does not support primary keys, foreign keys, or unique constraints
-                }
+                };
 
-                database[datasetId][table.id ?? ''] = currentTable
+                database[datasetId][table.id ?? ''] = currentTable;
             }
         }
 
-        return database
+        return database;
     }
 }
