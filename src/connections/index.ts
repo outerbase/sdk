@@ -1,5 +1,9 @@
 import { Query } from '../query';
-import { Database, TableColumn } from '../models/database';
+import {
+    Database,
+    TableColumn,
+    TableColumnDefinition,
+} from '../models/database';
 import { AbstractDialect } from 'src/query-builder';
 import { Outerbase } from 'src/client';
 
@@ -87,6 +91,26 @@ export abstract class Connection {
         tableName: string,
         columnName: string,
         newColumnName: string
+    ): Promise<QueryResult>;
+
+    abstract renameTable(
+        schemaName: string | undefined,
+        tableName: string,
+        newTableName: string
+    ): Promise<QueryResult>;
+
+    abstract alterColumn(
+        schemaName: string | undefined,
+        tableName: string,
+        columnName: string,
+        defintion: TableColumnDefinition
+    ): Promise<QueryResult>;
+
+    abstract addColumn(
+        schemaName: string | undefined,
+        tableName: string,
+        columnName: string,
+        defintion: TableColumnDefinition
     ): Promise<QueryResult>;
 }
 
@@ -243,6 +267,59 @@ export abstract class SqlConnection extends Connection {
                     schemaName ? `${schemaName}.${tableName}` : tableName
                 )
                 .renameColumn(columnName, newColumnName)
+                .toQuery()
+        );
+    }
+
+    async renameTable(
+        schemaName: string | undefined,
+        tableName: string,
+        newTableName: string
+    ): Promise<QueryResult> {
+        const qb = Outerbase(this);
+
+        return await this.query(
+            qb
+                .alterTable(
+                    schemaName ? `${schemaName}.${tableName}` : tableName
+                )
+                .renameTable(newTableName)
+                .toQuery()
+        );
+    }
+
+    async alterColumn(
+        schemaName: string | undefined,
+        tableName: string,
+        columnName: string,
+        defintion: TableColumnDefinition
+    ): Promise<QueryResult> {
+        const qb = Outerbase(this);
+
+        return await this.query(
+            qb
+                .alterTable(
+                    schemaName ? `${schemaName}.${tableName}` : tableName
+                )
+                .alterColumn(columnName, defintion)
+                .toQuery()
+        );
+    }
+
+    async addColumn(
+        schemaName: string | undefined,
+        tableName: string,
+        columnName: string,
+        defintion: TableColumnDefinition
+    ): Promise<QueryResult> {
+        const qb = Outerbase(this);
+
+        return await this.query(
+            qb
+                .alterTable(
+                    schemaName ? `${schemaName}.${tableName}` : tableName
+                )
+                .addColumn(columnName, defintion)
                 .toQuery()
         );
     }

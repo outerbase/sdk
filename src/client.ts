@@ -75,8 +75,7 @@ export interface QueryBuilderInternal {
     selectRawValue?: string;
 
     // General operation values, such as when renaming tables referencing the old and new name
-    originalValue?: string;
-    newValue?: string;
+    newTableName?: string;
 }
 
 function buildWhereClause(args: unknown[]): WhereCondition | WhereClaues {
@@ -329,9 +328,21 @@ class QueryBuilderAlterTable extends IQueryBuilder {
         this.state.table = tableName;
     }
 
+    alterColumn(columnName: string, definition: TableColumnDefinition) {
+        this.state.action = QueryBuilderAction.UPDATE_COLUMNS;
+        this.state.columns.push({ name: columnName, definition });
+        return this;
+    }
+
+    addColumn(name: string, definition: TableColumnDefinition) {
+        this.state.action = QueryBuilderAction.ADD_COLUMNS;
+        this.state.columns.push({ name, definition });
+        return this;
+    }
+
     renameTable(newTableName: string) {
-        this.state.originalValue = this.state.table;
-        this.state.newValue = newTableName;
+        this.state.action = QueryBuilderAction.RENAME_TABLE;
+        this.state.newTableName = newTableName;
         return this;
     }
 
@@ -439,37 +450,14 @@ function buildQueryString(
             return dialect.createTable(queryBuilder);
         case QueryBuilderAction.DELETE_TABLE:
             return dialect.dropTable(queryBuilder);
-        // case QueryBuilderAction.RENAME_TABLE:
-        //     query.query = dialect.renameTable(
-        //         queryBuilder,
-        //         queryType,
-        //         query
-        //     ).query;
-        //     break;
-
-        // case QueryBuilderAction.ADD_COLUMNS:
-        //     query.query = dialect.addColumn(
-        //         queryBuilder,
-        //         queryType,
-        //         query
-        //     ).query;
-        //     break;
-        // case QueryBuilderAction.DROP_COLUMNS:
-        //     query.query = dialect.dropColumn(
-        //         queryBuilder,
-        //         queryType,
-        //         query
-        //     ).query;
-        //     break;
+        case QueryBuilderAction.RENAME_TABLE:
+            return dialect.renameTable(queryBuilder);
+        case QueryBuilderAction.ADD_COLUMNS:
+            return dialect.addColumn(queryBuilder);
+        case QueryBuilderAction.UPDATE_COLUMNS:
+            return dialect.alterColumn(queryBuilder);
         case QueryBuilderAction.RENAME_COLUMNS:
             return dialect.renameColumn(queryBuilder);
-        // case QueryBuilderAction.UPDATE_COLUMNS:
-        //     query.query = dialect.updateColumn(
-        //         queryBuilder,
-        //         queryType,
-        //         query
-        //     ).query;
-        //     break;
         default:
             throw new Error('Invalid action');
     }

@@ -3,6 +3,7 @@ import {
     Database,
     Table,
     TableColumn,
+    TableColumnDefinition,
     TableIndex,
     TableIndexType,
 } from '../models/database';
@@ -295,5 +296,28 @@ export class MongoDBConnection implements Connection {
         return {
             [this.defaultDatabase]: tableList,
         };
+    }
+
+    async addColumn(): Promise<QueryResult> {
+        // Do nothing, MongoDB does not have a schema
+        return createOkResult();
+    }
+
+    async alterColumn(): Promise<QueryResult> {
+        // Do nothing, MongoDB does not have a schema
+        return createOkResult();
+    }
+
+    async renameTable(
+        schemaName: string | undefined,
+        tableName: string,
+        newTableName: string
+    ): Promise<QueryResult> {
+        await this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .rename(newTableName);
+
+        return createOkResult();
     }
 }

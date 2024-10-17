@@ -16,7 +16,10 @@ interface Dialect {
     delete(builder: QueryBuilderInternal): Query;
     createTable(builder: QueryBuilderInternal): Query;
     dropTable(builder: QueryBuilderInternal): Query;
+    renameTable(builder: QueryBuilderInternal): Query;
     renameColumn(builder: QueryBuilderInternal): Query;
+    alterColumn(builder: QueryBuilderInternal): Query;
+    addColumn(builder: QueryBuilderInternal): Query;
 }
 
 export enum ColumnDataType {
@@ -392,6 +395,84 @@ export abstract class AbstractDialect implements Dialect {
 
         return {
             query: `ALTER TABLE ${this.escapeId(tableName)} RENAME COLUMN ${this.escapeId(column.name)} TO ${this.escapeId(column.newName)}`,
+            parameters: [],
+        };
+    }
+
+    renameTable(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+        const newTableName = builder.newTableName;
+
+        if (!tableName) {
+            throw new Error(
+                'Table name is required to build a RENAME TABLE query.'
+            );
+        }
+
+        if (!newTableName) {
+            throw new Error('New table name is required to rename.');
+        }
+
+        return {
+            query: `ALTER TABLE ${this.escapeId(tableName)} RENAME TO ${this.escapeId(newTableName)}`,
+            parameters: [],
+        };
+    }
+
+    alterColumn(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+
+        if (!tableName) {
+            throw new Error(
+                'Table name is required to build a ALTER COLUMN query.'
+            );
+        }
+
+        if (builder.columns.length !== 1) {
+            throw new Error('Exactly one column is required to alter.');
+        }
+
+        const column = builder.columns[0];
+
+        if (!column.name) {
+            throw new Error('Column name is required to alter.');
+        }
+
+        if (!column.definition) {
+            throw new Error('Column definition is required to alter.');
+        }
+
+        return {
+            query: `ALTER TABLE ${this.escapeId(tableName)} ALTER COLUMN ${this.escapeId(column.name)} ${this.buildColumnDefinition(column.definition)}`,
+            parameters: [],
+        };
+    }
+
+    addColumn(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+
+        if (!tableName) {
+            throw new Error(
+                'Table name is required to build a ADD COLUMN query.'
+            );
+        }
+
+        if (builder.columns.length !== 1) {
+            throw new Error('Exactly one column is required to add.');
+        }
+
+        const column = builder.columns[0];
+
+        if (!column.name) {
+            throw new Error('Column name is required to add.');
+        }
+
+        if (!column.definition) {
+            throw new Error('Column definition is required to add.');
+        }
+
+        return {
+            query: `ALTER TABLE ${this.escapeId(tableName)} ADD COLUMN ${this.escapeId(column.name)} ${this.buildColumnDefinition(column.definition)}`,
             parameters: [],
         };
     }
