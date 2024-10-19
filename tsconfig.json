@@ -12,7 +12,11 @@
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "strict": true,
-        "baseUrl": "./"
+        "baseUrl": "./",
+        "paths": {
+            "src/*": ["src/*"],
+            "src": ["src"]
+        }
     },
     "include": ["src/**/*"],
     "exclude": ["node_modules"]
