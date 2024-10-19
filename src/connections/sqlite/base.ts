@@ -1,7 +1,7 @@
-import { Database, Table, TableColumn } from 'src/models/database';
+import { Database, Table, TableColumn } from './../../models/database';
 import { SqlConnection } from '..';
-import { AbstractDialect } from 'src/query-builder';
-import { SqliteDialect } from 'src/query-builder/dialects/sqlite-dialect';
+import { AbstractDialect } from './../../query-builder';
+import { SqliteDialect } from './../../query-builder/dialects/sqlite-dialect';
 export abstract class SqliteBaseConnection extends SqlConnection {
     dialect: AbstractDialect = new SqliteDialect();
 

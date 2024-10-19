@@ -3,17 +3,15 @@ import {
     Database,
     Table,
     TableColumn,
-    TableColumnDefinition,
     TableIndex,
     TableIndexType,
 } from '../models/database';
 
-import { MongoClient, Db, Document, Collection, ObjectId } from 'mongodb';
-import { PostgresDialect } from 'src/query-builder/dialects/postgres';
+import { MongoClient, ObjectId } from 'mongodb';
 import {
     createOkResult,
     transformObjectBasedResult,
-} from 'src/utils/transformer';
+} from './../utils/transformer';
 // import { MongoDialect } from '../query-builder/dialects/mongo'
 
 function isValidObjectId(value: string) {
@@ -95,6 +93,16 @@ export class MongoDBConnection implements Connection {
 
     raw(query: string): Promise<QueryResult> {
         throw new Error('Method not implemented.');
+    }
+
+    async testConnection(): Promise<boolean> {
+        try {
+            await this.connect();
+            await this.disconnect();
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     async renameColumn(

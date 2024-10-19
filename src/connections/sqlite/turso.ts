@@ -1,10 +1,11 @@
 import { Client, InValue } from '@libsql/client';
 
-import { AbstractDialect } from 'src/query-builder';
+import { AbstractDialect } from './../../query-builder';
 import { QueryResult } from '..';
 import { Query } from '../../query';
-import { PostgresDialect } from 'src/query-builder/dialects/postgres';
+import { PostgresDialect } from './../../query-builder/dialects/postgres';
 import { SqliteBaseConnection } from './base';
+import { transformArrayBasedResult } from './../../utils/transformer';
 
 export class TursoConnection extends SqliteBaseConnection {
     client: Client;
@@ -24,20 +25,11 @@ export class TursoConnection extends SqliteBaseConnection {
                 args: (query.parameters ?? []) as InValue[],
             });
 
-            return {
-                data: result.rows.map((row) => {
-                    return result.columns.reduce(
-                        (acc, column) => {
-                            acc[column] = row[column];
-                            return acc;
-                        },
-                        {} as Record<string, unknown>
-                    );
-                }) as unknown as T[],
-                error: null,
-                query: query.query,
-                headers: [],
-            };
+            return transformArrayBasedResult(
+                result.columns,
+                (header) => ({ name: header }),
+                result.rows as unknown as unknown[][]
+            ) as QueryResult<T>;
         } catch (e) {
             if (e instanceof Error) {
                 return {

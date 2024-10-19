@@ -10,8 +10,8 @@ import {
     TableColumn,
     TableIndex,
     TableIndexType,
-} from 'src/models/database';
-import { transformArrayBasedResult } from 'src/utils/transformer';
+} from './../../models/database';
+import { transformArrayBasedResult } from './../../utils/transformer';
 import { QueryResult } from '..';
 
 interface CloudflareResult {

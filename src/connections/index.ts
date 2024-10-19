@@ -4,14 +4,8 @@ import {
     TableColumn,
     TableColumnDefinition,
 } from '../models/database';
-import { AbstractDialect } from 'src/query-builder';
-import { Outerbase } from 'src/client';
-
-export type OperationResponse = {
-    success: boolean;
-    data: any;
-    error: Error | null;
-};
+import { AbstractDialect } from './../query-builder';
+import { Outerbase } from './../client';
 
 export interface QueryResultHeader {
     name: string;
@@ -39,8 +33,8 @@ export abstract class Connection {
 
     // Retrieve metadata about the database, useful for introspection.
     abstract fetchDatabaseSchema(): Promise<Database>;
-
     abstract raw(query: string): Promise<QueryResult>;
+    abstract testConnection(): Promise<boolean>;
 
     // Connection common operations that will be used by Outerbase
     abstract insert(
@@ -322,5 +316,16 @@ export abstract class SqlConnection extends Connection {
                 .addColumn(columnName, defintion)
                 .toQuery()
         );
+    }
+
+    async testConnection(): Promise<boolean> {
+        try {
+            await this.connect();
+            const { error } = await this.raw('SELECT 1;');
+            await this.disconnect();
+            return !error;
+        } catch (error) {
+            return false;
+        }
     }
 }

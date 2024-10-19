@@ -6,7 +6,7 @@ import { PostgreBaseConnection } from './postgre/base';
 import {
     createErrorResult,
     transformObjectBasedResultFirstRow,
-} from 'src/utils/transformer';
+} from './../utils/transformer';
 
 export class DuckDBConnection extends PostgreBaseConnection {
     client: duckDB.Database;

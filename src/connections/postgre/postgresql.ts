@@ -1,13 +1,13 @@
 import { Client } from 'pg';
 import { QueryResult } from '..';
 import { Query } from '../../query';
-import { AbstractDialect } from 'src/query-builder';
-import { PostgresDialect } from 'src/query-builder/dialects/postgres';
-import { QueryType } from 'src/query-params';
+import { AbstractDialect } from './../../query-builder';
+import { PostgresDialect } from './../../query-builder/dialects/postgres';
+import { QueryType } from './../../query-params';
 import {
     createErrorResult,
     transformArrayBasedResult,
-} from 'src/utils/transformer';
+} from './../../utils/transformer';
 import { PostgreBaseConnection } from './base';
 
 function replacePlaceholders(query: string): string {

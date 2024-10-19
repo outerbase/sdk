@@ -7,7 +7,7 @@ import { BigQuery } from '@google-cloud/bigquery';
 import {
     createErrorResult,
     transformObjectBasedResultFirstRow,
-} from 'src/utils/transformer';
+} from './../utils/transformer';
 
 export class BigQueryConnection extends SqlConnection {
     bigQuery: BigQuery;

@@ -3,7 +3,7 @@
  * database result format into our own query result formation
  */
 
-import { QueryResult, QueryResultHeader } from 'src/connections';
+import { QueryResult, QueryResultHeader } from './../connections';
 
 export function transformObjectBasedResult(
     arr: Record<string, unknown>[]

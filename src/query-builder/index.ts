@@ -1,4 +1,4 @@
-import { TableColumnDefinition } from 'src/models/database';
+import { TableColumnDefinition } from './../models/database';
 import {
     OrderByClause,
     QueryBuilderInternal,

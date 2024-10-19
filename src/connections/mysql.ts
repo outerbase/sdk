@@ -12,7 +12,7 @@ import { MySQLDialect } from './../query-builder/dialects/mysql';
 import {
     createErrorResult,
     transformArrayBasedResult,
-} from 'src/utils/transformer';
+} from './../utils/transformer';
 
 interface MySQLSchemaResult {
     SCHEMA_NAME: string;
