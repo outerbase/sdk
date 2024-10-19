@@ -240,6 +240,23 @@ export abstract class SqlConnection extends Connection {
         );
     }
 
+    async dropColumn(
+        schemaName: string | undefined,
+        tableName: string,
+        columnName: string
+    ): Promise<QueryResult> {
+        const qb = Outerbase(this);
+
+        return await this.query(
+            qb
+                .alterTable(
+                    schemaName ? `${schemaName}.${tableName}` : tableName
+                )
+                .dropColumn(columnName)
+                .toQuery()
+        );
+    }
+
     async testConnection(): Promise<boolean> {
         try {
             await this.connect();

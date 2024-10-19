@@ -21,6 +21,7 @@ interface Dialect {
     renameTable(builder: QueryBuilderInternal): Query;
     renameColumn(builder: QueryBuilderInternal): Query;
     alterColumn(builder: QueryBuilderInternal): Query;
+    dropColumn(builder: QueryBuilderInternal): Query;
     addColumn(builder: QueryBuilderInternal): Query;
 }
 
@@ -390,6 +391,26 @@ export abstract class AbstractDialect implements Dialect {
 
         return {
             query: `DROP TABLE IF EXISTS ${this.escapeId(tableName)}`,
+            parameters: [],
+        };
+    }
+
+    dropColumn(builder: QueryBuilderInternal): Query {
+        const tableName = builder.table;
+        const columnName = builder.dropColumn;
+
+        if (!tableName) {
+            throw new Error(
+                'Table name is required to build a DROP COLUMN query.'
+            );
+        }
+
+        if (!columnName) {
+            throw new Error('Column name is required to drop.');
+        }
+
+        return {
+            query: `ALTER TABLE ${this.escapeId(tableName)} DROP COLUMN ${this.escapeId(columnName)}`,
             parameters: [],
         };
     }

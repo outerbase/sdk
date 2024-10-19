@@ -108,4 +108,10 @@ export abstract class Connection {
         columnName: string,
         defintion: TableColumnDefinition
     ): Promise<QueryResult>;
+
+    abstract dropColumn(
+        schemaName: string | undefined,
+        tableName: string,
+        columnName: string
+    ): Promise<QueryResult>;
 }

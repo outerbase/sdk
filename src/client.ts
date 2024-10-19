@@ -62,6 +62,7 @@ export interface QueryBuilderInternal {
     // ------------------------------------------
     // This is use for alter or create schema
     // ------------------------------------------
+    dropColumn?: string;
     columns: {
         name: string;
         definition?: TableColumnDefinition; // For alter or create column
@@ -345,6 +346,12 @@ class QueryBuilderAlterTable extends IQueryBuilder {
         return this;
     }
 
+    dropColumn(name: string) {
+        this.state.action = QueryBuilderAction.DROP_COLUMNS;
+        this.state.dropColumn = name;
+        return this;
+    }
+
     renameTable(newTableName: string) {
         this.state.action = QueryBuilderAction.RENAME_TABLE;
         this.state.newTableName = newTableName;
@@ -463,6 +470,8 @@ function buildQueryString(
             return dialect.alterColumn(queryBuilder);
         case QueryBuilderAction.RENAME_COLUMNS:
             return dialect.renameColumn(queryBuilder);
+        case QueryBuilderAction.DROP_COLUMNS:
+            return dialect.dropColumn(queryBuilder);
         default:
             throw new Error('Invalid action');
     }

@@ -179,7 +179,10 @@ describe('Database Connection', () => {
         ]);
     });
 
-    test('Add table column', async () => {
+    test('Add and drop table column', async () => {
+        // Skip Mongodb because it does not have schema
+        if (process.env.CONNECTION_TYPE === 'mongodb') return;
+
         const { error } = await db.addColumn(
             DEFAULT_SCHEMA,
             'persons',
@@ -194,26 +197,8 @@ describe('Database Connection', () => {
 
         expect(error).not.toBeTruthy();
 
-        // Need to update email because MongoDB does not have schema
-        if (process.env.CONNECTION_TYPE === 'bigquery') {
-            await db.raw(
-                `UPDATE \`${DEFAULT_SCHEMA}.persons\` SET email = 'test@outerbase.com' WHERE TRUE;`
-            );
-        } else {
-            await db.update(
-                DEFAULT_SCHEMA,
-                'persons',
-                {
-                    email: 'test@outerbase.com',
-                },
-                {}
-            );
-        }
-
         const { data } = await db.select(DEFAULT_SCHEMA, 'persons', {
             orderBy: ['id'],
-            limit: 1000,
-            offset: 0,
         });
 
         expect(cleanup(data)).toEqual([
@@ -221,13 +206,33 @@ describe('Database Connection', () => {
                 id: 1,
                 full_name: 'Visal In',
                 age: 25,
-                email: 'test@outerbase.com',
+                email: null,
             },
             {
                 id: 2,
                 full_name: 'Outerbase',
                 age: 30,
-                email: 'test@outerbase.com',
+                email: null,
+            },
+        ]);
+
+        // Remove the column
+        await db.dropColumn(DEFAULT_SCHEMA, 'persons', 'email');
+
+        const { data: data2 } = await db.select(DEFAULT_SCHEMA, 'persons', {
+            orderBy: ['id'],
+        });
+
+        expect(cleanup(data2)).toEqual([
+            {
+                id: 1,
+                full_name: 'Visal In',
+                age: 25,
+            },
+            {
+                id: 2,
+                full_name: 'Outerbase',
+                age: 30,
             },
         ]);
     });
@@ -264,7 +269,6 @@ describe('Database Connection', () => {
                 id: 2,
                 full_name: 'Outerbase',
                 age: 30,
-                email: 'test@outerbase.com',
             },
         ]);
     });

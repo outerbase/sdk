@@ -165,6 +165,10 @@ export class MongoDBConnection implements Connection {
         return createOkResult();
     }
 
+    async dropColumn(): Promise<QueryResult> {
+        return createOkResult();
+    }
+
     async select(
         schemaName: string,
         tableName: string,
