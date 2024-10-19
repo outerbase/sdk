@@ -3,11 +3,29 @@ import { Query, constructRawQuery } from '../../query';
 import { DefaultDialect } from '../../query-builder/dialects/default';
 import { SqliteBaseConnection } from './base';
 import { QueryResult } from '..';
+import {
+    createErrorResult,
+    transformArrayBasedResult,
+} from '../../utils/transformer';
 
 export type StarbaseConnectionDetails = {
     url: string;
     apiKey: string;
 };
+
+interface StarbaseResult {
+    columns: string[];
+    rows: unknown[][];
+    meta: {
+        rows_read: number;
+        rows_written: number;
+    };
+}
+
+interface StarbaseResponse {
+    result: StarbaseResult | StarbaseResult[];
+    error?: string;
+}
 
 export class StarbaseConnection extends SqliteBaseConnection {
     // The Starbase API key with
@@ -79,7 +97,7 @@ export class StarbaseConnection extends SqliteBaseConnection {
         if (!this.apiKey) throw new Error('Starbase API key is not set');
         if (!query) throw new Error('A SQL query was not provided');
 
-        const response = await fetch(this.url, {
+        const response = await fetch(new URL('/query/raw', this.url).href, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -91,25 +109,24 @@ export class StarbaseConnection extends SqliteBaseConnection {
             }),
         });
 
-        const json = await response.json();
-        const rawSQL = constructRawQuery(query);
+        const json: StarbaseResponse = await response.json();
 
-        if (json.result) {
-            const items = json.result;
-
-            return {
-                data: items,
-                error: null,
-                query: rawSQL,
-                headers: [],
-            };
+        if (json.error) {
+            return createErrorResult(json.error) as QueryResult<T>;
         }
 
-        return {
-            data: [],
-            error: Error('Unknown operation error'),
-            query: rawSQL,
-            headers: [],
-        };
+        if (json.result) {
+            const items = Array.isArray(json.result)
+                ? json.result[0]
+                : json.result;
+
+            return transformArrayBasedResult(
+                items.columns,
+                (header) => ({ name: header }),
+                items.rows
+            ) as QueryResult<T>;
+        }
+
+        return createErrorResult('ss') as QueryResult<T>;
     }
 }

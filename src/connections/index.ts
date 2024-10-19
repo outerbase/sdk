@@ -15,6 +15,7 @@ export interface QueryResultHeader {
 }
 export interface QueryResult<T = Record<string, unknown>> {
     data: T[];
+    count?: number;
     headers: QueryResultHeader[];
     error: Error | null;
     query: string;
@@ -25,6 +26,7 @@ export interface ConnectionSelectOptions {
     orderBy?: (string | [string, 'ASC' | 'DESC'])[];
     offset: number;
     limit: number;
+    includeCounting?: boolean;
 }
 export abstract class Connection {
     // Handles logic for securely connecting and properly disposing of the connection.

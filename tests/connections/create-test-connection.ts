@@ -12,6 +12,7 @@ import {
     CloudflareD1Connection,
     MongoDBConnection,
     DuckDBConnection,
+    StarbaseConnection,
 } from '../../src';
 import { MongoClient } from 'mongodb';
 
@@ -89,6 +90,13 @@ export default function createTestClient(): {
                   })
                 : new duckDB.Database(':memory:')
         );
+        return { client, defaultSchema: 'main' };
+    } else if (process.env.CONNECTION_TYPE === 'starbase') {
+        const client = new StarbaseConnection({
+            apiKey: process.env.STARBASEDB_TOKEN as string,
+            url: process.env.STARBASEDB_URL as string,
+        });
+
         return { client, defaultSchema: 'main' };
     }
 

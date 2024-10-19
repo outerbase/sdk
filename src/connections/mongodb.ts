@@ -36,13 +36,6 @@ function convertToObjectId(obj: any): any {
     return obj;
 }
 
-type MongoDBParameters = {
-    uri: string;
-    username: string;
-    password: string;
-    dbName: string;
-};
-
 function parseArguments(args: string) {
     const balancedArgs: string[] = [];
     let bracketLevel = 0;
@@ -222,6 +215,7 @@ export class MongoDBConnection implements Connection {
         }
 
         const data = await query.toArray();
+
         return transformObjectBasedResult(data);
     }
 

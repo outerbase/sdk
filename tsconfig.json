@@ -11,12 +11,12 @@
         "outDir": "./dist",
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "strict": true
-        // "baseUrl": "./",
-        // "paths": {
-        //     "src/*": ["src/*"],
-        //     "src": ["src"]
-        // }
+        "strict": true,
+        "baseUrl": "./",
+        "paths": {
+            "src/*": ["src/*"],
+            "src": ["src"]
+        }
     },
     "include": ["src/**/*"],
     "exclude": ["node_modules"]
