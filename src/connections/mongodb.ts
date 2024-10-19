@@ -193,9 +193,15 @@ export class MongoDBConnection implements Connection {
         const query = this.client
             .db(schemaName ?? this.defaultDatabase)
             .collection(tableName)
-            .find(filter)
-            .skip(options.offset)
-            .limit(options.limit);
+            .find(filter);
+
+        if (options.offset) {
+            query.skip(options.offset);
+        }
+
+        if (options.limit) {
+            query.limit(options.limit);
+        }
 
         if (options.orderBy) {
             const sort = options.orderBy.reduce(
@@ -214,9 +220,18 @@ export class MongoDBConnection implements Connection {
             query.sort(sort);
         }
 
-        const data = await query.toArray();
+        let count: number | undefined = undefined;
+        if (options.includeCounting) {
+            if (!options.where) {
+                count = await this.client
+                    .db(schemaName ?? this.defaultDatabase)
+                    .collection(tableName)
+                    .estimatedDocumentCount();
+            }
+        }
 
-        return transformObjectBasedResult(data);
+        const data = await query.toArray();
+        return { ...transformObjectBasedResult(data), count };
     }
 
     async createTable(): Promise<QueryResult> {

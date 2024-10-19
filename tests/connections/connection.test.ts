@@ -99,7 +99,7 @@ describe('Database Connection', () => {
     });
 
     test('Select data', async () => {
-        const { data } = await db.select(DEFAULT_SCHEMA, 'persons', {
+        const { data, count } = await db.select(DEFAULT_SCHEMA, 'persons', {
             orderBy: ['id'],
             limit: 1000,
             offset: 0,
@@ -109,6 +109,15 @@ describe('Database Connection', () => {
             { id: 1, name: 'Visal', age: 25 },
             { id: 2, name: 'Outerbase', age: 30 },
         ]);
+
+        expect(count).toBeUndefined();
+    });
+
+    test('Select data with count', async () => {
+        const { count } = await db.select(DEFAULT_SCHEMA, 'persons', {
+            includeCounting: true,
+        });
+        expect(count).toEqual(2);
     });
 
     test('Select from non-existing table should return error', async () => {

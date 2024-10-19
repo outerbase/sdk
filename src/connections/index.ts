@@ -24,8 +24,8 @@ export interface QueryResult<T = Record<string, unknown>> {
 export interface ConnectionSelectOptions {
     where?: { name: string; value: unknown; operator: string }[];
     orderBy?: (string | [string, 'ASC' | 'DESC'])[];
-    offset: number;
-    limit: number;
+    offset?: number;
+    limit?: number;
     includeCounting?: boolean;
 }
 export abstract class Connection {

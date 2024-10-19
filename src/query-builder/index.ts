@@ -259,14 +259,25 @@ export abstract class AbstractDialect implements Dialect {
             throw new Error('Table name is required to build a SELECT query.');
         }
 
+        const selectPart: QueryPart = builder.countingAllColumnName
+            ? [
+                  `COUNT(*) AS ${this.escapeId(builder.countingAllColumnName)}`,
+                  [],
+              ]
+            : this.buildSelectPart(builder.selectColumns);
+
+        const limitPart: QueryPart = builder.countingAllColumnName
+            ? ['', []]
+            : this.buildLimitPart(builder.limit, builder.offset);
+
         const combinedParts = this.mergePart(
             [
                 ['SELECT', []],
-                this.buildSelectPart(builder.selectColumns),
+                selectPart,
                 [`FROM ${this.escapeId(tableName)}`, []],
                 this.buildWherePart(builder.whereClauses),
                 this.buildOrderPart(builder.orderBy),
-                this.buildLimitPart(builder.limit, builder.offset),
+                limitPart,
             ],
             ' '
         );

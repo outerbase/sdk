@@ -46,37 +46,28 @@ export interface OrderByClause {
 
 export interface QueryBuilderInternal {
     action: QueryBuilderAction;
-    // Sets the focused schema name, used for INSERT, UPDATE, DELETE
+
     schema?: string;
-    // Sets the focused table name, used for INSERT, UPDATE, DELETE
     table?: string;
-
     selectColumns: string[];
-
-    // Used when column names and type are required, such as CREATE TABLE
-    columns: {
-        name: string;
-        definition?: TableColumnDefinition;
-        // When you want to rename a column
-        newName?: string;
-    }[];
-
     whereClauses: WhereClaues;
-    joins?: string[];
     data?: Record<string, unknown>;
     limit?: number;
     offset?: number;
     orderBy: OrderByClause[];
-    returning?: string[];
-    asClass?: any;
-    groupBy?: string;
-    // In an alter state within the builder
-    isAltering?: boolean;
 
-    selectRawValue?: string;
+    // This is temporary just to make SDK work with Outerbase
+    countingAllColumnName?: string;
 
-    // General operation values, such as when renaming tables referencing the old and new name
-    newTableName?: string;
+    // ------------------------------------------
+    // This is use for alter or create schema
+    // ------------------------------------------
+    columns: {
+        name: string;
+        definition?: TableColumnDefinition; // For alter or create column
+        newName?: string; // For rename column
+    }[];
+    newTableName?: string; // For rename table
 }
 
 function buildWhereClause(args: unknown[]): WhereCondition | WhereClaues {
@@ -204,6 +195,11 @@ class QueryBuilderSelect extends IQueryBuilder {
 
     select(...columName: string[]) {
         this.state.selectColumns = [...this.state.selectColumns, ...columName];
+        return this;
+    }
+
+    count(columnName: string) {
+        this.state.countingAllColumnName = columnName;
         return this;
     }
 

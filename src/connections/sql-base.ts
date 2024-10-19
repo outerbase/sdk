@@ -26,9 +26,15 @@ export abstract class SqlConnection extends Connection {
     ): Promise<QueryResult> {
         const query = Outerbase(this)
             .select()
-            .from(schemaName ? `${schemaName}.${tableName}` : tableName)
-            .limit(options.limit)
-            .offset(options.offset);
+            .from(schemaName ? `${schemaName}.${tableName}` : tableName);
+
+        if (options.limit) {
+            query.limit(options.limit);
+        }
+
+        if (options.offset) {
+            query.offset(options.offset);
+        }
 
         if (options.where) {
             for (const where of options.where) {
@@ -46,7 +52,23 @@ export abstract class SqlConnection extends Connection {
             }
         }
 
-        return await this.query(query.toQuery());
+        let count: number | undefined = undefined;
+        const result = await this.query(query.toQuery());
+
+        if (options.includeCounting) {
+            const { data: countResult } = await this.query<{
+                total_rows: number;
+            }>(query.count('total_rows').toQuery());
+
+            if (countResult && countResult.length === 1) {
+                count = countResult[0].total_rows;
+            }
+        }
+
+        return {
+            ...result,
+            count,
+        };
     }
 
     async insert(
