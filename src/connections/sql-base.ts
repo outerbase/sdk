@@ -61,7 +61,7 @@ export abstract class SqlConnection extends Connection {
             }>(query.count('total_rows').toQuery());
 
             if (countResult && countResult.length === 1) {
-                count = countResult[0].total_rows;
+                count = Number(countResult[0].total_rows);
             }
         }
 
