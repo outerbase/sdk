@@ -1,8 +1,8 @@
-import { SqlConnection } from './..';
 import { AbstractDialect } from './../../query-builder';
 import { PostgresDialect } from './../../query-builder/dialects/postgres';
 import { Database } from './../../models/database';
 import { buildMySQLDatabaseSchmea } from './../mysql';
+import { SqlConnection } from '../sql-base';
 
 export abstract class PostgreBaseConnection extends SqlConnection {
     dialect: AbstractDialect = new PostgresDialect();

@@ -1,5 +1,5 @@
 import { Database, Table, TableColumn } from './../../models/database';
-import { SqlConnection } from '..';
+import { SqlConnection } from '../sql-base';
 import { AbstractDialect } from './../../query-builder';
 import { SqliteDialect } from './../../query-builder/dialects/sqlite-dialect';
 export abstract class SqliteBaseConnection extends SqlConnection {

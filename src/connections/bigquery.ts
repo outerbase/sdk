@@ -1,6 +1,6 @@
 import { QueryType } from '../query-params';
-import { Query, constructRawQuery } from '../query';
-import { Connection, QueryResult, SqlConnection } from './index';
+import { Query } from '../query';
+import { QueryResult } from './index';
 import { Database, Table, TableColumn } from '../models/database';
 import { BigQueryDialect } from '../query-builder/dialects/bigquery';
 import { BigQuery } from '@google-cloud/bigquery';
@@ -8,6 +8,7 @@ import {
     createErrorResult,
     transformObjectBasedResultFirstRow,
 } from './../utils/transformer';
+import { SqlConnection } from './sql-base';
 
 export class BigQueryConnection extends SqlConnection {
     bigQuery: BigQuery;

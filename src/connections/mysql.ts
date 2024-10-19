@@ -4,8 +4,8 @@ import {
     type Connection,
     type QueryResult as MySQLQueryResult,
 } from 'mysql2';
-import { QueryResult, SqlConnection } from '.';
-import { constructRawQuery, Query } from '../query';
+import { SqlConnection } from './sql-base';
+import { Query } from '../query';
 import { QueryType } from '../query-params';
 import { Constraint, Database, Table, TableColumn } from './../models/database';
 import { MySQLDialect } from './../query-builder/dialects/mysql';
@@ -13,6 +13,7 @@ import {
     createErrorResult,
     transformArrayBasedResult,
 } from './../utils/transformer';
+import { QueryResult } from '.';
 
 interface MySQLSchemaResult {
     SCHEMA_NAME: string;

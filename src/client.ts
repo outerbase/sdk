@@ -1,8 +1,9 @@
-import { SqlConnection, QueryResult } from './connections';
+import { QueryResult } from './connections';
 import { Query } from './query';
 import { QueryType } from './query-params';
-import { AbstractDialect, ColumnDataType } from './query-builder';
+import { AbstractDialect } from './query-builder';
 import { TableColumnDefinition } from './models/database';
+import { SqlConnection } from './connections/sql-base';
 
 export enum QueryBuilderAction {
     SELECT = 'select',
