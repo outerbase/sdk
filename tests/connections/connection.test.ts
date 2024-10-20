@@ -7,6 +7,7 @@ beforeAll(async () => {
     // It is better to cleanup here in case any previous test failed
     await db.dropTable(DEFAULT_SCHEMA, 'persons');
     await db.dropTable(DEFAULT_SCHEMA, 'people');
+    await db.dropTable(DEFAULT_SCHEMA, 'teams');
 });
 
 afterAll(async () => {
@@ -23,27 +24,79 @@ function cleanup(data: Record<string, unknown>[]) {
 
 describe('Database Connection', () => {
     test('Create table', async () => {
-        // Create testing table
-        await db.createTable(DEFAULT_SCHEMA, 'persons', [
-            { name: 'id', definition: { type: 'INTEGER' } },
-            {
-                name: 'name',
-                definition: {
-                    type:
-                        process.env.CONNECTION_TYPE === 'bigquery'
-                            ? 'STRING'
-                            : 'VARCHAR(255)',
+        const { error: createTableTeamError } = await db.createTable(
+            DEFAULT_SCHEMA,
+            'teams',
+            [
+                {
+                    name: 'id',
+                    definition: { type: 'INTEGER', primaryKey: true },
                 },
-            },
-            { name: 'age', definition: { type: 'INTEGER' } },
-        ]);
+                {
+                    name: 'name',
+                    definition: {
+                        type:
+                            process.env.CONNECTION_TYPE === 'bigquery'
+                                ? 'STRING'
+                                : 'VARCHAR(255)',
+                    },
+                },
+            ]
+        );
+
+        const { error: createTablePersonError } = await db.createTable(
+            DEFAULT_SCHEMA,
+            'persons',
+            [
+                {
+                    name: 'id',
+                    definition: { type: 'INTEGER', primaryKey: true },
+                },
+                {
+                    name: 'name',
+                    definition: {
+                        type:
+                            process.env.CONNECTION_TYPE === 'bigquery'
+                                ? 'STRING'
+                                : 'VARCHAR(255)',
+                    },
+                },
+                { name: 'age', definition: { type: 'INTEGER' } },
+                {
+                    name: 'team_id',
+                    definition: {
+                        type: 'INTEGER',
+                        references: {
+                            column: ['id'],
+                            table: 'teams',
+                        },
+                    },
+                },
+            ]
+        );
+
+        expect(createTableTeamError).not.toBeTruthy();
+        expect(createTablePersonError).not.toBeTruthy();
     });
 
     test('Insert data', async () => {
-        await db.insertMany(DEFAULT_SCHEMA, 'persons', [
-            { id: 1, name: 'Visal', age: 25 },
-            { id: 2, name: 'Outerbase', age: 30 },
-        ]);
+        const { error: insertError } = await db.insertMany(
+            DEFAULT_SCHEMA,
+            'teams',
+            [{ id: 1, name: 'Avenger' }]
+        );
+
+        const { error: insertError2 } = await db.insertMany(
+            DEFAULT_SCHEMA,
+            'persons',
+            [
+                { id: 1, name: 'Visal', age: 25, team_id: 1 },
+                { id: 2, name: 'Outerbase', age: 30, team_id: 1 },
+            ]
+        );
+
+        expect(insertError).not.toBeTruthy();
+        expect(insertError2).not.toBeTruthy();
     });
 
     // Check schema must be done AFTER insert data
@@ -65,6 +118,16 @@ describe('Database Connection', () => {
 
                             // Actual columns
                             'age',
+                            'id',
+                            'name',
+                            'team_id',
+                        ].filter(Boolean),
+                    },
+                    teams: {
+                        columns: [
+                            process.env.CONNECTION_TYPE === 'mongodb'
+                                ? '_id'
+                                : undefined,
                             'id',
                             'name',
                         ].filter(Boolean),
@@ -101,13 +164,11 @@ describe('Database Connection', () => {
     test('Select data', async () => {
         const { data, count } = await db.select(DEFAULT_SCHEMA, 'persons', {
             orderBy: ['id'],
-            limit: 1000,
-            offset: 0,
         });
 
         expect(cleanup(data)).toEqual([
-            { id: 1, name: 'Visal', age: 25 },
-            { id: 2, name: 'Outerbase', age: 30 },
+            { id: 1, name: 'Visal', age: 25, team_id: 1 },
+            { id: 2, name: 'Outerbase', age: 30, team_id: 1 },
         ]);
 
         expect(count).toBeUndefined();
@@ -127,7 +188,7 @@ describe('Database Connection', () => {
         const { error } = await db.select(
             DEFAULT_SCHEMA,
             'non_existing_table',
-            { limit: 1000, offset: 0 }
+            {}
         );
 
         expect(error).toBeTruthy();
@@ -152,8 +213,8 @@ describe('Database Connection', () => {
         });
 
         expect(cleanup(data)).toEqual([
-            { id: 1, name: 'Visal In', age: 25 },
-            { id: 2, name: 'Outerbase', age: 30 },
+            { id: 1, name: 'Visal In', age: 25, team_id: 1 },
+            { id: 2, name: 'Outerbase', age: 30, team_id: 1 },
         ]);
     });
 
@@ -174,8 +235,8 @@ describe('Database Connection', () => {
         });
 
         expect(cleanup(data)).toEqual([
-            { id: 1, full_name: 'Visal In', age: 25 },
-            { id: 2, full_name: 'Outerbase', age: 30 },
+            { id: 1, full_name: 'Visal In', age: 25, team_id: 1 },
+            { id: 2, full_name: 'Outerbase', age: 30, team_id: 1 },
         ]);
     });
 
@@ -207,12 +268,14 @@ describe('Database Connection', () => {
                 full_name: 'Visal In',
                 age: 25,
                 email: null,
+                team_id: 1,
             },
             {
                 id: 2,
                 full_name: 'Outerbase',
                 age: 30,
                 email: null,
+                team_id: 1,
             },
         ]);
 
@@ -228,11 +291,13 @@ describe('Database Connection', () => {
                 id: 1,
                 full_name: 'Visal In',
                 age: 25,
+                team_id: 1,
             },
             {
                 id: 2,
                 full_name: 'Outerbase',
                 age: 30,
+                team_id: 1,
             },
         ]);
     });
@@ -248,8 +313,6 @@ describe('Database Connection', () => {
 
         const { data } = await db.select(DEFAULT_SCHEMA, 'people', {
             orderBy: ['id'],
-            limit: 1000,
-            offset: 0,
         });
 
         expect(cleanup(data).length).toEqual(2);
@@ -260,8 +323,6 @@ describe('Database Connection', () => {
 
         const { data } = await db.select(DEFAULT_SCHEMA, 'people', {
             orderBy: ['id'],
-            limit: 1000,
-            offset: 0,
         });
 
         expect(cleanup(data)).toEqual([
@@ -269,6 +330,7 @@ describe('Database Connection', () => {
                 id: 2,
                 full_name: 'Outerbase',
                 age: 30,
+                team_id: 1,
             },
         ]);
     });
