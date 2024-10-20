@@ -74,9 +74,8 @@ FROM
 	LEFT JOIN information_schema.constraint_column_usage AS ccu
 	ON (
 		ccu.table_schema = kcu.table_schema AND
-		ccu.table_name = kcu.table_name AND
 		ccu.constraint_name = kcu.constraint_name AND
-		tc.constraint_name = 'FOREIGN KEY'
+		tc.constraint_type = 'FOREIGN KEY'
 	)
 WHERE
 	kcu.constraint_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')`,
