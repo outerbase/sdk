@@ -193,7 +193,7 @@ export function buildMySQLDatabaseSchmea({
 
         constraint.columns.push({
             columnName: constraintColumn.COLUMN_NAME,
-            referenceTableName: constraintColumn.REFERENCED_COLUMN_NAME,
+            referenceColumnName: constraintColumn.REFERENCED_COLUMN_NAME,
         });
     }
 

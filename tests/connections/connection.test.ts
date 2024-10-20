@@ -166,6 +166,16 @@ describe('Database Connection', () => {
                 column: ['id'],
                 table: 'teams',
             });
+
+            // This is to make sure it works with Outerbase ERD
+            const fkConstraint = schemas[
+                DEFAULT_SCHEMA
+            ].persons.constraints.find((c) => c.type === 'FOREIGN KEY');
+            expect(fkConstraint).toBeTruthy();
+
+            expect(fkConstraint!.columns[0].columnName).toBe('team_id');
+            expect(fkConstraint!.referenceTableName).toBe('teams');
+            expect(fkConstraint!.columns[0].referenceColumnName).toBe('id');
         }
     });
 

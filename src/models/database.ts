@@ -13,7 +13,7 @@ export type Table = {
 
 export type ConstraintColumn = {
     columnName: string;
-    referenceTableName?: string;
+    referenceColumnName?: string;
 };
 
 export type Constraint = {

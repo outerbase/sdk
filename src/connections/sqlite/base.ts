@@ -47,9 +47,10 @@ FROM
         );
 
         for (const column of columnList) {
-            if (!tableLookup[column.tbl_name]) continue;
+            const currentTable = tableLookup[column.tbl_name];
+            if (!currentTable) continue;
 
-            tableLookup[column.tbl_name].columns.push({
+            currentTable.columns.push({
                 name: column.name,
                 position: column.cid,
                 definition: {
@@ -67,6 +68,22 @@ FROM
                             : undefined,
                 },
             } as TableColumn);
+
+            if (column.ref_table_name && column.ref_column_name) {
+                currentTable.constraints.push({
+                    name: `fk_${column.tbl_name}_${column.name}`,
+                    schema: 'main',
+                    tableName: column.tbl_name,
+                    type: 'FOREIGN KEY',
+                    referenceTableName: column.ref_table_name,
+                    columns: [
+                        {
+                            columnName: column.name,
+                            referenceColumnName: column.ref_column_name,
+                        },
+                    ],
+                });
+            }
         }
 
         // Sqlite default schema is "main", since we don't support
