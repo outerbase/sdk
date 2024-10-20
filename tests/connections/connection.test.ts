@@ -103,62 +103,68 @@ describe('Database Connection', () => {
     // because some NoSQL database does not have schema
     // their schema is based on the data in the collection
     test('Check the schema', async () => {
-        if (db.fetchDatabaseSchema) {
-            const schemas = await db.fetchDatabaseSchema();
+        const schemas = await db.fetchDatabaseSchema();
 
-            // Column names are sorted for easier comparison
-            const expectedSchema = {
-                [DEFAULT_SCHEMA]: {
-                    persons: {
-                        columns: [
-                            // MongoDB comes with _id by default
-                            process.env.CONNECTION_TYPE === 'mongodb'
-                                ? '_id'
-                                : undefined,
+        // Column names are sorted for easier comparison
+        const expectedSchema = {
+            [DEFAULT_SCHEMA]: {
+                persons: {
+                    columns: [
+                        // MongoDB comes with _id by default
+                        process.env.CONNECTION_TYPE === 'mongodb'
+                            ? '_id'
+                            : undefined,
 
-                            // Actual columns
-                            'age',
-                            'id',
-                            'name',
-                            'team_id',
-                        ].filter(Boolean),
-                    },
-                    teams: {
-                        columns: [
-                            process.env.CONNECTION_TYPE === 'mongodb'
-                                ? '_id'
-                                : undefined,
-                            'id',
-                            'name',
-                        ].filter(Boolean),
-                    },
+                        // Actual columns
+                        'age',
+                        'id',
+                        'name',
+                        'team_id',
+                    ].filter(Boolean),
                 },
-            };
-
-            // We only care about the columns for this test
-            const actualSchema = Object.entries(schemas).reduce(
-                (a, [schemaName, schemaTables]) => {
-                    a[schemaName] = Object.entries(schemaTables).reduce(
-                        (b, [tableName, table]) => {
-                            b[tableName] = {
-                                columns: table.columns
-                                    .map((column) => column.name)
-                                    .sort(),
-                            };
-                            return b;
-                        },
-                        {} as Record<string, { columns: string[] }>
-                    );
-
-                    return a;
+                teams: {
+                    columns: [
+                        process.env.CONNECTION_TYPE === 'mongodb'
+                            ? '_id'
+                            : undefined,
+                        'id',
+                        'name',
+                    ].filter(Boolean),
                 },
-                {} as Record<string, Record<string, { columns: string[] }>>
-            );
+            },
+        };
 
-            expect(actualSchema).toEqual(expectedSchema);
-        }
+        // We only care about the columns for this test
+        const actualSchema = Object.entries(schemas).reduce(
+            (a, [schemaName, schemaTables]) => {
+                a[schemaName] = Object.entries(schemaTables).reduce(
+                    (b, [tableName, table]) => {
+                        b[tableName] = {
+                            columns: table.columns
+                                .map((column) => column.name)
+                                .sort(),
+                        };
+                        return b;
+                    },
+                    {} as Record<string, { columns: string[] }>
+                );
 
-        expect(true).toBe(true);
+                return a;
+            },
+            {} as Record<string, Record<string, { columns: string[] }>>
+        );
+
+        expect(actualSchema).toEqual(expectedSchema);
+
+        // Check teams and persons table reference
+        expect(
+            schemas[DEFAULT_SCHEMA].persons!.columns!.find(
+                (c) => c.name === 'team_id'
+            )!.definition.references
+        ).toEqual({
+            column: 'id',
+            table: 'teams',
+        });
     });
 
     test('Select data', async () => {
