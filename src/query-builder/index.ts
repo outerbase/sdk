@@ -212,21 +212,6 @@ export abstract class AbstractDialect implements Dialect {
 
     // This is generic implementation of column definition,
     protected buildColumnDefinition(def: TableColumnDefinition): string {
-        const referencePart = def.references
-            ? [
-                  `REFERENCES ${this.escapeId(def.references.table)}(${def.references.column.map((c) => this.escapeId(c)).join(', ')})`,
-                  def.references.match ? `MATCH ${def.references.match}` : '',
-                  def.references.onDelete
-                      ? `ON DELETE ${def.references.onDelete}`
-                      : '',
-                  def.references.onUpdate
-                      ? `ON UPDATE ${def.references.onUpdate}`
-                      : '',
-              ]
-                  .filter(Boolean)
-                  .join(' ')
-            : '';
-
         return [
             def.type,
             def.nullable === false ? 'NOT NULL' : '',
@@ -244,7 +229,6 @@ export abstract class AbstractDialect implements Dialect {
                 ? def.generatedType
                 : '',
             def.checkExpression ? `CHECK (${def.checkExpression})` : '',
-            referencePart,
             def.comment && this.SUPPORT_COLUMN_COMMENT
                 ? `COMMENT '${def.comment}'`
                 : '',
@@ -371,11 +355,31 @@ export abstract class AbstractDialect implements Dialect {
                     .join(' ');
             }) ?? [];
 
+        const references = builder?.columns?.filter(
+            (c) => c.definition?.references
+        );
+
+        // Construct references part
+        const referenceParts = references.map((column) => {
+            const ref = column.definition?.references!;
+
+            return [
+                `FOREIGN KEY (${this.escapeId(column.name)}) REFERENCES ${this.escapeId(ref.table)}(${ref.column.map((c) => this.escapeId(c)).join(', ')})`,
+                ref.match ? `MATCH ${ref.match}` : '',
+                ref.onDelete ? `ON DELETE ${ref.onDelete}` : '',
+                ref.onUpdate ? `ON UPDATE ${ref.onUpdate}` : '',
+            ]
+                .filter(Boolean)
+                .join(' ');
+        });
+
         const query = [
             'CREATE TABLE IF NOT EXISTS',
             this.escapeId(tableName),
-            `(${columns.join(', ')})`,
+            `(${[...columns, ...referenceParts].join(', ')})`,
         ].join(' ');
+
+        console.log(query, 'query');
 
         return { query, parameters: [] };
     }

@@ -157,14 +157,16 @@ describe('Database Connection', () => {
         expect(actualSchema).toEqual(expectedSchema);
 
         // Check teams and persons table reference
-        expect(
-            schemas[DEFAULT_SCHEMA].persons!.columns!.find(
-                (c) => c.name === 'team_id'
-            )!.definition.references
-        ).toEqual({
-            column: 'id',
-            table: 'teams',
-        });
+        if (!['bigquery', 'mongodb'].includes(process.env.CONNECTION_TYPE!)) {
+            expect(
+                schemas[DEFAULT_SCHEMA].persons!.columns!.find(
+                    (c) => c.name === 'team_id'
+                )!.definition.references
+            ).toEqual({
+                column: ['id'],
+                table: 'teams',
+            });
+        }
     });
 
     test('Select data', async () => {

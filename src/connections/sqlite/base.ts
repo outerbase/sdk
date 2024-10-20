@@ -62,7 +62,7 @@ FROM
                         column.ref_table_name && column.ref_column_name
                             ? {
                                   table: column.ref_table_name,
-                                  column: column.ref_column_name,
+                                  column: [column.ref_column_name],
                               }
                             : undefined,
                 },

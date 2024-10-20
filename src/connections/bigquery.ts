@@ -95,6 +95,7 @@ export class BigQueryConnection extends SqlConnection {
         const tempColumns = structuredClone(columns);
         for (const column of tempColumns) {
             delete column.definition.primaryKey;
+            delete column.definition.references;
         }
 
         return super.createTable(schemaName, tableName, tempColumns);
