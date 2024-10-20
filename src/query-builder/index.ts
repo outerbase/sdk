@@ -379,8 +379,6 @@ export abstract class AbstractDialect implements Dialect {
             `(${[...columns, ...referenceParts].join(', ')})`,
         ].join(' ');
 
-        console.log(query, 'query');
-
         return { query, parameters: [] };
     }
 

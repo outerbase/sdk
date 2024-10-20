@@ -38,7 +38,7 @@ export abstract class PostgreBaseConnection extends SqlConnection {
         const { data: constraintList } = await this.query<{
             constraint_schema: string;
             constraint_name: string;
-            table_catalog: string;
+            table_name: string;
             table_schema: string;
             constraint_type: string;
         }>({
@@ -105,7 +105,7 @@ WHERE
             constraintsList: constraintList.map((constraint) => ({
                 CONSTRAINT_NAME: constraint.constraint_name,
                 CONSTRAINT_TYPE: constraint.constraint_type,
-                TABLE_NAME: constraint.table_catalog,
+                TABLE_NAME: constraint.table_name,
                 TABLE_SCHEMA: constraint.table_schema,
             })),
             constraintColumnsList: constraintColumnsList.map((constraint) => ({
