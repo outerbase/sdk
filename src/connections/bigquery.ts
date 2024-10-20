@@ -86,6 +86,20 @@ export class BigQueryConnection extends SqlConnection {
         }
     }
 
+    createTable(
+        schemaName: string | undefined,
+        tableName: string,
+        columns: TableColumn[]
+    ): Promise<QueryResult> {
+        // BigQuery does not support PRIMARY KEY. We can remove if here
+        const tempColumns = structuredClone(columns);
+        for (const column of tempColumns) {
+            delete column.definition.primaryKey;
+        }
+
+        return super.createTable(schemaName, tableName, tempColumns);
+    }
+
     public async fetchDatabaseSchema(): Promise<Database> {
         const database: Database = {};
 
