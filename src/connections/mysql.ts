@@ -7,7 +7,13 @@ import {
 import { SqlConnection } from './sql-base';
 import { Query } from '../query';
 import { QueryType } from '../query-params';
-import { Constraint, Database, Table, TableColumn } from './../models/database';
+import {
+    Constraint,
+    Database,
+    Table,
+    TableColumn,
+    TableColumnDefinition,
+} from './../models/database';
 import { MySQLDialect } from './../query-builder/dialects/mysql';
 import {
     createErrorResult,
@@ -106,17 +112,17 @@ export function buildMySQLDatabaseSchmea({
 
         if (!table) continue;
 
-        const columnObject = {
+        const columnObject: TableColumn = {
             name: column.COLUMN_NAME,
             position: column.ORDINAL_POSITION,
             definition: {
                 type: column.COLUMN_TYPE,
                 nullable: column.IS_NULLABLE === 'YES',
                 default: column.COLUMN_DEFAULT,
-                primary: column.COLUMN_KEY === 'PRI',
+                primaryKey: column.COLUMN_KEY === 'PRI',
                 unique: column.EXTRA === 'UNI',
             },
-        } as TableColumn;
+        };
 
         columnLookup[
             column.TABLE_SCHEMA +
@@ -145,7 +151,7 @@ export function buildMySQLDatabaseSchmea({
             tableName: constraint.TABLE_NAME,
             type: constraint.CONSTRAINT_TYPE,
             columns: [],
-        };
+        } as Constraint;
 
         constraintLookup[
             constraint.TABLE_SCHEMA + '.' + constraint.CONSTRAINT_NAME
@@ -178,10 +184,16 @@ export function buildMySQLDatabaseSchmea({
                 table: constraintColumn.REFERENCED_TABLE_NAME,
                 column: [constraintColumn.REFERENCED_COLUMN_NAME],
             };
+
+            constraint.referenceSchema =
+                constraintColumn.REFERENCED_TABLE_SCHEMA;
+            constraint.referenceTableName =
+                constraintColumn.REFERENCED_TABLE_NAME;
         }
 
         constraint.columns.push({
             columnName: constraintColumn.COLUMN_NAME,
+            referenceTableName: constraintColumn.REFERENCED_COLUMN_NAME,
         });
     }
 

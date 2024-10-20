@@ -13,6 +13,7 @@ export type Table = {
 
 export type ConstraintColumn = {
     columnName: string;
+    referenceTableName?: string;
 };
 
 export type Constraint = {
@@ -20,6 +21,8 @@ export type Constraint = {
     schema: string;
     tableName: string;
     type: string;
+    referenceTableName?: string;
+    referenceSchema?: string;
     columns: ConstraintColumn[];
 };
 
