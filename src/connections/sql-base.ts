@@ -199,7 +199,9 @@ export abstract class SqlConnection extends Connection {
                 .alterTable(
                     schemaName ? `${schemaName}.${tableName}` : tableName
                 )
-                .renameTable(newTableName)
+                .renameTable(
+                    schemaName ? `${schemaName}.${newTableName}` : newTableName
+                )
                 .toQuery()
         );
     }
