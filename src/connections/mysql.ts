@@ -290,6 +290,20 @@ export class MySQLConnection extends SqlConnection {
         });
     }
 
+    async renameTable(
+        schemaName: string | undefined,
+        tableName: string,
+        newTableName: string
+    ): Promise<QueryResult> {
+        // If we don't put the schema name when rename the table,
+        // it might change the schema of the table after rename.
+        return super.renameTable(
+            schemaName,
+            tableName,
+            schemaName ? `${schemaName}.${newTableName}` : newTableName
+        );
+    }
+
     async renameColumn(
         schemaName: string | undefined,
         tableName: string,

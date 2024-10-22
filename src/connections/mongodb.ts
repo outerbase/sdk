@@ -88,13 +88,13 @@ export class MongoDBConnection implements Connection {
         throw new Error('Method not implemented.');
     }
 
-    async testConnection(): Promise<boolean> {
+    async testConnection(): Promise<{ error?: string }> {
         try {
             await this.connect();
             await this.disconnect();
-            return true;
+            return {};
         } catch {
-            return false;
+            return { error: 'Failed to connect to MongoDB' };
         }
     }
 

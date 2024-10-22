@@ -199,9 +199,7 @@ export abstract class SqlConnection extends Connection {
                 .alterTable(
                     schemaName ? `${schemaName}.${tableName}` : tableName
                 )
-                .renameTable(
-                    schemaName ? `${schemaName}.${newTableName}` : newTableName
-                )
+                .renameTable(newTableName)
                 .toQuery()
         );
     }
@@ -259,14 +257,14 @@ export abstract class SqlConnection extends Connection {
         );
     }
 
-    async testConnection(): Promise<boolean> {
+    async testConnection(): Promise<{ error?: string }> {
         try {
             await this.connect();
-            const { error } = await this.raw('SELECT 1;');
+            const { error, data } = await this.raw('SELECT 1;');
             await this.disconnect();
-            return !error;
+            return { error: error ? error.message : undefined };
         } catch (error) {
-            return false;
+            return { error: 'Unexpected error' };
         }
     }
 }
