@@ -227,12 +227,15 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
                     schema: table.schema,
                     tableName: table.name,
                     type: 'FOREIGN KEY',
+                    referenceSchema: table.schema,
+                    referenceTableName: fkConstraintData[0].table,
                     columns: [],
                 };
 
                 fkConstraintData.forEach((fkConstraint) => {
                     const currentConstraint: ConstraintColumn = {
                         columnName: fkConstraint.from,
+                        referenceColumnName: fkConstraint.to,
                     };
                     fkConstraints.columns.push(currentConstraint);
                 });

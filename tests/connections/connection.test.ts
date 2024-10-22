@@ -166,7 +166,11 @@ describe('Database Connection', () => {
         expect(actualSchema).toEqual(expectedSchema);
 
         // Check teams and persons table reference
-        if (!['bigquery', 'mongodb'].includes(process.env.CONNECTION_TYPE!)) {
+        if (
+            !['bigquery', 'mongodb', 'motherduck'].includes(
+                process.env.CONNECTION_TYPE!
+            )
+        ) {
             expect(
                 schemas[DEFAULT_SCHEMA].persons!.columns!.find(
                     (c) => c.name === 'team_id'
