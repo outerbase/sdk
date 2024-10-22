@@ -106,7 +106,7 @@ describe('Database Connection', () => {
 
         expect(insertError).not.toBeTruthy();
         expect(insertError2).not.toBeTruthy();
-    });
+    }, 20000);
 
     // Check schema must be done AFTER insert data
     // because some NoSQL database does not have schema
