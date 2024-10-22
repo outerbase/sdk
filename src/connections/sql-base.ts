@@ -17,6 +17,7 @@ export abstract class SqlConnection extends Connection {
 
     mapDataType(dataType: string): string {
         if (dataType === ColumnDataType.ID) return 'INTEGER';
+        if (dataType === ColumnDataType.NUMBER) return 'INTEGER';
         return dataType;
     }
 
