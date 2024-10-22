@@ -246,7 +246,10 @@ export abstract class SqlConnection extends Connection {
                 .alterTable(
                     schemaName ? `${schemaName}.${tableName}` : tableName
                 )
-                .addColumn(columnName, defintion)
+                .addColumn(columnName, {
+                    ...defintion,
+                    type: this.mapDataType(defintion.type),
+                })
                 .toQuery()
         );
     }
