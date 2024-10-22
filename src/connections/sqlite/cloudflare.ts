@@ -250,6 +250,10 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
                     });
                 }
 
+                const columnConstraint = fkConstraintData.find(
+                    (fk) => fk.from === column.name
+                );
+
                 const currentColumn: TableColumn = {
                     name: column.name,
                     position: column.cid,
@@ -259,6 +263,12 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
                         default: column.dflt_value,
                         primaryKey: column.pk === 1,
                         unique: column.pk === 1,
+                        references: columnConstraint
+                            ? {
+                                  column: [columnConstraint.to],
+                                  table: columnConstraint.table,
+                              }
+                            : undefined,
                     },
                 };
 

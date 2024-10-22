@@ -14,6 +14,15 @@ afterAll(async () => {
     await db.disconnect();
 });
 
+afterEach(async () => {
+    if (
+        ['cloudflare', 'bigquery'].includes(process.env.CONNECTION_TYPE ?? '')
+    ) {
+        // 3 seconds delay on each operation
+        await new Promise((r) => setTimeout(r, 3000));
+    }
+});
+
 function cleanup(data: Record<string, unknown>[]) {
     // Remove some database specified fields
     return data.map((d) => {
