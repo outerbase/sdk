@@ -7,8 +7,16 @@ import {
     TableIndexType,
 } from '../models/database';
 
-import { MongoClient, ObjectId } from 'mongodb';
 import {
+    Collection,
+    FindCursor,
+    MongoClient,
+    ObjectId,
+    WithId,
+    Document,
+} from 'mongodb';
+import {
+    createErrorResult,
     createOkResult,
     transformObjectBasedResult,
 } from './../utils/transformer';
@@ -85,7 +93,7 @@ export class MongoDBConnection implements Connection {
     }
 
     raw(query: string): Promise<QueryResult> {
-        throw new Error('Method not implemented.');
+        return this.runQuery(query);
     }
 
     async testConnection(): Promise<{ error?: string }> {
@@ -177,16 +185,20 @@ export class MongoDBConnection implements Connection {
         // Map our condition to MongoDB's query format
         const filter = (options.where ?? []).reduce(
             (acc, condition) => {
+                let value = condition.value;
+                if (condition.name === '_id' && typeof value === 'string')
+                    value = new ObjectId(value);
+
                 if (condition.operator === '=') {
-                    acc[condition.name] = condition.value;
+                    acc[condition.name] = value;
                 } else if (condition.operator === '>') {
-                    acc[condition.name] = { $gt: condition.value };
+                    acc[condition.name] = { $gt: value };
                 } else if (condition.operator === '<') {
-                    acc[condition.name] = { $lt: condition.value };
+                    acc[condition.name] = { $lt: value };
                 } else if (condition.operator === '>=') {
-                    acc[condition.name] = { $gte: condition.value };
+                    acc[condition.name] = { $gte: value };
                 } else if (condition.operator === '<=') {
-                    acc[condition.name] = { $lte: condition.value };
+                    acc[condition.name] = { $lte: value };
                 }
 
                 return acc;
@@ -235,7 +247,18 @@ export class MongoDBConnection implements Connection {
         }
 
         const data = await query.toArray();
-        return { ...transformObjectBasedResult(data), count };
+        return { ...this.transformResult(data), count };
+    }
+
+    transformResult(data: (WithId<Document> | Document)[]) {
+        return {
+            ...transformObjectBasedResult(
+                data.map((row) => {
+                    return { ...row, _id: row._id.toString() };
+                })
+            ),
+            count: data.length,
+        };
     }
 
     async createTable(): Promise<QueryResult> {
@@ -341,4 +364,101 @@ export class MongoDBConnection implements Connection {
 
         return createOkResult();
     }
+
+    runQuery = async (query: string): Promise<QueryResult> => {
+        const currentDatabase = this.client.db(this.defaultDatabase);
+
+        const parts = query.split('.');
+        const isDBCommand = parts.length === 2;
+
+        if (isDBCommand) {
+            const [dbName, command] = parts;
+            if (dbName !== 'db') throw new Error('Query must begin with db');
+
+            // Extract the command and arguments dynamically
+            const commandArgs = command.match(/\(([^)]+)\)/)?.[1] ?? '';
+            const parsedArgs = commandArgs
+                ? JSON.parse(`[${commandArgs}]`)
+                : [];
+
+            // Dynamically run the command with arguments
+            const commandName = command.split('(')[0];
+
+            const result = await currentDatabase.command({
+                [commandName]: parsedArgs,
+            });
+
+            const isBatch = result?.cursor?.firstBatch;
+            if (isBatch) {
+                return createOkResult();
+            }
+
+            return this.transformResult([result]);
+        }
+
+        const [db, collectionNameFromQuery, ...otherCalls] = parts;
+
+        if (db !== 'db') throw new Error('Query must begin with db');
+
+        const collectionExists = (
+            await currentDatabase.listCollections().toArray()
+        ).some((c) => c.name === collectionNameFromQuery);
+
+        if (!collectionExists)
+            throw new Error(
+                `Collection ${collectionNameFromQuery} does not exist.`
+            );
+        const collection = currentDatabase.collection(collectionNameFromQuery);
+
+        let cursor = collection;
+
+        otherCalls.forEach(async (call) => {
+            const methodName = call.match(
+                /^[a-zA-Z]+/
+            )?.[0] as keyof Collection<Document>;
+            const argsString = call.match(/\((.*)\)/)?.[1];
+
+            // Only process string method names
+            if (typeof methodName !== 'string') {
+                throw new Error(
+                    `${String(methodName)} is not a valid cursor method.`
+                );
+            }
+
+            const actualArgs = parseArguments(argsString ?? '');
+
+            // Convert valid ObjectId _strings_ to actual ObjectId instances
+            const processedArgs = actualArgs.map((arg) =>
+                convertToObjectId(arg)
+            );
+
+            if (
+                methodName in cursor &&
+                typeof cursor[methodName] === 'function'
+            ) {
+                cursor = (cursor[methodName] as any)(...processedArgs);
+            } else {
+                throw new Error(
+                    `Method ${methodName} is not a valid function on the cursor.`
+                );
+            }
+        });
+        let c = cursor as any;
+        try {
+            const result = await (c as FindCursor).toArray();
+            return this.transformResult(result);
+        } catch {
+            const result = await c;
+            try {
+                JSON.stringify(result);
+            } catch (e) {
+                // Converting circular structure to JSON -->
+                // @todo, need to find a better way to handle
+                // This error rather than checking here
+                throw new Error('Invalid query');
+            }
+
+            return createErrorResult('Invalid query');
+        }
+    };
 }

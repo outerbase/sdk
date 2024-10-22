@@ -1,11 +1,8 @@
-import { Query } from '../query';
 import {
     Database,
     TableColumn,
     TableColumnDefinition,
 } from '../models/database';
-import { AbstractDialect } from './../query-builder';
-import { Outerbase } from './../client';
 
 export interface QueryResultHeader {
     name: string;

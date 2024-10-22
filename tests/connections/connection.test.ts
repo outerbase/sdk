@@ -198,7 +198,33 @@ describe('Database Connection', () => {
             { id: 2, name: 'Outerbase', age: 30, team_id: 1 },
         ]);
 
+        // For mongodb, there is _id column. It should be string
+        if (process.env.CONNECTION_TYPE === 'mongodb') {
+            expect(typeof data[0]._id).toBe('string');
+
+            // We should able to select data via _id
+            const { data: dataById } = await db.select(
+                DEFAULT_SCHEMA,
+                'persons',
+                {
+                    where: [{ name: '_id', operator: '=', value: data[0]._id }],
+                }
+            );
+
+            expect(dataById).toEqual([data[0]]);
+        }
+
         expect(count).toBeUndefined();
+    });
+
+    test('[Mongodb] Execute raw query', async () => {
+        if (process.env.CONNECTION_TYPE !== 'mongodb') return;
+
+        const { data } = await db.raw('db.persons.find()');
+        expect(cleanup(data)).toEqual([
+            { id: 1, name: 'Visal', age: 25, team_id: 1 },
+            { id: 2, name: 'Outerbase', age: 30, team_id: 1 },
+        ]);
     });
 
     test('Select data with count', async () => {
