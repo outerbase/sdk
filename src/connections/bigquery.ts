@@ -9,7 +9,6 @@ import {
     transformObjectBasedResultFirstRow,
 } from './../utils/transformer';
 import { SqlConnection } from './sql-base';
-import { ColumnDataType } from 'src/query-builder';
 
 export class BigQueryConnection extends SqlConnection {
     bigQuery: BigQuery;

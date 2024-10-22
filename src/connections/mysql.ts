@@ -20,7 +20,7 @@ import {
     transformArrayBasedResult,
 } from './../utils/transformer';
 import { QueryResult } from '.';
-import { ColumnDataType } from 'src/query-builder';
+import { ColumnDataType } from '../query-builder';
 
 interface MySQLSchemaResult {
     SCHEMA_NAME: string;
