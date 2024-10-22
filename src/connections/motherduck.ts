@@ -12,7 +12,7 @@ export class DuckDBConnection extends PostgreBaseConnection {
     client: duckDB.Database;
     connection: duckDB.Connection;
 
-    constructor(client: duckDB.Database) {
+    constructor(client: any) {
         super();
         this.client = client;
         this.connection = client.connect();

@@ -275,7 +275,7 @@ export abstract class SqlConnection extends Connection {
     async testConnection(): Promise<{ error?: string }> {
         try {
             await this.connect();
-            const { error, data } = await this.raw('SELECT 1;');
+            const { error } = await this.raw('SELECT 1;');
             await this.disconnect();
             return { error: error ? error.message : undefined };
         } catch (error) {

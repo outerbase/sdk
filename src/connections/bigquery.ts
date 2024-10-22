@@ -25,7 +25,7 @@ export class BigQueryConnection extends SqlConnection {
      * @param keyFileName - Path to a .json, .pem, or .p12 key file.
      * @param region - Region for your dataset
      */
-    constructor(bigQuery: BigQuery) {
+    constructor(bigQuery: any) {
         super();
         this.bigQuery = bigQuery;
     }

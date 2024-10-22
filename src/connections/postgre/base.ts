@@ -49,7 +49,7 @@ export abstract class PostgreBaseConnection extends SqlConnection {
             table_schema: string;
             constraint_type: string;
         }>({
-            query: `SELECT * FROM information_schema.table_constraints WHERE constraint_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast');`,
+            query: `SELECT * FROM information_schema.table_constraints WHERE constraint_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast') AND constraint_type IN ('FOREIGN KEY', 'PRIMARY KEY', 'UNIQUE');`,
         });
 
         // Get the list of foreign key relation

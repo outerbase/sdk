@@ -206,7 +206,7 @@ export class MySQLConnection extends SqlConnection {
     public dialect = new MySQLDialect();
     queryType = QueryType.positional;
 
-    constructor(conn: Connection) {
+    constructor(conn: any) {
         super();
         this.conn = conn;
     }

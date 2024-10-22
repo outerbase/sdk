@@ -20,7 +20,7 @@ export class PostgreSQLConnection extends PostgreBaseConnection {
     dialect: AbstractDialect = new PostgresDialect();
     queryType: QueryType = QueryType.positional;
 
-    constructor(pgClient: Client) {
+    constructor(pgClient: any) {
         super();
         this.client = pgClient;
     }

@@ -76,7 +76,7 @@ export class MongoDBConnection implements Connection {
     client: MongoClient;
     defaultDatabase: string;
 
-    constructor(client: MongoClient, defaultDatabase: string) {
+    constructor(client: any, defaultDatabase: string) {
         this.client = client;
         this.defaultDatabase = defaultDatabase;
     }

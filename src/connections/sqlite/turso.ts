@@ -11,7 +11,7 @@ export class TursoConnection extends SqliteBaseConnection {
     client: Client;
     dialect: AbstractDialect = new PostgresDialect();
 
-    constructor(client: Client) {
+    constructor(client: any) {
         super();
         this.client = client;
     }
