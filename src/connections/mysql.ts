@@ -20,6 +20,7 @@ import {
     transformArrayBasedResult,
 } from './../utils/transformer';
 import { QueryResult } from '.';
+import { ColumnDataType } from 'src/query-builder';
 
 interface MySQLSchemaResult {
     SCHEMA_NAME: string;
@@ -208,6 +209,14 @@ export class MySQLConnection extends SqlConnection {
     constructor(conn: Connection) {
         super();
         this.conn = conn;
+    }
+
+    mapDataType(dataType: string): string {
+        if (dataType === ColumnDataType.STRING) return 'TEXT';
+        if (dataType === ColumnDataType.NUMBER) return 'INT';
+        if (dataType === ColumnDataType.ARRAY) return 'JSON';
+        if (dataType === ColumnDataType.UUID) return 'TEXT';
+        return super.mapDataType(dataType);
     }
 
     async query<T = Record<string, unknown>>(

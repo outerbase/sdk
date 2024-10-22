@@ -5,7 +5,7 @@ import {
     Outerbase,
     QueryResult,
 } from '..';
-import { AbstractDialect } from './../query-builder';
+import { AbstractDialect, ColumnDataType } from './../query-builder';
 import { TableColumn, TableColumnDefinition } from './../models/database';
 
 export abstract class SqlConnection extends Connection {
@@ -14,6 +14,11 @@ export abstract class SqlConnection extends Connection {
     abstract query<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>>;
+
+    mapDataType(dataType: string): string {
+        if (dataType === ColumnDataType.ID) return 'INTEGER';
+        return dataType;
+    }
 
     async raw(query: string): Promise<QueryResult> {
         return await this.query({ query });
@@ -148,7 +153,10 @@ export abstract class SqlConnection extends Connection {
         );
 
         for (const column of columns) {
-            qb.column(column.name, column.definition);
+            qb.column(column.name, {
+                ...column.definition,
+                type: this.mapDataType(column.definition.type),
+            });
         }
 
         return this.query(qb.toQuery());
@@ -217,7 +225,10 @@ export abstract class SqlConnection extends Connection {
                 .alterTable(
                     schemaName ? `${schemaName}.${tableName}` : tableName
                 )
-                .alterColumn(columnName, defintion)
+                .alterColumn(columnName, {
+                    ...defintion,
+                    type: this.mapDataType(defintion.type),
+                })
                 .toQuery()
         );
     }

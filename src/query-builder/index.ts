@@ -26,6 +26,7 @@ interface Dialect {
 }
 
 export enum ColumnDataType {
+    ID = 'id',
     STRING = 'string',
     NUMBER = 'number',
     BOOLEAN = 'boolean',

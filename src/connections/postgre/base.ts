@@ -1,4 +1,4 @@
-import { AbstractDialect } from './../../query-builder';
+import { AbstractDialect, ColumnDataType } from './../../query-builder';
 import { PostgresDialect } from './../../query-builder/dialects/postgres';
 import { Database } from './../../models/database';
 import { buildMySQLDatabaseSchmea } from './../mysql';
@@ -6,6 +6,13 @@ import { SqlConnection } from '../sql-base';
 
 export abstract class PostgreBaseConnection extends SqlConnection {
     dialect: AbstractDialect = new PostgresDialect();
+
+    mapDataType(dataType: string): string {
+        if (dataType === ColumnDataType.ID) return 'SERIAL';
+        if (dataType === ColumnDataType.STRING) return 'TEXT';
+        if (dataType === ColumnDataType.NUMBER) return 'INTEGER';
+        return super.mapDataType(dataType);
+    }
 
     async fetchDatabaseSchema(): Promise<Database> {
         // Get the list of schema first

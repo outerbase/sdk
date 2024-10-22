@@ -1,5 +1,9 @@
+import { ColumnDataType } from '../../src/query-builder';
 import createTestClient from './create-test-connection';
 const { client: db, defaultSchema: DEFAULT_SCHEMA } = createTestClient();
+
+// Some drivers are just too slow such as Cloudflare and BigQuery
+jest.setTimeout(10000);
 
 beforeAll(async () => {
     await db.connect();
@@ -39,15 +43,15 @@ describe('Database Connection', () => {
             [
                 {
                     name: 'id',
-                    definition: { type: 'INTEGER', primaryKey: true },
+                    definition: {
+                        type: ColumnDataType.NUMBER,
+                        primaryKey: true,
+                    },
                 },
                 {
                     name: 'name',
                     definition: {
-                        type:
-                            process.env.CONNECTION_TYPE === 'bigquery'
-                                ? 'STRING'
-                                : 'VARCHAR(255)',
+                        type: ColumnDataType.STRING,
                     },
                 },
             ]
@@ -59,22 +63,22 @@ describe('Database Connection', () => {
             [
                 {
                     name: 'id',
-                    definition: { type: 'INTEGER', primaryKey: true },
+                    definition: {
+                        type: ColumnDataType.NUMBER,
+                        primaryKey: true,
+                    },
                 },
                 {
                     name: 'name',
                     definition: {
-                        type:
-                            process.env.CONNECTION_TYPE === 'bigquery'
-                                ? 'STRING'
-                                : 'VARCHAR(255)',
+                        type: ColumnDataType.STRING,
                     },
                 },
-                { name: 'age', definition: { type: 'INTEGER' } },
+                { name: 'age', definition: { type: ColumnDataType.NUMBER } },
                 {
                     name: 'team_id',
                     definition: {
-                        type: 'INTEGER',
+                        type: ColumnDataType.NUMBER,
                         references: {
                             column: ['id'],
                             table: 'teams',
@@ -236,7 +240,7 @@ describe('Database Connection', () => {
             includeCounting: true,
         });
         expect(count).toEqual(2);
-    });
+    }, 10000);
 
     test('Select from non-existing table should return error', async () => {
         // MongoDB does not show error when selecting from non-existing collection
@@ -306,10 +310,7 @@ describe('Database Connection', () => {
             'persons',
             'email',
             {
-                type:
-                    process.env.CONNECTION_TYPE === 'bigquery'
-                        ? 'STRING'
-                        : 'VARCHAR(255)',
+                type: ColumnDataType.STRING,
             }
         );
 
