@@ -1,6 +1,6 @@
 {
     "name": "@outerbase/sdk",
-    "version": "1.0.17",
+    "version": "2.0.0-rc.0",
     "description": "",
     "main": "dist/index.js",
     "module": "dist/index.js",
@@ -16,9 +16,10 @@
         "publish-npm-module": "npm publish --access public",
         "prepack": "npm run build",
         "prepare": "husky install",
-        "test": "jest",
+        "test": "jest --verbose --testPathPattern=unit",
+        "test:connection": "jest --verbose --testPathPattern=connection",
         "test:watch": "jest --watch",
-        "test:coverage": "jest --coverage && npx serve coverage/lcov-report"
+        "test:coverage": "jest --coverage --testPathPattern=unit"
     },
     "lint-staged": {
         "**/*.{ts,tsx,js,json,css,scss,md}": [
@@ -33,24 +34,29 @@
     "author": "Outerbase",
     "license": "MIT",
     "dependencies": {
-        "@google-cloud/bigquery": "^7.9.0",
-        "@neondatabase/serverless": "^0.9.3",
-        "duckdb": "^1.0.0",
-        "handlebars": "^4.7.8",
-        "mongodb": "^6.9.0",
-        "ws": "^8.17.1"
+        "handlebars": "^4.7.8"
     },
     "devDependencies": {
         "@jest/globals": "^29.7.0",
+        "@libsql/client": "^0.14.0",
+        "@types/jest": "^29.5.13",
         "@types/node": "^20.12.12",
         "@types/ws": "^8.5.10",
+        "dotenv": "^16.4.5",
         "husky": "^9.0.11",
         "jest": "^29.7.0",
         "lint-staged": "^15.2.4",
+        "mysql2": "^3.11.3",
+        "pg": "^8.13.0",
         "prettier": "^3.2.5",
         "ts-jest": "^29.1.3",
         "ts-node": "^10.9.2",
         "tsconfig-paths": "^4.2.0",
-        "typescript": "^5.4.5"
+        "typescript": "^5.4.5",
+        "@google-cloud/bigquery": "^7.9.0",
+        "@neondatabase/serverless": "^0.9.3",
+        "duckdb": "^1.1.1",
+        "ws": "^8.17.1",
+        "mongodb": "^6.9.0"
     }
 }

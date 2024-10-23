@@ -3,21 +3,208 @@ name: CI
 on: push
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+    build:
+        name: 'Unit Test and Build'
+        runs-on: ubuntu-latest
 
-    steps:
-    - uses: actions/checkout@v2
+        steps:
+            - uses: actions/checkout@v4
 
-    - name: Install modules
-      run: npm install
+            - name: Install modules
+              run: npm install
 
-    - name: Build
-      run: npm run build
+            - name: Build
+              run: npm run build
 
-    - name: Run sync-database-models command
-      id: sync
-      run: npm exec sync-database-models
+            # - name: Run sync-database-models command
+            #   id: sync
+            #   run: npm exec sync-database-models
 
-    - name: Run tests
-      run: npm test
+            - name: Run tests
+              run: npm test
+
+    test_postgre:
+        name: 'Postgres Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        services:
+            postgres:
+                image: postgres
+                env:
+                    POSTGRES_PASSWORD: 123456
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+                ports:
+                    - 5432:5432
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: postgres
+                  POSTGRES_HOST: localhost
+                  POSTGRES_DB: postgres
+                  POSTGRES_USER: postgres
+                  POSTGRES_PASSWORD: 123456
+                  POSTGRES_PORT: 5432
+                  POSTGRES_DEFAULT_SCHEMA: public
+              run: npm run test:connection
+
+    test_mysql:
+        name: 'MySQL Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        strategy:
+            matrix:
+                version: ['5.7', '8.0']
+
+        services:
+            mysql:
+                image: mysql:${{ matrix.version }}
+                env:
+                    MYSQL_DATABASE: testdb
+                    MYSQL_ROOT_PASSWORD: 123456
+                ports:
+                    - 3306:3306
+                options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: mysql
+                  MYSQL_HOST: localhost
+                  MYSQL_DB: testdb
+                  MYSQL_USER: root
+                  MYSQL_PASSWORD: 123456
+                  MYSQL_PORT: 3306
+                  MYSQL_DEFAULT_SCHEMA: testdb
+              run: npm run test:connection
+
+    test_bigquery:
+        name: 'BigQuery Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: bigquery
+                  BIGQUERY_PROJECT_ID: ${{ secrets.BIGQUERY_PROJECT_ID }}
+                  BIGQUERY_CLIENT_EMAIL: ${{ secrets.BIGQUERY_CLIENT_EMAIL }}
+                  BIGQUERY_PRIVATE_KEY: ${{ secrets.BIGQUERY_PRIVATE_KEY }}
+                  BIGQUERY_DEFAULT_SCHEMA: ${{ secrets.BIGQUERY_DEFAULT_SCHEMA }}
+              run: npm run test:connection
+
+    test_turso:
+        name: 'Turso Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: turso
+              run: npm run test:connection
+
+    test_cloudflare:
+        name: 'Cloudflare D1 Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: cloudflare
+                  CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+                  CLOUDFLARE_DATABASE_ID: ${{ secrets.CLOUDFLARE_DATABASE_ID }}
+              run: npm run test:connection
+
+    test_starbase:
+        name: 'StarbaseDB Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: starbase
+                  STARBASEDB_URL: ${{ secrets.STARBASEDB_URL }}
+                  STARBASEDB_TOKEN: ${{ secrets.STARBASEDB_TOKEN }}
+              run: npm run test:connection
+
+    test_mongodb:
+        name: 'MongoDB Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        services:
+            mongodb:
+                image: mongo
+                ports:
+                    - 27017:27017
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: mongodb
+                  MONGODB_URI: mongodb://localhost:27017
+                  MONGODB_DB_NAME: testing
+              run: npm run test:connection
+
+    test_motherduck:
+        name: 'Motherduck Connection'
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install modules
+              run: npm install
+
+            - name: Run tests
+              env:
+                  CONNECTION_TYPE: motherduck
+                  MOTHERDUCK_PATH: ${{ secrets.MOTHERDUCK_PATH }}
+                  MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+              run: npm run test:connection

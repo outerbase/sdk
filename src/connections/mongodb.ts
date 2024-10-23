@@ -1,16 +1,26 @@
-import { QueryType } from '../query-params'
-import { Query, constructRawQuery } from '../query'
-import { Connection } from './index'
+import { Connection, ConnectionSelectOptions, QueryResult } from './index';
 import {
     Database,
     Table,
     TableColumn,
     TableIndex,
     TableIndexType,
-} from '../models/database'
+} from '../models/database';
 
-import { MongoClient, Db, Document, FindCursor, Collection, ObjectId } from 'mongodb'
-import { MongoDialect } from '../query-builder/dialects/mongo'
+import {
+    Collection,
+    FindCursor,
+    MongoClient,
+    ObjectId,
+    WithId,
+    Document,
+} from 'mongodb';
+import {
+    createErrorResult,
+    createOkResult,
+    transformObjectBasedResult,
+} from './../utils/transformer';
+// import { MongoDialect } from '../query-builder/dialects/mongo'
 
 function isValidObjectId(value: string) {
     return /^[a-f\d]{24}$/i.test(value); // Check if it's a valid ObjectId string format
@@ -19,7 +29,7 @@ function isValidObjectId(value: string) {
 function convertToObjectId(obj: any): any {
     if (Array.isArray(obj)) {
         // If the value is an array, recursively convert each element
-        return obj.map(item => convertToObjectId(item));
+        return obj.map((item) => convertToObjectId(item));
     } else if (typeof obj === 'object' && obj !== null) {
         // If it's an object, recursively check each key-value pair
         for (const key in obj) {
@@ -32,14 +42,6 @@ function convertToObjectId(obj: any): any {
         }
     }
     return obj;
-}
-
-
-type MongoDBParameters = {
-    uri: string
-    username: string
-    password: string
-    dbName: string
 }
 
 function parseArguments(args: string) {
@@ -68,118 +70,252 @@ function parseArguments(args: string) {
         balancedArgs.push(currentArg.trim());
     }
 
-    return balancedArgs.map(arg => JSON.parse(arg));
+    return balancedArgs.map((arg) => JSON.parse(arg));
 }
 export class MongoDBConnection implements Connection {
-    client: MongoClient | undefined
-    db: Db | undefined
+    client: MongoClient;
+    defaultDatabase: string;
 
-    queryType = QueryType.positional
-
-    dialect = new MongoDialect()
-
-    constructor(private _: MongoDBParameters) {
-        this.client = new MongoClient(_.uri, {
-            auth: {
-                username: _.username,
-                password: _.password,
-            },
-            authMechanism: 'SCRAM-SHA-1',
-        })
+    constructor(client: any, defaultDatabase: string) {
+        this.client = client;
+        this.defaultDatabase = defaultDatabase;
     }
 
-    /**
-     * Performs a connect action on the current Connection object.
-     *
-     * @returns Promise<any>
-     */
     async connect(): Promise<any> {
         if (!this.client) {
-            throw new Error('MongoClient not initialized.')
+            throw new Error('MongoClient not initialized.');
         }
-
-        await this.client.connect()
-        this.db = this.client.db(this._.dbName)
+        await this.client.connect();
     }
 
-    /**
-     * Performs a disconnect action on the current Connection object.
-     *
-     * @returns Promise<any>
-     */
     async disconnect(): Promise<any> {
-        return this.client?.close()
+        return this.client.close();
     }
 
-    /**
-     * Triggers a query action on the current Connection object.
-     *
-     * The parameters object is sent along with the query to be used in the
-     * query. By default if the query has parameters the SQL statement will
-     * produce a string with `?::[DataType]` values that the parameters object
-     * keys should map to, and will be replaced by.
-     *
-     * @param query - The query to be executed.
-     * @returns Promise<{ data: any, error: Error | null, query: string }>
-     */
-    async query(
-        query: Query
-    ): Promise<{ data: any; error: Error | null; query: string }> {
-        const db = this.db
-        if (!db) throw new Error('No MongoDB connection was found.')
+    raw(query: string): Promise<QueryResult> {
+        return this.runQuery(query);
+    }
 
-        let result = null
-        let error = null
-        let rawSQL = null
-
+    async testConnection(): Promise<{ error?: string }> {
         try {
-            const { res } = await this.runQuery(query.query)
-            rawSQL = constructRawQuery(query)
-            result = res
-        } catch (e) {
-            error = e instanceof Error ? e : new Error(String(e))
-            rawSQL = constructRawQuery(query)
+            await this.connect();
+            await this.disconnect();
+            return {};
+        } catch {
+            return { error: 'Failed to connect to MongoDB' };
+        }
+    }
+
+    async renameColumn(
+        schemaName: string | undefined,
+        tableName: string,
+        columnName: string,
+        newColumnName: string
+    ): Promise<QueryResult> {
+        await this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .updateMany({}, { $rename: { [columnName]: newColumnName } });
+
+        return createOkResult();
+    }
+
+    async insert(
+        schemaName: string | undefined,
+        tableName: string,
+        data: Record<string, unknown>
+    ): Promise<QueryResult> {
+        await this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .insertOne(data);
+
+        return createOkResult();
+    }
+
+    async insertMany(
+        schemaName: string | undefined,
+        tableName: string,
+        data: Record<string, unknown>[]
+    ): Promise<QueryResult> {
+        await this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .insertMany(data);
+
+        return createOkResult();
+    }
+
+    async update(
+        schemaName: string | undefined,
+        tableName: string,
+        data: Record<string, unknown>,
+        where: Record<string, unknown>
+    ): Promise<QueryResult> {
+        await this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .updateMany(where, { $set: data });
+
+        return createOkResult();
+    }
+
+    async delete(
+        schemaName: string | undefined,
+        tableName: string,
+        where: Record<string, unknown>
+    ): Promise<QueryResult> {
+        await this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .deleteMany(where);
+
+        return createOkResult();
+    }
+
+    async dropColumn(): Promise<QueryResult> {
+        return createOkResult();
+    }
+
+    async select(
+        schemaName: string,
+        tableName: string,
+        options: ConnectionSelectOptions
+    ): Promise<QueryResult> {
+        // Map our condition to MongoDB's query format
+        const filter = (options.where ?? []).reduce(
+            (acc, condition) => {
+                let value = condition.value;
+                if (condition.name === '_id' && typeof value === 'string')
+                    value = new ObjectId(value);
+
+                if (condition.operator === '=') {
+                    acc[condition.name] = value;
+                } else if (condition.operator === '>') {
+                    acc[condition.name] = { $gt: value };
+                } else if (condition.operator === '<') {
+                    acc[condition.name] = { $lt: value };
+                } else if (condition.operator === '>=') {
+                    acc[condition.name] = { $gte: value };
+                } else if (condition.operator === '<=') {
+                    acc[condition.name] = { $lte: value };
+                }
+
+                return acc;
+            },
+            {} as Record<string, unknown>
+        );
+
+        const query = this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .find(filter);
+
+        if (options.offset) {
+            query.skip(options.offset);
         }
 
-        return {
-            data: result,
-            error: error,
-            query: rawSQL,
+        if (options.limit) {
+            query.limit(options.limit);
         }
+
+        if (options.orderBy) {
+            const sort = options.orderBy.reduce(
+                (acc, order) => {
+                    if (typeof order === 'string') {
+                        acc[order] = 1;
+                        return acc;
+                    }
+
+                    acc[order[0]] = order[1] === 'ASC' ? 1 : -1;
+                    return acc;
+                },
+                {} as Record<string, -1 | 1>
+            );
+
+            query.sort(sort);
+        }
+
+        let count: number | undefined = undefined;
+        if (options.includeCounting) {
+            if (!options.where) {
+                count = await this.client
+                    .db(schemaName ?? this.defaultDatabase)
+                    .collection(tableName)
+                    .estimatedDocumentCount();
+            }
+        }
+
+        const data = await query.toArray();
+        return { ...this.transformResult(data), count };
+    }
+
+    transformResult(data: (WithId<Document> | Document)[]) {
+        return {
+            ...transformObjectBasedResult(
+                data.map((row) => {
+                    return { ...row, _id: row._id.toString() };
+                })
+            ),
+            count: data.length,
+        };
+    }
+
+    async createTable(): Promise<QueryResult> {
+        // Mongodb does not have a schema, so we can't create a table
+        return createOkResult();
+    }
+
+    async dropTable(
+        schemaName: string | undefined,
+        tableName: string
+    ): Promise<QueryResult> {
+        await this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .drop();
+
+        return createOkResult();
     }
 
     public async fetchDatabaseSchema(): Promise<Database> {
-        if (!this.db) throw new Error('No MongoDB connection was found.')
+        const collections = await this.client
+            .db(this.defaultDatabase)
+            .listCollections()
+            .toArray();
 
-        const collections = await this.db.listCollections().toArray()
-
-        const schemaMap: Record<string, Record<string, Table>> = {}
+        const tableList: Record<string, Table> = {};
 
         for (const collectionInfo of collections) {
-            const collectionName = collectionInfo.name
-            const collection = this.db.collection(collectionName)
-            const indexes = await collection.indexes()
+            const collectionName = collectionInfo.name;
+
+            const collection = this.client
+                .db(this.defaultDatabase)
+                .collection(collectionName);
+
+            const indexes = await collection.indexes();
 
             // Since MongoDB is schemaless, we sample a document to infer the schema
-            const sampleDocument = await collection.findOne()
-            const columns: TableColumn[] = []
+            const sampleDocument = await collection.findOne();
+            const columns: TableColumn[] = [];
 
             if (sampleDocument) {
-                let position = 0
+                let position = 0;
                 for (const [fieldName, value] of Object.entries(
                     sampleDocument
                 )) {
                     const column: TableColumn = {
                         name: fieldName,
-                        type: typeof value,
+                        definition: {
+                            type: typeof value,
+                            nullable: true,
+                            default: null,
+                            primaryKey: fieldName === '_id',
+                            unique: fieldName === '_id',
+                        },
                         position: position++,
-                        nullable: true,
-                        default: null,
-                        primary: fieldName === '_id',
-                        unique: fieldName === '_id',
-                        references: [],
-                    }
-                    columns.push(column)
+                    };
+                    columns.push(column);
                 }
             }
 
@@ -189,113 +325,140 @@ export class MongoDBConnection implements Connection {
                     ? TableIndexType.UNIQUE
                     : TableIndexType.INDEX,
                 columns: Object.keys(index.key),
-            }))
+            }));
 
             const currentTable: Table = {
                 name: collectionName,
                 columns: columns,
                 indexes: tableIndexes,
                 constraints: [], // Constraints are not used in MongoDB
-            }
+            };
 
-            // Use the database name as the schema
-            const schemaName = this._.dbName
-
-            if (!schemaMap[schemaName]) {
-                schemaMap[schemaName] = {}
-            }
-
-            schemaMap[schemaName][collectionName] = currentTable
+            tableList[collectionName] = currentTable;
         }
 
-        return schemaMap
+        return {
+            [this.defaultDatabase]: tableList,
+        };
     }
 
-    runQuery = async (query: string): Promise<{ stmt: string; res: any[] }> => {
-        if (!this.db) throw new Error('No MongoDB connection was found.')
-        let statement = ''
+    async addColumn(): Promise<QueryResult> {
+        // Do nothing, MongoDB does not have a schema
+        return createOkResult();
+    }
 
-        const parts = query.split('.')
-        const isDBCommand = parts.length === 2
+    async alterColumn(): Promise<QueryResult> {
+        // Do nothing, MongoDB does not have a schema
+        return createOkResult();
+    }
+
+    async renameTable(
+        schemaName: string | undefined,
+        tableName: string,
+        newTableName: string
+    ): Promise<QueryResult> {
+        await this.client
+            .db(schemaName ?? this.defaultDatabase)
+            .collection(tableName)
+            .rename(newTableName);
+
+        return createOkResult();
+    }
+
+    runQuery = async (query: string): Promise<QueryResult> => {
+        const currentDatabase = this.client.db(this.defaultDatabase);
+
+        const parts = query.split('.');
+        const isDBCommand = parts.length === 2;
 
         if (isDBCommand) {
-            const [dbName, command] = parts
-            if (dbName !== 'db') throw new Error('Query must begin with db')
+            const [dbName, command] = parts;
+            if (dbName !== 'db') throw new Error('Query must begin with db');
 
             // Extract the command and arguments dynamically
-            const commandArgs = command.match(/\(([^)]+)\)/)?.[1] ?? ''
-            const parsedArgs = commandArgs ? JSON.parse(`[${commandArgs}]`) : []
-
-            statement = `db.${command}`
+            const commandArgs = command.match(/\(([^)]+)\)/)?.[1] ?? '';
+            const parsedArgs = commandArgs
+                ? JSON.parse(`[${commandArgs}]`)
+                : [];
 
             // Dynamically run the command with arguments
-            const commandName = command.split('(')[0]
+            const commandName = command.split('(')[0];
 
-            const result = await this.db.command({ [commandName]: parsedArgs })
-            const isBatch = result?.cursor?.firstBatch
+            const result = await currentDatabase.command({
+                [commandName]: parsedArgs,
+            });
+
+            const isBatch = result?.cursor?.firstBatch;
             if (isBatch) {
-                return { stmt: statement, res: result.cursor.firstBatch }
-            } 
-            return { stmt: statement, res: [result] }
+                return createOkResult();
+            }
+
+            return this.transformResult([result]);
         }
 
-        const [db, collectionNameFromQuery, ...otherCalls] = parts
-        statement = `db.${collectionNameFromQuery}`
+        const [db, collectionNameFromQuery, ...otherCalls] = parts;
 
-        if (db !== 'db') throw new Error('Query must begin with db')
+        if (db !== 'db') throw new Error('Query must begin with db');
 
-        const collectionExists = (await this.db.listCollections().toArray()).some(c => c.name === collectionNameFromQuery)
-        if (!collectionExists) throw new Error(`Collection ${collectionNameFromQuery} does not exist.`)
-        const collection = this.db.collection(collectionNameFromQuery)
-        
-        let cursor = collection
+        const collectionExists = (
+            await currentDatabase.listCollections().toArray()
+        ).some((c) => c.name === collectionNameFromQuery);
+
+        if (!collectionExists)
+            throw new Error(
+                `Collection ${collectionNameFromQuery} does not exist.`
+            );
+        const collection = currentDatabase.collection(collectionNameFromQuery);
+
+        let cursor = collection;
 
         otherCalls.forEach(async (call) => {
             const methodName = call.match(
                 /^[a-zA-Z]+/
-            )?.[0] as keyof Collection<Document>
+            )?.[0] as keyof Collection<Document>;
             const argsString = call.match(/\((.*)\)/)?.[1];
 
             // Only process string method names
             if (typeof methodName !== 'string') {
                 throw new Error(
                     `${String(methodName)} is not a valid cursor method.`
-                )
+                );
             }
-            
+
             const actualArgs = parseArguments(argsString ?? '');
-        
+
             // Convert valid ObjectId _strings_ to actual ObjectId instances
-            const processedArgs = actualArgs.map(arg => convertToObjectId(arg));
+            const processedArgs = actualArgs.map((arg) =>
+                convertToObjectId(arg)
+            );
 
             if (
                 methodName in cursor &&
                 typeof cursor[methodName] === 'function'
             ) {
-                cursor = (cursor[methodName] as any)(...processedArgs)
-                statement += `.${methodName}(${processedArgs})`
+                cursor = (cursor[methodName] as any)(...processedArgs);
             } else {
                 throw new Error(
                     `Method ${methodName} is not a valid function on the cursor.`
-                )
+                );
             }
-        })
-        let c = cursor as any
+        });
+        let c = cursor as any;
         try {
-            const result = await c.toArray()
-            return { stmt: statement, res: result }
+            const result = await (c as FindCursor).toArray();
+            return this.transformResult(result);
         } catch {
-            const result = await c
+            const result = await c;
             try {
-                JSON.stringify(result)
+                JSON.stringify(result);
             } catch (e) {
                 // Converting circular structure to JSON -->
                 // @todo, need to find a better way to handle
                 // This error rather than checking here
-                throw new Error('Invalid query')
+                throw new Error('Invalid query');
             }
 
-            return { stmt: statement, res: result }
+            return createErrorResult('Invalid query');
         }
-    }
+    };
 }

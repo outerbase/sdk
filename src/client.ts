@@ -1,9 +1,9 @@
-import { BaseTable } from 'src/models'
-import { Connection } from './connections'
-import { Query, constructRawQuery } from './query'
-import { QueryParams, QueryType } from './query-params'
-import { AbstractDialect, ColumnDataType } from './query-builder'
-import { DefaultDialect } from './query-builder/dialects/default'
+import { QueryResult } from './connections';
+import { Query } from './query';
+import { QueryType } from './query-params';
+import { AbstractDialect } from './query-builder';
+import { TableColumnDefinition } from './models/database';
+import { SqlConnection } from './connections/sql-base';
 
 export enum QueryBuilderAction {
     SELECT = 'select',
@@ -24,798 +24,455 @@ export enum QueryBuilderAction {
     UPDATE_COLUMNS = 'updateColumns',
 }
 
-export interface QueryBuilder {
-    action: QueryBuilderAction
-    // Sets the focused schema name, used for INSERT, UPDATE, DELETE
-    schema?: string
-    // Sets the focused table name, used for INSERT, UPDATE, DELETE
-    table?: string
-    // Used specifically for SELECT statements, useful when joining multiple tables
-    columnsWithTable?: { schema?: string; table: string; columns: string[] }[]
-    // Used when column names and type are required, such as CREATE TABLE
-    columns?: {
-        default?: string
-        nullable?: boolean
-        name?: string
-        type?: ColumnDataType | string
-        oldName?: string
-        newName?: string
-    }[]
-    whereClauses?: string[]
-    joins?: string[]
-    data?: { [key: string]: any }
-    limit?: number
-    offset?: number | null
-    orderBy?: string
-    returning?: string[]
-    asClass?: any
-    groupBy?: string
-    // In an alter state within the builder
-    isAltering?: boolean
-
-    selectRawValue?: string
-
-    // General operation values, such as when renaming tables referencing the old and new name
-    originalValue?: string
-    newValue?: string
+export type QueryPart = [string, unknown[]];
+export interface WhereCondition {
+    joinType?: undefined;
+    column: string;
+    value: unknown;
+    operator: string;
 }
 
-export interface OuterbaseType {
-    queryBuilder: QueryBuilder
-    selectFrom: (
-        columnsArray: { schema?: string; table: string; columns: string[] }[]
-    ) => OuterbaseType
-    selectRaw: (statement: string) => OuterbaseType
-
-    insert: (data: { [key: string]: any }) => OuterbaseType
-    update: (data: { [key: string]: any }) => OuterbaseType
-    deleteFrom: (table: string) => OuterbaseType
-    where: (condition: any) => OuterbaseType
-    limit: (limit: number) => OuterbaseType
-    offset: (offset: number) => OuterbaseType
-    orderBy: (column: string, direction?: 'ASC' | 'DESC') => OuterbaseType
-    innerJoin: (
-        table: string,
-        condition: string,
-        options?: any
-    ) => OuterbaseType
-    leftJoin: (table: string, condition: string, options?: any) => OuterbaseType
-    rightJoin: (
-        table: string,
-        condition: string,
-        options?: any
-    ) => OuterbaseType
-    outerJoin: (
-        table: string,
-        condition: string,
-        options?: any
-    ) => OuterbaseType
-    into: (table: string) => OuterbaseType
-    schema: (schema: string) => OuterbaseType
-    returning: (columns: string[]) => OuterbaseType
-    groupBy: (column: string) => OuterbaseType
-
-    // WORK IN PROGRESS
-    // WORK IN PROGRESS
-    // Table operations
-    createTable?: (table: string) => OuterbaseType
-    renameTable?: (old: string, name: string) => OuterbaseType
-    addColumns: (columns: { name: string; type: string }[]) => OuterbaseType
-    dropColumns: (columns: string[]) => OuterbaseType
-    updateColumn: (
-        columns: {
-            name: string
-            type: ColumnDataType
-            nullable?: boolean
-            default?: string
-        }[]
-    ) => OuterbaseType
-    dropTable?: (table: string) => OuterbaseType
-    alterTable: (table: string) => OuterbaseType
-    columns?: (
-        columns: { name: string; type: ColumnDataType }[]
-    ) => OuterbaseType
-
-    renameColumns: (
-        columns: { newName: string; oldName: string }[]
-    ) => OuterbaseType
-    // WORK IN PROGRESS
-    // WORK IN PROGRESS
-    // WORK IN PROGRESS
-
-    // General purpose methods
-    asClass: (classType: any) => OuterbaseType
-    query: () => Promise<any>
-    queryRaw: (query: string, parameters?: QueryParams) => Promise<any>
-    toString: () => string
+export interface WhereClaues {
+    joinType: 'OR' | 'AND';
+    conditions: (WhereCondition | WhereClaues)[];
 }
 
-export function Outerbase(connection: Connection): OuterbaseType {
-    const dialect = connection.dialect
+export type WhereGenerator = () => WhereClaues;
 
-    const outerbase: OuterbaseType = {
-        queryBuilder: { action: QueryBuilderAction.SELECT },
-        selectFrom(columnsArray) {
-            this.queryBuilder = {
-                action: QueryBuilderAction.SELECT,
-                columnsWithTable: columnsArray,
-                whereClauses: [],
-                joins: [],
-            }
+export interface OrderByClause {
+    columnName: string;
+    direction: 'ASC' | 'DESC';
+}
 
-            return this
-        },
-        selectRaw(statement) {
-            this.queryBuilder.action = QueryBuilderAction.SELECT
-            this.queryBuilder.selectRawValue = statement
+export interface QueryBuilderInternal {
+    action: QueryBuilderAction;
 
-            return this
-        },
-        where(condition) {
-            // Check if `condition` is an array of conditions
-            if (Array.isArray(condition)) {
-                if (this.queryBuilder.whereClauses) {
-                    this.queryBuilder.whereClauses.push(
-                        `(${condition.join(' AND ')})`
-                    )
-                }
+    schema?: string;
+    table?: string;
+    selectColumns: string[];
+    whereClauses: WhereClaues;
+    data?: Record<string, unknown>;
+    limit?: number;
+    offset?: number;
+    orderBy: OrderByClause[];
+
+    // This is temporary just to make SDK work with Outerbase
+    countingAllColumnName?: string;
+
+    // ------------------------------------------
+    // This is use for alter or create schema
+    // ------------------------------------------
+    dropColumn?: string;
+    columns: {
+        name: string;
+        definition?: TableColumnDefinition; // For alter or create column
+        newName?: string; // For rename column
+    }[];
+    newTableName?: string; // For rename table
+}
+
+function buildWhereClause(args: unknown[]): WhereCondition | WhereClaues {
+    if (args.length === 0) throw new Error('No arguments provided');
+
+    if (typeof args[0] === 'string') {
+        // This should be columnName, operator, and value arguments
+        const columnName = args[0];
+        const operator = args[1];
+        const value = args[2];
+
+        if (!operator) throw new Error("Operator can't be empty");
+        if (typeof operator !== 'string')
+            throw new Error('Operator must be a string');
+        if (value === undefined) throw new Error("Value can't be empty");
+
+        const whereCondition = {
+            column: columnName,
+            operator,
+            value,
+        };
+
+        return whereCondition;
+    } else if (typeof args[0] === 'object') {
+        // This should be Record<string, unknown> arguments
+        const conditions = args[0] as Record<string, unknown>;
+
+        const whereClause: WhereClaues = {
+            joinType: 'AND',
+            conditions: [],
+        };
+
+        for (const key in conditions) {
+            if (conditions[key] === null) {
+                whereClause.conditions.push({
+                    column: key,
+                    value: conditions[key],
+                    operator: 'IS',
+                });
             } else {
-                if (this.queryBuilder.whereClauses) {
-                    this.queryBuilder.whereClauses.push(condition)
-                }
+                whereClause.conditions.push({
+                    column: key,
+                    value: conditions[key],
+                    operator: '=',
+                });
             }
-            return this
-        },
-        limit(limit) {
-            this.queryBuilder.limit = limit
-            return this
-        },
-        offset(offset) {
-            this.queryBuilder.offset = offset
-            return this
-        },
-        orderBy(value) {
-            this.queryBuilder.orderBy = value
-            return this
-        },
-        innerJoin(table, condition, options) {
-            let skipEscape = false
-            if (options && options.escape_single_quotes !== undefined) {
-                if (options.escape_single_quotes === false) {
-                    skipEscape = true
-                }
-            }
-            if (!skipEscape) {
-                condition = condition.replace(/'/g, '')
-            }
+        }
 
-            if (this.queryBuilder.joins)
-                this.queryBuilder.joins.push(
-                    `INNER JOIN ${table} ON ${condition}`
-                )
-            return this
-        },
-        leftJoin(table, condition, options) {
-            let skipEscape = false
-            if (options && options.escape_single_quotes !== undefined) {
-                if (options.escape_single_quotes === false) {
-                    skipEscape = true
-                }
-            }
-            if (!skipEscape) {
-                condition = condition.replace(/'/g, '')
-            }
-
-            if (this.queryBuilder.joins)
-                this.queryBuilder.joins.push(
-                    `LEFT JOIN ${table} ON ${condition}`
-                )
-            return this
-        },
-        rightJoin(table, condition, options) {
-            let skipEscape = false
-            if (options && options.escape_single_quotes !== undefined) {
-                if (options.escape_single_quotes === false) {
-                    skipEscape = true
-                }
-            }
-            if (!skipEscape) {
-                condition = condition.replace(/'/g, '')
-            }
-
-            condition = condition.replace(/'/g, '')
-            if (this.queryBuilder.joins)
-                this.queryBuilder.joins.push(
-                    `RIGHT JOIN ${table} ON ${condition}`
-                )
-            return this
-        },
-        outerJoin(table, condition, options) {
-            let skipEscape = false
-            if (options && options.escape_single_quotes !== undefined) {
-                if (options.escape_single_quotes === false) {
-                    skipEscape = true
-                }
-            }
-            if (!skipEscape) {
-                condition = condition.replace(/'/g, '')
-            }
-
-            if (this.queryBuilder.joins)
-                this.queryBuilder.joins.push(
-                    `OUTER JOIN ${table} ON ${condition}`
-                )
-            return this
-        },
-
-        addColumns(columns) {
-            this.queryBuilder = {
-                ...this.queryBuilder,
-                columns,
-                action: QueryBuilderAction.ADD_COLUMNS,
-            }
-            return this
-        },
-        renameColumns(columns) {
-            this.queryBuilder = {
-                ...this.queryBuilder,
-                columns,
-                action: QueryBuilderAction.RENAME_COLUMNS,
-            }
-            return this
-        },
-        dropColumns(columns) {
-            this.queryBuilder = {
-                ...this.queryBuilder,
-                columns: columns.map((column) => ({
-                    name: column,
-                    // We don't really care what the type is
-                    type: ColumnDataType.STRING,
-                })),
-                action: QueryBuilderAction.DROP_COLUMNS,
-            }
-            return this
-        },
-        updateColumn(columns) {
-            this.queryBuilder = {
-                ...this.queryBuilder,
-                columns,
-                action: QueryBuilderAction.UPDATE_COLUMNS,
-            }
-            return this
-        },
-        insert(data) {
-            this.queryBuilder = {
-                action: QueryBuilderAction.INSERT,
-                data: data,
-            }
-            return this
-        },
-        update(data) {
-            this.queryBuilder = {
-                action: QueryBuilderAction.UPDATE,
-                data: data,
-                whereClauses: [],
-            }
-            return this
-        },
-        into(table) {
-            this.queryBuilder.table = table
-            return this
-        },
-        schema(schema) {
-            this.queryBuilder.schema = schema
-            return this
-        },
-        deleteFrom(table) {
-            this.queryBuilder = {
-                action: QueryBuilderAction.DELETE,
-                table: table,
-                whereClauses: [],
-            }
-            return this
-        },
-        returning(columns: string[]) {
-            this.queryBuilder.returning = columns
-            return this
-        },
-        groupBy(column: string) {
-            this.queryBuilder.groupBy = column
-            return this
-        },
-        asClass(classType) {
-            this.queryBuilder.asClass = classType
-            return this
-        },
-        toString() {
-            const query = buildQueryString(
-                this.queryBuilder,
-                connection.queryType,
-                dialect
-            )
-            return constructRawQuery(query)
-        },
-        async query() {
-            const query = buildQueryString(
-                this.queryBuilder,
-                connection.queryType,
-                dialect
-            )
-            
-            // If asClass is set, map the response to the class
-            if (this.queryBuilder.asClass) {
-                const response = await connection.query(query)
-                let result = mapToClass(
-                    response?.data,
-                    this.queryBuilder.asClass,
-                    connection
-                )
-                return {
-                    data: result,
-                    error: response.error,
-                    query,
-                }
-            }
-
-            // Otherwise, if asClass is not set, return the raw response
-            let response = await connection.query(query)
-
-            return {
-                ...response,
-                query,
-            }
-        },
-        async queryRaw(query, parameters) {
-            // If asClass is set, map the response to the class
-            if (this.queryBuilder.asClass) {
-                const response = await connection.query({ query, parameters })
-                let result = mapToClass(
-                    response?.data,
-                    this.queryBuilder.asClass,
-                    connection
-                )
-                return {
-                    data: result,
-                    error: response.error,
-                    query,
-                }
-            }
-
-            // Otherwise, if asClass is not set, return the raw response
-            let response = await connection.query({ query, parameters })
-            return {
-                ...response,
-                query,
-            }
-        },
-
-        createTable(table) {
-            this.queryBuilder = {
-                action: QueryBuilderAction.CREATE_TABLE,
-                table,
-            }
-            return this
-        },
-
-        alterTable(table) {
-            this.queryBuilder.isAltering = true
-            this.queryBuilder.table = table
-            return this
-        },
-
-        dropTable(table) {
-            this.queryBuilder = {
-                action: QueryBuilderAction.DELETE_TABLE,
-                table,
-            }
-            return this
-        },
-        renameTable(old, name) {
-            this.queryBuilder = {
-                action: QueryBuilderAction.RENAME_TABLE,
-                originalValue: old,
-                newValue: name,
-            }
-            return this
-        },
-
-        columns(columns) {
-            this.queryBuilder.columns = columns
-            return this
-        },
+        if (whereClause.conditions.length === 1) {
+            return whereClause.conditions[0];
+        }
+        return whereClause;
+    } else if (typeof args[0] === 'function') {
+        // This should be a callback function
+        const callback = args[0] as WhereGenerator;
+        const whereClause = callback();
+        return whereClause;
     }
 
-    return outerbase
+    throw new Error('Invalid arguments');
+}
+
+function whereImplementation(state: QueryBuilderInternal, args: unknown[]) {
+    const whereClause = buildWhereClause(args);
+
+    // If the join type is the same, we can merge it together
+    if (
+        whereClause.joinType &&
+        state.whereClauses.joinType === whereClause.joinType
+    ) {
+        state.whereClauses.conditions = [
+            ...state.whereClauses.conditions,
+            ...whereClause.conditions,
+        ];
+    } else {
+        state.whereClauses.conditions.push(whereClause);
+    }
+}
+
+abstract class IQueryBuilder {
+    abstract state: QueryBuilderInternal;
+
+    protected connection: SqlConnection;
+
+    constructor(connection: SqlConnection) {
+        this.connection = connection;
+    }
+
+    toQuery(): Query {
+        return buildQueryString(
+            this.state,
+            QueryType.named,
+            this.connection.dialect
+        );
+    }
+
+    query(): Promise<QueryResult> {
+        const query = this.toQuery();
+        return this.connection.query(query);
+    }
+}
+
+function createBlankState(action: QueryBuilderAction): QueryBuilderInternal {
+    return {
+        action,
+        whereClauses: { joinType: 'AND', conditions: [] },
+        selectColumns: [],
+        orderBy: [],
+        columns: [],
+    };
+}
+
+class QueryBuilderSelect extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(QueryBuilderAction.SELECT);
+
+    constructor(connection: SqlConnection, columnNames: string[]) {
+        super(connection);
+        this.state.selectColumns = columnNames;
+    }
+
+    from(tableName: string) {
+        this.state.table = tableName;
+        return this;
+    }
+
+    select(...columName: string[]) {
+        this.state.selectColumns = [...this.state.selectColumns, ...columName];
+        return this;
+    }
+
+    count(columnName: string) {
+        this.state.countingAllColumnName = columnName;
+        return this;
+    }
+
+    where(conditions: Record<string, unknown>): QueryBuilderSelect;
+    where(
+        columName: string,
+        operator: string,
+        value: unknown
+    ): QueryBuilderSelect;
+    where(callback: WhereGenerator): QueryBuilderSelect;
+    where(...args: unknown[]) {
+        whereImplementation(this.state, args);
+        return this;
+    }
+
+    offset(offset: number) {
+        this.state.offset = offset;
+        return this;
+    }
+
+    limit(limit: number) {
+        this.state.limit = limit;
+        return this;
+    }
+
+    orderBy(columnName: string, direction: 'ASC' | 'DESC' = 'ASC') {
+        this.state.orderBy.push({ columnName, direction });
+        return this;
+    }
+}
+
+class QueryBuilderInsert extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(QueryBuilderAction.INSERT);
+
+    constructor(connection: SqlConnection, data: Record<string, unknown>) {
+        super(connection);
+        this.state.data = data;
+    }
+
+    into(tableName: string) {
+        this.state.table = tableName;
+        return this;
+    }
+}
+
+class QueryBuilderUpdate extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(QueryBuilderAction.UPDATE);
+
+    constructor(connection: SqlConnection, data: Record<string, unknown>) {
+        super(connection);
+        this.state.data = data;
+    }
+
+    into(tableName: string) {
+        this.state.table = tableName;
+        return this;
+    }
+
+    where(conditions: Record<string, unknown>): QueryBuilderUpdate;
+    where(
+        columName: string,
+        operator: string,
+        value: unknown
+    ): QueryBuilderUpdate;
+    where(callback: WhereGenerator): QueryBuilderUpdate;
+    where(...args: unknown[]) {
+        whereImplementation(this.state, args);
+        return this;
+    }
+}
+
+class QueryBuilderDelete extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(QueryBuilderAction.DELETE);
+
+    constructor(connection: SqlConnection) {
+        super(connection);
+    }
+
+    from(tableName: string) {
+        this.state.table = tableName;
+        return this;
+    }
+
+    where(conditions: Record<string, unknown>): QueryBuilderDelete;
+    where(
+        columName: string,
+        operator: string,
+        value: unknown
+    ): QueryBuilderDelete;
+    where(callback: WhereGenerator): QueryBuilderDelete;
+    where(...args: unknown[]) {
+        whereImplementation(this.state, args);
+        return this;
+    }
+}
+
+class QueryBuilderCreateTable extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(
+        QueryBuilderAction.CREATE_TABLE
+    );
+
+    constructor(connection: SqlConnection, tableName: string) {
+        super(connection);
+        this.state.table = tableName;
+    }
+
+    column(name: string, definition: TableColumnDefinition) {
+        this.state.columns.push({ name, definition });
+        return this;
+    }
+}
+
+class QueryBuilderDropTable extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(
+        QueryBuilderAction.DELETE_TABLE
+    );
+
+    constructor(connection: SqlConnection, tableName: string) {
+        super(connection);
+        this.state.table = tableName;
+    }
+}
+
+class QueryBuilderAlterTable extends IQueryBuilder {
+    state: QueryBuilderInternal = createBlankState(
+        QueryBuilderAction.ALTER_TABLE
+    );
+
+    constructor(connection: SqlConnection, tableName: string) {
+        super(connection);
+        this.state.table = tableName;
+    }
+
+    alterColumn(columnName: string, definition: TableColumnDefinition) {
+        this.state.action = QueryBuilderAction.UPDATE_COLUMNS;
+        this.state.columns.push({ name: columnName, definition });
+        return this;
+    }
+
+    addColumn(name: string, definition: TableColumnDefinition) {
+        this.state.action = QueryBuilderAction.ADD_COLUMNS;
+        this.state.columns.push({ name, definition });
+        return this;
+    }
+
+    dropColumn(name: string) {
+        this.state.action = QueryBuilderAction.DROP_COLUMNS;
+        this.state.dropColumn = name;
+        return this;
+    }
+
+    renameTable(newTableName: string) {
+        this.state.action = QueryBuilderAction.RENAME_TABLE;
+        this.state.newTableName = newTableName;
+        return this;
+    }
+
+    renameColumn(columnName: string, newColumnName: string) {
+        this.state.action = QueryBuilderAction.RENAME_COLUMNS;
+        this.state.columns = [
+            {
+                name: columnName,
+                newName: newColumnName,
+            },
+        ];
+        return this;
+    }
+}
+
+class QueryBuilder {
+    connection: SqlConnection;
+
+    constructor(connection: SqlConnection) {
+        this.connection = connection;
+    }
+
+    select(...columnName: string[]) {
+        return new QueryBuilderSelect(this.connection, columnName);
+    }
+
+    insert(data: Record<string, unknown>) {
+        return new QueryBuilderInsert(this.connection, data);
+    }
+
+    update(data: Record<string, unknown>) {
+        return new QueryBuilderUpdate(this.connection, data);
+    }
+
+    delete() {
+        return new QueryBuilderDelete(this.connection);
+    }
+
+    createTable(tableName: string) {
+        return new QueryBuilderCreateTable(this.connection, tableName);
+    }
+
+    dropTable(tableName: string) {
+        return new QueryBuilderDropTable(this.connection, tableName);
+    }
+
+    alterTable(tableName: string) {
+        return new QueryBuilderAlterTable(this.connection, tableName);
+    }
+
+    or(
+        ...args: (WhereClaues | WhereCondition | WhereGenerator)[]
+    ): WhereGenerator {
+        return () => ({
+            joinType: 'OR',
+            conditions: args.map((arg) => {
+                if (typeof arg === 'function') {
+                    return arg();
+                }
+                return arg;
+            }),
+        });
+    }
+
+    and(
+        ...args: (WhereClaues | WhereCondition | WhereGenerator)[]
+    ): WhereGenerator {
+        return () => ({
+            joinType: 'AND',
+            conditions: args.map((arg) => {
+                if (typeof arg === 'function') {
+                    return arg();
+                }
+                return arg;
+            }),
+        });
+    }
+
+    where(conditions: Record<string, unknown>): WhereClaues | WhereCondition;
+    where(columName: string, operator: string, value: unknown): WhereCondition;
+    where(...args: unknown[]): WhereClaues | WhereCondition {
+        return buildWhereClause(args);
+    }
+}
+
+export function Outerbase(connection: SqlConnection) {
+    return new QueryBuilder(connection);
 }
 
 function buildQueryString(
-    queryBuilder: QueryBuilder,
+    queryBuilder: QueryBuilderInternal,
     queryType: QueryType,
     dialect: AbstractDialect
 ): Query {
-    const query: Query = {
-        query: '',
-        parameters: queryType === QueryType.named ? {} : [],
-    }
-
     switch (queryBuilder.action) {
         case QueryBuilderAction.SELECT:
-            query.query = dialect.select(queryBuilder, queryType, query).query
-            break
+            return dialect.select(queryBuilder);
         case QueryBuilderAction.INSERT:
-            query.query = dialect.insert(queryBuilder, queryType, query).query
-            query.parameters = dialect.insert(
-                queryBuilder,
-                queryType,
-                query
-            ).parameters
-            break
+            return dialect.insert(queryBuilder);
         case QueryBuilderAction.UPDATE:
-            query.query = dialect.update(queryBuilder, queryType, query).query
-            query.parameters = dialect.update(
-                queryBuilder,
-                queryType,
-                query
-            ).parameters
-            break
+            return dialect.update(queryBuilder);
         case QueryBuilderAction.DELETE:
-            query.query = dialect.delete(queryBuilder, queryType, query).query
-            query.parameters = dialect.delete(
-                queryBuilder,
-                queryType,
-                query
-            ).parameters
-            break
+            return dialect.delete(queryBuilder);
         case QueryBuilderAction.CREATE_TABLE:
-            query.query = dialect.createTable(
-                queryBuilder,
-                queryType,
-                query
-            ).query
-            query.parameters = dialect.createTable(
-                queryBuilder,
-                queryType,
-                query
-            ).parameters
-            break
+            return dialect.createTable(queryBuilder);
         case QueryBuilderAction.DELETE_TABLE:
-            query.query = dialect.dropTable(
-                queryBuilder,
-                queryType,
-                query
-            ).query
-            break
+            return dialect.dropTable(queryBuilder);
         case QueryBuilderAction.RENAME_TABLE:
-            query.query = dialect.renameTable(
-                queryBuilder,
-                queryType,
-                query
-            ).query
-            break
-
+            return dialect.renameTable(queryBuilder);
         case QueryBuilderAction.ADD_COLUMNS:
-            query.query = dialect.addColumn(
-                queryBuilder,
-                queryType,
-                query
-            ).query
-            break
-        case QueryBuilderAction.DROP_COLUMNS:
-            query.query = dialect.dropColumn(
-                queryBuilder,
-                queryType,
-                query
-            ).query
-            break
-        case QueryBuilderAction.RENAME_COLUMNS:
-            query.query = dialect.renameColumn(
-                queryBuilder,
-                queryType,
-                query
-            ).query
-            break
+            return dialect.addColumn(queryBuilder);
         case QueryBuilderAction.UPDATE_COLUMNS:
-            query.query = dialect.updateColumn(
-                queryBuilder,
-                queryType,
-                query
-            ).query
-            break
+            return dialect.alterColumn(queryBuilder);
+        case QueryBuilderAction.RENAME_COLUMNS:
+            return dialect.renameColumn(queryBuilder);
+        case QueryBuilderAction.DROP_COLUMNS:
+            return dialect.dropColumn(queryBuilder);
         default:
-            throw new Error('Invalid action')
+            throw new Error('Invalid action');
     }
-
-    return query
-}
-
-function mapToClass<T>(
-    data: any | any[],
-    ctor: new (data: any) => T,
-    connection?: Connection
-): T | T[] {
-    if (Array.isArray(data)) {
-        return data.map((item) => {
-            const model = new ctor(item) as BaseTable
-            model._connection = connection
-            return model
-        }) as T[]
-    } else {
-        const model = new ctor(data) as BaseTable
-        model._connection = connection
-        return new ctor(data)
-    }
-}
-
-export function equals(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.equals(a, b)
-}
-
-export function equalsNumber(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.equalsNumber(a, b)
-}
-
-export function equalsColumn(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.equalsColumn(a, b)
-}
-
-export function notEquals(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.notEquals(a, b)
-}
-
-export function notEqualsNumber(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.notEqualsNumber(a, b)
-}
-
-export function notEqualsColumn(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.notEqualsColumn(a, b)
-}
-
-export function greaterThan(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.greaterThan(a, b)
-}
-
-export function greaterThanNumber(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.greaterThanNumber(a, b)
-}
-
-export function lessThan(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.lessThan(a, b)
-}
-
-export function lessThanNumber(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.lessThanNumber(a, b)
-}
-
-export function greaterThanOrEqual(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.greaterThanOrEqual(a, b)
-}
-
-export function greaterThanOrEqualNumber(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.greaterThanOrEqualNumber(a, b)
-}
-
-export function lessThanOrEqual(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.lessThanOrEqual(a, b)
-}
-
-export function lessThanOrEqualNumber(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.lessThanOrEqualNumber(a, b)
-}
-
-export function inValues(
-    a: any,
-    b: any[],
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.inValues(a, b)
-}
-
-export function inNumbers(
-    a: any,
-    b: any[],
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.inNumbers(a, b)
-}
-
-export function notInValues(
-    a: any,
-    b: any[],
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.notInValues(a, b)
-}
-
-export function notInNumbers(
-    a: any,
-    b: any[],
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.notInNumbers(a, b)
-}
-
-export function is(
-    this: any,
-    a: any,
-    b: string | null,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.is(this, a, b)
-}
-
-export function isNumber(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.isNumber(a, b)
-}
-
-export function isNot(
-    this: any,
-    a: any,
-    b: null,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.isNot(this, a, b)
-}
-
-export function isNotNumber(
-    a: any,
-    b: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.isNotNumber(a, b)
-}
-
-export function like(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.like(a, b)
-}
-
-export function notLike(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.notLike(a, b)
-}
-
-export function ilike(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.ilike(a, b)
-}
-
-export function notILike(
-    a: any,
-    b: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.notILike(a, b)
-}
-
-export function isNull(
-    a: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.isNull(a)
-}
-
-export function isNotNull(
-    a: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.isNotNull(a)
-}
-
-export function between(
-    a: any,
-    b: string,
-    c: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.between(a, b, c)
-}
-
-export function betweenNumbers(
-    a: any,
-    b: any,
-    c: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.betweenNumbers(a, b, c)
-}
-
-export function notBetween(
-    a: any,
-    b: string,
-    c: string,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.notBetween(a, b, c)
-}
-
-export function notBetweenNumbers(
-    a: any,
-    b: any,
-    c: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.notBetweenNumbers(a, b, c)
-}
-
-export function ascending(
-    a: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.ascending(a)
-}
-
-export function descending(
-    a: any,
-    dialect: AbstractDialect = new DefaultDialect()
-) {
-    return dialect.descending(a)
 }
