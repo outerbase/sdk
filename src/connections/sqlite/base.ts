@@ -86,6 +86,25 @@ FROM
             }
         }
 
+        // Building primary key constraint
+        Object.values(tableLookup).forEach((table) => {
+            const primaryKeyColumns = table.columns
+                .filter((column) => column.definition.primaryKey)
+                .map((column) => column.name);
+
+            if (primaryKeyColumns.length) {
+                table.constraints.push({
+                    name: `pk_${table.name}`,
+                    schema: 'main',
+                    tableName: table.name,
+                    type: 'PRIMARY KEY',
+                    columns: primaryKeyColumns.map((columnName) => ({
+                        columnName,
+                    })),
+                });
+            }
+        });
+
         // Sqlite default schema is "main", since we don't support
         // ATTACH, we don't need to worry about other schemas
         return {

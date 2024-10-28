@@ -155,7 +155,11 @@ export function buildMySQLDatabaseSchmea({
         } as Constraint;
 
         constraintLookup[
-            constraint.TABLE_SCHEMA + '.' + constraint.CONSTRAINT_NAME
+            constraint.TABLE_SCHEMA +
+                '.' +
+                constraint.TABLE_NAME +
+                '.' +
+                constraint.CONSTRAINT_NAME
         ] = constraintObject;
 
         table.constraints.push(constraintObject);
@@ -166,6 +170,8 @@ export function buildMySQLDatabaseSchmea({
         const constraint =
             constraintLookup[
                 constraintColumn.TABLE_SCHEMA +
+                    '.' +
+                    constraintColumn.TABLE_NAME +
                     '.' +
                     constraintColumn.CONSTRAINT_NAME
             ];
