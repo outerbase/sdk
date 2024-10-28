@@ -153,145 +153,151 @@ export class CloudflareD1Connection extends SqliteBaseConnection {
         };
     }
 
+    public async fetchDatabaseSchema(): Promise<Database> {
+        const result = await super.fetchDatabaseSchema();
+        delete result.main['_cf_KV'];
+        return result;
+    }
+
     // For some reason, Cloudflare D1 does not support
     // cross join with pragma_table_info, so we have to
     // to expensive loops to get the same data
-    public async fetchDatabaseSchema(): Promise<Database> {
-        const exclude_tables = [
-            '_cf_kv',
-            'sqlite_schema',
-            'sqlite_temp_schema',
-        ];
+    // public async fetchDatabaseSchema(): Promise<Database> {
+    //     const exclude_tables = [
+    //         '_cf_kv',
+    //         'sqlite_schema',
+    //         'sqlite_temp_schema',
+    //     ];
 
-        const schemaMap: Record<string, Record<string, Table>> = {};
+    //     const schemaMap: Record<string, Record<string, Table>> = {};
 
-        const { data } = await this.query({
-            query: `PRAGMA table_list`,
-        });
+    //     const { data } = await this.query({
+    //         query: `PRAGMA table_list`,
+    //     });
 
-        const allTables = (
-            data as {
-                schema: string;
-                name: string;
-                type: string;
-            }[]
-        ).filter(
-            (row) =>
-                !row.name.startsWith('_lite') &&
-                !row.name.startsWith('sqlite_') &&
-                !exclude_tables.includes(row.name?.toLowerCase())
-        );
+    //     const allTables = (
+    //         data as {
+    //             schema: string;
+    //             name: string;
+    //             type: string;
+    //         }[]
+    //     ).filter(
+    //         (row) =>
+    //             !row.name.startsWith('_lite') &&
+    //             !row.name.startsWith('sqlite_') &&
+    //             !exclude_tables.includes(row.name?.toLowerCase())
+    //     );
 
-        for (const table of allTables) {
-            if (exclude_tables.includes(table.name?.toLowerCase())) continue;
+    //     for (const table of allTables) {
+    //         if (exclude_tables.includes(table.name?.toLowerCase())) continue;
 
-            const { data: pragmaData } = await this.query({
-                query: `PRAGMA table_info('${table.name}')`,
-            });
+    //         const { data: pragmaData } = await this.query({
+    //             query: `PRAGMA table_info('${table.name}')`,
+    //         });
 
-            const tableData = pragmaData as {
-                cid: number;
-                name: string;
-                type: string;
-                notnull: 0 | 1;
-                dflt_value: string | null;
-                pk: 0 | 1;
-            }[];
+    //         const tableData = pragmaData as {
+    //             cid: number;
+    //             name: string;
+    //             type: string;
+    //             notnull: 0 | 1;
+    //             dflt_value: string | null;
+    //             pk: 0 | 1;
+    //         }[];
 
-            const { data: fkConstraintResponse } = await this.query({
-                query: `PRAGMA foreign_key_list('${table.name}')`,
-            });
+    //         const { data: fkConstraintResponse } = await this.query({
+    //             query: `PRAGMA foreign_key_list('${table.name}')`,
+    //         });
 
-            const fkConstraintData = (
-                fkConstraintResponse as {
-                    id: number;
-                    seq: number;
-                    table: string;
-                    from: string;
-                    to: string;
-                    on_update: 'NO ACTION' | unknown;
-                    on_delete: 'NO ACTION' | unknown;
-                    match: 'NONE' | unknown;
-                }[]
-            ).filter(
-                (row) =>
-                    !row.table.startsWith('_lite') &&
-                    !row.table.startsWith('sqlite_')
-            );
+    //         const fkConstraintData = (
+    //             fkConstraintResponse as {
+    //                 id: number;
+    //                 seq: number;
+    //                 table: string;
+    //                 from: string;
+    //                 to: string;
+    //                 on_update: 'NO ACTION' | unknown;
+    //                 on_delete: 'NO ACTION' | unknown;
+    //                 match: 'NONE' | unknown;
+    //             }[]
+    //         ).filter(
+    //             (row) =>
+    //                 !row.table.startsWith('_lite') &&
+    //                 !row.table.startsWith('sqlite_')
+    //         );
 
-            const constraints: Constraint[] = [];
+    //         const constraints: Constraint[] = [];
 
-            if (fkConstraintData.length > 0) {
-                const fkConstraints: Constraint = {
-                    name: 'FOREIGN KEY',
-                    schema: table.schema,
-                    tableName: table.name,
-                    type: 'FOREIGN KEY',
-                    referenceSchema: table.schema,
-                    referenceTableName: fkConstraintData[0].table,
-                    columns: [],
-                };
+    //         if (fkConstraintData.length > 0) {
+    //             const fkConstraints: Constraint = {
+    //                 name: 'FOREIGN KEY',
+    //                 schema: table.schema,
+    //                 tableName: table.name,
+    //                 type: 'FOREIGN KEY',
+    //                 referenceSchema: table.schema,
+    //                 referenceTableName: fkConstraintData[0].table,
+    //                 columns: [],
+    //             };
 
-                fkConstraintData.forEach((fkConstraint) => {
-                    const currentConstraint: ConstraintColumn = {
-                        columnName: fkConstraint.from,
-                        referenceColumnName: fkConstraint.to,
-                    };
-                    fkConstraints.columns.push(currentConstraint);
-                });
-                constraints.push(fkConstraints);
-            }
+    //             fkConstraintData.forEach((fkConstraint) => {
+    //                 const currentConstraint: ConstraintColumn = {
+    //                     columnName: fkConstraint.from,
+    //                     referenceColumnName: fkConstraint.to,
+    //                 };
+    //                 fkConstraints.columns.push(currentConstraint);
+    //             });
+    //             constraints.push(fkConstraints);
+    //         }
 
-            const indexes: TableIndex[] = [];
-            const columns = tableData.map((column) => {
-                // Primary keys are ALWAYS considered indexes
-                if (column.pk === 1) {
-                    indexes.push({
-                        name: column.name,
-                        type: TableIndexType.PRIMARY,
-                        columns: [column.name],
-                    });
-                }
+    //         const indexes: TableIndex[] = [];
+    //         const columns = tableData.map((column) => {
+    //             // Primary keys are ALWAYS considered indexes
+    //             if (column.pk === 1) {
+    //                 indexes.push({
+    //                     name: column.name,
+    //                     type: TableIndexType.PRIMARY,
+    //                     columns: [column.name],
+    //                 });
+    //             }
 
-                const columnConstraint = fkConstraintData.find(
-                    (fk) => fk.from === column.name
-                );
+    //             const columnConstraint = fkConstraintData.find(
+    //                 (fk) => fk.from === column.name
+    //             );
 
-                const currentColumn: TableColumn = {
-                    name: column.name,
-                    position: column.cid,
-                    definition: {
-                        type: column.type,
-                        nullable: column.notnull === 0,
-                        default: column.dflt_value,
-                        primaryKey: column.pk === 1,
-                        unique: column.pk === 1,
-                        references: columnConstraint
-                            ? {
-                                  column: [columnConstraint.to],
-                                  table: columnConstraint.table,
-                              }
-                            : undefined,
-                    },
-                };
+    //             const currentColumn: TableColumn = {
+    //                 name: column.name,
+    //                 position: column.cid,
+    //                 definition: {
+    //                     type: column.type,
+    //                     nullable: column.notnull === 0,
+    //                     default: column.dflt_value,
+    //                     primaryKey: column.pk === 1,
+    //                     unique: column.pk === 1,
+    //                     references: columnConstraint
+    //                         ? {
+    //                               column: [columnConstraint.to],
+    //                               table: columnConstraint.table,
+    //                           }
+    //                         : undefined,
+    //                 },
+    //             };
 
-                return currentColumn;
-            });
+    //             return currentColumn;
+    //         });
 
-            const currentTable: Table = {
-                name: table.name,
-                columns: columns,
-                indexes: indexes,
-                constraints: constraints,
-            };
+    //         const currentTable: Table = {
+    //             name: table.name,
+    //             columns: columns,
+    //             indexes: indexes,
+    //             constraints: constraints,
+    //         };
 
-            if (!schemaMap[table.schema]) {
-                schemaMap[table.schema] = {};
-            }
+    //         if (!schemaMap[table.schema]) {
+    //             schemaMap[table.schema] = {};
+    //         }
 
-            schemaMap[table.schema][table.name] = currentTable;
-        }
+    //         schemaMap[table.schema][table.name] = currentTable;
+    //     }
 
-        return schemaMap;
-    }
+    //     return schemaMap;
+    // }
 }
