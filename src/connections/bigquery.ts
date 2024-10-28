@@ -1,7 +1,7 @@
 import { QueryType } from '../query-params';
 import { Query } from '../query';
 import { QueryResult } from './index';
-import { Database, Table, TableColumn } from '../models/database';
+import { Database, Schema, Table, TableColumn } from '../models/database';
 import { BigQueryDialect } from '../query-builder/dialects/bigquery';
 import { BigQuery } from '@google-cloud/bigquery';
 import {
@@ -12,45 +12,33 @@ import { SqlConnection } from './sql-base';
 
 export class BigQueryConnection extends SqlConnection {
     bigQuery: BigQuery;
-
-    // Default query type to positional for BigQuery
-    queryType = QueryType.positional;
-
-    // Default dialect for BigQuery
     dialect = new BigQueryDialect();
 
-    /**
-     * Creates a new BigQuery object.
-     *
-     * @param keyFileName - Path to a .json, .pem, or .p12 key file.
-     * @param region - Region for your dataset
-     */
     constructor(bigQuery: any) {
         super();
         this.bigQuery = bigQuery;
     }
 
-    /**
-     * Performs a connect action on the current Connection object.
-     * In this particular use case, BigQuery has no connect
-     * So this is a no-op
-     *
-     * @param details - Unused in the BigQuery scenario.
-     * @returns Promise<any>
-     */
     async connect(): Promise<any> {
         return Promise.resolve();
     }
 
-    /**
-     * Performs a disconnect action on the current Connection object.
-     * In this particular use case, BigQuery has no disconnect
-     * So this is a no-op
-     *
-     * @returns Promise<any>
-     */
     async disconnect(): Promise<any> {
         return Promise.resolve();
+    }
+
+    createTable(
+        schemaName: string | undefined,
+        tableName: string,
+        columns: TableColumn[]
+    ): Promise<QueryResult> {
+        // BigQuery does not support PRIMARY KEY. We can remove if here
+        const tempColumns = structuredClone(columns);
+        for (const column of tempColumns) {
+            delete column.definition.references;
+        }
+
+        return super.createTable(schemaName, tableName, tempColumns);
     }
 
     /**
@@ -86,70 +74,104 @@ export class BigQueryConnection extends SqlConnection {
         }
     }
 
-    createTable(
-        schemaName: string | undefined,
-        tableName: string,
-        columns: TableColumn[]
-    ): Promise<QueryResult> {
-        // BigQuery does not support PRIMARY KEY. We can remove if here
-        const tempColumns = structuredClone(columns);
-        for (const column of tempColumns) {
-            delete column.definition.primaryKey;
-            delete column.definition.references;
-        }
-
-        return super.createTable(schemaName, tableName, tempColumns);
-    }
-
     public async fetchDatabaseSchema(): Promise<Database> {
-        const database: Database = {};
+        const [datasetList] = await this.bigQuery.getDatasets();
 
-        // Fetch all datasets
-        const [datasets] = await this.bigQuery.getDatasets();
-        if (datasets.length === 0) {
-            throw new Error('No datasets found in the project.');
-        }
+        // Construct the query to get all the table in one go
+        const sql = datasetList
+            .map((dataset) => {
+                const schemaPath = `${this.bigQuery.projectId}.${dataset.id}`;
 
-        // Iterate over each dataset
-        for (const dataset of datasets) {
-            const datasetId = dataset.id;
-            if (!datasetId) continue;
+                return `(
+  SELECT
+    a.table_schema,
+    a.table_name,
+    a.column_name,
+    a.data_type,
+    b.constraint_schema,
+    b.constraint_name,
+    c.constraint_type
+  FROM \`${schemaPath}.INFORMATION_SCHEMA.COLUMNS\` AS a LEFT JOIN \`${schemaPath}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE\` AS b ON (
+    a.table_schema = b.table_schema AND
+    a.table_name = b.table_name AND
+    a.column_name = b.column_name
+  ) LEFT JOIN \`${schemaPath}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS\` AS c ON (
+    b.constraint_schema = c.constraint_schema AND
+    b.constraint_name = c.constraint_name
+  )
+)`;
+            })
+            .join(' UNION ALL ');
 
-            const [tables] = await dataset.getTables();
+        const { data } = await this.query<{
+            table_schema: string;
+            table_name: string;
+            column_name: string;
+            data_type: string;
+            constraint_schema: string;
+            constraint_name: string;
+            constraint_type: null | 'PRIMARY KEY' | 'FOREIGN KEY';
+        }>({ query: sql });
 
-            if (!database[datasetId]) {
-                database[datasetId] = {}; // Initialize schema in the database
+        // Group the database schema by table
+        const database: Database = datasetList.reduce(
+            (acc, dataset) => {
+                acc[dataset.id ?? ''] = {};
+                return acc;
+            },
+            {} as Record<string, Schema>
+        );
+
+        // Group the table by database
+        data.forEach((row) => {
+            const schema = database[row.table_schema];
+            if (!schema) {
+                return;
             }
 
-            for (const table of tables) {
-                const [metadata] = await table.getMetadata();
+            const table = schema[row.table_name] ?? {
+                name: row.table_name,
+                columns: [],
+                indexes: [],
+                constraints: [],
+            };
 
-                const columns = metadata.schema.fields.map(
-                    (field: any, index: number): TableColumn => {
-                        return {
-                            name: field.name,
-                            position: index,
-                            definition: {
-                                type: field.type,
-                                nullable: field.mode === 'NULLABLE',
-                                default: null, // BigQuery does not support default values in the schema metadata
-                                primaryKey: false, // BigQuery does not have a concept of primary keys
-                                unique: false, // BigQuery does not have a concept of unique constraints
-                            },
-                        };
-                    }
+            if (!schema[row.table_name]) {
+                schema[row.table_name] = table;
+            }
+
+            // Add the column to the table
+            table.columns.push({
+                name: row.column_name,
+                definition: {
+                    type: row.data_type,
+                    primaryKey: row.constraint_type === 'PRIMARY KEY',
+                },
+            });
+
+            // Add the constraint to the table
+            if (row.constraint_name && row.constraint_type === 'PRIMARY KEY') {
+                let constraint = table.constraints.find(
+                    (c) => c.name === row.constraint_name
                 );
 
-                const currentTable: Table = {
-                    name: table.id ?? '',
-                    columns: columns,
-                    indexes: [], // BigQuery does not support indexes
-                    constraints: [], // BigQuery does not support primary keys, foreign keys, or unique constraints
-                };
+                if (!constraint) {
+                    constraint = {
+                        name: row.constraint_name,
+                        schema: row.constraint_schema,
+                        tableName: row.table_name,
+                        type: row.constraint_type,
+                        columns: [],
+                    };
 
-                database[datasetId][table.id ?? ''] = currentTable;
+                    table.constraints.push(constraint);
+                }
+
+                constraint.columns.push({
+                    columnName: row.column_name,
+                });
             }
-        }
+        });
 
         return database;
     }

@@ -43,6 +43,10 @@ export abstract class AbstractDialect implements Dialect {
     protected AUTO_INCREMENT_KEYWORD = 'AUTO_INCREMENT';
     protected SUPPORT_COLUMN_COMMENT = true;
 
+    // BigQuery does not support enforced constraint
+    // This flag is primary for BigQuery only.
+    protected ALWAY_NO_ENFORCED_CONSTRAINT = false;
+
     escapeId(identifier: string): string {
         return identifier
             .split('.')
@@ -134,6 +138,15 @@ export abstract class AbstractDialect implements Dialect {
             }
             return merged;
         } else {
+            // BigQuery does not provide easy way to bind NULL value,
+            // so we will skip binding NULL values and use raw NULL in query
+            if (where.value === null) {
+                return [
+                    `${this.escapeId(where.column)} ${where.operator} NULL`,
+                    [],
+                ];
+            }
+
             return [
                 `${this.escapeId(where.column)} ${where.operator} ?`,
                 [where.value],
@@ -177,6 +190,10 @@ export abstract class AbstractDialect implements Dialect {
         const bindings: unknown[] = [];
 
         const setClauses = columns.map((column) => {
+            // BigQuery does not provide easy way to bind NULL value,
+            // so we will skip binding NULL values and use raw NULL in query
+            if (data[column] === null) return `${this.escapeId(column)} = NULL`;
+
             bindings.push(data[column]);
             return `${this.escapeId(column)} = ?`;
         });
@@ -199,11 +216,20 @@ export abstract class AbstractDialect implements Dialect {
         const bindings: unknown[] = [];
 
         const columnNames = columns.map((column) => {
-            bindings.push(data[column]);
+            // BigQuery does not provide easy way to bind NULL value,
+            // so we will skip binding NULL values and use raw NULL in query
+            if (data[column] !== null) bindings.push(data[column]);
             return this.escapeId(column);
         });
 
-        const placeholders = columns.map(() => '?').join(', ');
+        const placeholders = columns
+            .map((column) => {
+                // BigQuery does not provide easy way to bind NULL value,
+                // so we will skip binding NULL values and use raw NULL in query
+                if (data[column] === null) return 'NULL';
+                return '?';
+            })
+            .join(', ');
 
         return [
             `(${columnNames.join(', ')}) VALUES(${placeholders})`,
@@ -218,6 +244,9 @@ export abstract class AbstractDialect implements Dialect {
             def.nullable === false ? 'NOT NULL' : '',
             def.invisible ? 'INVISIBLE' : '', // This is for MySQL case
             def.primaryKey ? 'PRIMARY KEY' : '',
+            def.primaryKey && this.ALWAY_NO_ENFORCED_CONSTRAINT
+                ? 'NOT ENFORCED'
+                : '',
             def.unique ? 'UNIQUE' : '',
             def.default ? `DEFAULT ${this.escapeValue(def.default)}` : '',
             def.defaultExpression ? `DEFAULT (${def.defaultExpression})` : '',
@@ -278,7 +307,7 @@ export abstract class AbstractDialect implements Dialect {
         const tableName = builder.table;
 
         if (!tableName) {
-            throw new Error('Table name is required to build a UPDATE query.');
+            throw new Error('Table name is required to build a INSERT query.');
         }
 
         // Remove all empty value from object and check if there is any data to update
@@ -369,6 +398,7 @@ export abstract class AbstractDialect implements Dialect {
                 ref.match ? `MATCH ${ref.match}` : '',
                 ref.onDelete ? `ON DELETE ${ref.onDelete}` : '',
                 ref.onUpdate ? `ON UPDATE ${ref.onUpdate}` : '',
+                this.ALWAY_NO_ENFORCED_CONSTRAINT ? 'NOT ENFORCED' : '',
             ]
                 .filter(Boolean)
                 .join(' ');
