@@ -153,6 +153,18 @@ export class BigQueryConnection extends SqlConnection {
         );
     }
 
+    async delete(
+        schemaName: string,
+        tableName: string,
+        where: Record<string, unknown>
+    ): Promise<QueryResult> {
+        return super.delete(
+            schemaName,
+            tableName,
+            await this.autoCastingType(schemaName, tableName, where)
+        );
+    }
+
     async select(
         schemaName: string,
         tableName: string,
