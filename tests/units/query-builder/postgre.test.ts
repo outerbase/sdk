@@ -173,12 +173,12 @@ describe('Query Builder - Postgre Dialect', () => {
 
     test('Update query without where condition', () => {
         const { query, parameters } = qb()
-            .update({ last_name: 'Visal', first_name: 'In' })
+            .update({ last_name: 'Visal', banned: null, first_name: 'In' })
             .into('persons')
             .toQuery();
 
         expect(query).toBe(
-            'UPDATE "persons" SET "last_name" = ?, "first_name" = ?'
+            'UPDATE "persons" SET "last_name" = ?, "banned" = NULL, "first_name" = ?'
         );
         expect(parameters).toEqual(['Visal', 'In']);
     });
@@ -191,10 +191,11 @@ describe('Query Builder - Postgre Dialect', () => {
                 id: 123,
                 active: 1,
             })
+            .where('banned', 'IS', null)
             .toQuery();
 
         expect(query).toBe(
-            'UPDATE "persons" SET "last_name" = ?, "first_name" = ? WHERE "id" = ? AND "active" = ?'
+            'UPDATE "persons" SET "last_name" = ?, "first_name" = ? WHERE "id" = ? AND "active" = ? AND "banned" IS NULL'
         );
         expect(parameters).toEqual(['Visal', 'In', 123, 1]);
     });
@@ -211,12 +212,12 @@ describe('Query Builder - Postgre Dialect', () => {
 
     test('Insert data', () => {
         const { query, parameters } = qb()
-            .insert({ last_name: 'Visal', first_name: 'In' })
+            .insert({ last_name: 'Visal', banned: null, first_name: 'In' })
             .into('persons')
             .toQuery();
 
         expect(query).toBe(
-            'INSERT INTO "persons"("last_name", "first_name") VALUES(?, ?)'
+            'INSERT INTO "persons"("last_name", "banned", "first_name") VALUES(?, NULL, ?)'
         );
         expect(parameters).toEqual(['Visal', 'In']);
     });

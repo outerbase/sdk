@@ -194,6 +194,24 @@ describe('Database Connection', () => {
             expect(fkConstraint!.referenceTableName).toBe('teams');
             expect(fkConstraint!.columns[0].referenceColumnName).toBe('id');
         }
+
+        // Check the primary key
+        if (process.env.CONNECTION_TYPE !== 'mongodb') {
+            const pkList = Object.values(schemas[DEFAULT_SCHEMA])
+                .map((c) => c.constraints)
+                .flat()
+                .filter((c) => c.type === 'PRIMARY KEY')
+                .map((constraint) =>
+                    constraint.columns.map(
+                        (column) =>
+                            `${constraint.tableName}.${column.columnName}`
+                    )
+                )
+                .flat()
+                .sort();
+
+            expect(pkList).toEqual(['persons.id', 'teams.id']);
+        }
     });
 
     test('Select data', async () => {
@@ -361,6 +379,10 @@ describe('Database Connection', () => {
     });
 
     test('Rename table name', async () => {
+        // Skip BigQuery because you cannot rename table with
+        // primary key column
+        if (process.env.CONNECTION_TYPE === 'bigquery') return;
+
         const { error } = await db.renameTable(
             DEFAULT_SCHEMA,
             'persons',
@@ -374,12 +396,15 @@ describe('Database Connection', () => {
         });
 
         expect(cleanup(data).length).toEqual(2);
+
+        // Revert the operation back
+        await db.renameTable(DEFAULT_SCHEMA, 'people', 'persons');
     });
 
     test('Delete a row', async () => {
-        await db.delete(DEFAULT_SCHEMA, 'people', { id: 1 });
+        await db.delete(DEFAULT_SCHEMA, 'persons', { id: 1 });
 
-        const { data } = await db.select(DEFAULT_SCHEMA, 'people', {
+        const { data } = await db.select(DEFAULT_SCHEMA, 'persons', {
             orderBy: ['id'],
         });
 
