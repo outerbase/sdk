@@ -1,11 +1,11 @@
 import snowflake from 'snowflake-sdk';
-import { Query } from 'src/query';
+import { Query } from '../../query';
 import { QueryResult } from '..';
 import {
     createErrorResult,
     transformArrayBasedResult,
-} from 'src/utils/transformer';
-import { Database, TableColumn } from 'src/models/database';
+} from '../../utils/transformer';
+import { Database, TableColumn } from '../../models/database';
 import { PostgreBaseConnection } from './../postgre/base';
 import {
     buildMySQLDatabaseSchmea,
