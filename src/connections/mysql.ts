@@ -49,7 +49,7 @@ interface MySQLConstraintResult {
     CONSTRAINT_TYPE: string;
 }
 
-interface MySQLConstraintColumnResult {
+export interface MySQLConstraintColumnResult {
     TABLE_SCHEMA: string;
     TABLE_NAME: string;
     COLUMN_NAME: string;
