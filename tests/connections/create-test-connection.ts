@@ -1,6 +1,7 @@
 import { Client as PgClient } from 'pg';
 import { BigQuery } from '@google-cloud/bigquery';
 import duckDB from 'duckdb';
+import snowflake from 'snowflake-sdk';
 import { createClient as createTursoConnection } from '@libsql/client';
 import { createConnection as createMySqlConnection } from 'mysql2';
 import {
@@ -13,6 +14,7 @@ import {
     MongoDBConnection,
     DuckDBConnection,
     StarbaseConnection,
+    SnowflakeConnection,
 } from '../../src';
 import { MongoClient } from 'mongodb';
 
@@ -86,8 +88,8 @@ export default function createTestClient(): {
         const client = new DuckDBConnection(
             process.env.MOTHERDUCK_PATH
                 ? new duckDB.Database(process.env.MOTHERDUCK_PATH, {
-                      motherduck_token: process.env.MOTHERDUCK_TOKEN as string,
-                  })
+                    motherduck_token: process.env.MOTHERDUCK_TOKEN as string,
+                })
                 : new duckDB.Database(':memory:')
         );
         return { client, defaultSchema: 'main' };
@@ -98,6 +100,16 @@ export default function createTestClient(): {
         });
 
         return { client, defaultSchema: 'main' };
+    } else if (process.env.CONNECTION_TYPE === 'snowflake') {
+        const client = new SnowflakeConnection(snowflake.createConnection({
+            database: process.env.SNOWFLAKE_DATABASE as string,
+            username: process.env.SNOWFLAKE_USERNAME as string,
+            password: process.env.SNOWFLAKE_PASSWORD as string,
+            account: process.env.SNOWFLAKE_ACCOUNT_ID as string,
+            warehouse: process.env.SNOKWFLAKE_WAREHOUSE as string,
+        }));
+
+        return { client, defaultSchema: "PUBLIC" }
     }
 
     throw new Error('Invalid connection type');

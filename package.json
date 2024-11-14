@@ -37,15 +37,19 @@
         "handlebars": "^4.7.8"
     },
     "devDependencies": {
+        "@google-cloud/bigquery": "^7.9.0",
         "@jest/globals": "^29.7.0",
         "@libsql/client": "^0.14.0",
+        "@neondatabase/serverless": "^0.9.3",
         "@types/jest": "^29.5.13",
         "@types/node": "^20.12.12",
         "@types/ws": "^8.5.10",
         "dotenv": "^16.4.5",
+        "duckdb": "^1.1.1",
         "husky": "^9.0.11",
         "jest": "^29.7.0",
         "lint-staged": "^15.2.4",
+        "mongodb": "^6.9.0",
         "mysql2": "^3.11.3",
         "pg": "^8.13.0",
         "prettier": "^3.2.5",
@@ -53,10 +57,7 @@
         "ts-node": "^10.9.2",
         "tsconfig-paths": "^4.2.0",
         "typescript": "^5.4.5",
-        "@google-cloud/bigquery": "^7.9.0",
-        "@neondatabase/serverless": "^0.9.3",
-        "duckdb": "^1.1.1",
         "ws": "^8.17.1",
-        "mongodb": "^6.9.0"
+        "snowflake-sdk": "^1.15.0"
     }
 }

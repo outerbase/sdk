@@ -7,5 +7,6 @@ export * from './connections/mongodb';
 export * from './connections/mysql';
 export * from './connections/postgre/postgresql';
 export * from './connections/sqlite/turso';
+export * from './connections/snowflake/snowflake';
 export * from './client';
 export * from './models/decorators';
