@@ -41,15 +41,15 @@ describe('Database Connection', () => {
 
         const sql =
             process.env.CONNECTION_TYPE === 'mysql'
-                ? 'SELECT CONCAT(:hello, :world) AS testing_word'
-                : 'SELECT (:hello || :world) AS testing_word';
+                ? 'SELECT CONCAT(:hello, :world) AS TESTING_WORD'
+                : 'SELECT (:hello || :world) AS TESTING_WORD';
 
         const { data } = await db.raw(sql, {
             hello: 'hello ',
             world: 'world',
         });
 
-        expect(data).toEqual([{ testing_word: 'hello world' }]);
+        expect(data).toEqual([{ TESTING_WORD: 'hello world' }]);
     });
 
     test('Support positional placeholder', async () => {
