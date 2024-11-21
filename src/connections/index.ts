@@ -32,7 +32,10 @@ export abstract class Connection {
 
     // Retrieve metadata about the database, useful for introspection.
     abstract fetchDatabaseSchema(): Promise<Database>;
-    abstract raw(query: string): Promise<QueryResult>;
+    abstract raw(
+        query: string,
+        params?: Record<string, unknown> | unknown[]
+    ): Promise<QueryResult>;
     abstract testConnection(): Promise<{ error?: string }>;
 
     // Connection common operations that will be used by Outerbase

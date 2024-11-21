@@ -175,7 +175,7 @@ export class SnowflakeConnection extends PostgreBaseConnection {
         );
     }
 
-    async query<T = Record<string, unknown>>(
+    async internalQuery<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>> {
         try {

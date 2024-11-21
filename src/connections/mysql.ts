@@ -225,7 +225,7 @@ export class MySQLConnection extends SqlConnection {
         return super.mapDataType(dataType);
     }
 
-    async query<T = Record<string, unknown>>(
+    async internalQuery<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>> {
         try {
