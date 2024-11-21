@@ -3,22 +3,16 @@ import { QueryResult } from '..';
 import { Query } from '../../query';
 import { AbstractDialect } from './../../query-builder';
 import { PostgresDialect } from './../../query-builder/dialects/postgres';
-import { QueryType } from './../../query-params';
 import {
     createErrorResult,
     transformArrayBasedResult,
 } from './../../utils/transformer';
 import { PostgreBaseConnection } from './base';
 
-function replacePlaceholders(query: string): string {
-    let index = 1;
-    return query.replace(/\?/g, () => `$${index++}`);
-}
-
 export class PostgreSQLConnection extends PostgreBaseConnection {
     client: Client;
     dialect: AbstractDialect = new PostgresDialect();
-    queryType: QueryType = QueryType.positional;
+    protected numberedPlaceholder = true;
 
     constructor(pgClient: any) {
         super();
@@ -38,10 +32,7 @@ export class PostgreSQLConnection extends PostgreBaseConnection {
     ): Promise<QueryResult<T>> {
         try {
             const { rows, fields } = await this.client.query({
-                text:
-                    query.parameters?.length === 0
-                        ? query.query
-                        : replacePlaceholders(query.query),
+                text: query.query,
                 rowMode: 'array',
                 values: query.parameters as unknown[],
             });
