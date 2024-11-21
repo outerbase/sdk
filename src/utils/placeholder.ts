@@ -82,6 +82,13 @@ export function namedPlaceholder(
 
     const [sqlFragments, placeholders] = parts;
 
+    // If placeholders contains any number, then it's a mix of named and numbered placeholders
+    if (placeholders.some((p) => typeof p === 'number')) {
+        throw new Error(
+            'Mixing named and positional placeholder should throw error'
+        );
+    }
+
     for (let i = 0; i < sqlFragments.length; i++) {
         newQuery += sqlFragments[i];
 
@@ -92,6 +99,11 @@ export function namedPlaceholder(
                 newQuery += `$${i + 1}`;
             } else {
                 newQuery += `?`;
+            }
+
+            const placeholderValue = params[key];
+            if (placeholderValue === undefined) {
+                throw new Error(`Missing value for placeholder ${key}`);
             }
 
             bindings.push(params[key]);
@@ -118,6 +130,19 @@ export function toNumberedPlaceholders(
     let newQuery = '';
 
     const [sqlFragments, placeholders] = parts;
+
+    if (placeholders.length !== params.length) {
+        throw new Error(
+            'Number of positional placeholder should match with the number of values'
+        );
+    }
+
+    // Mixing named and numbered placeholders should throw error
+    if (placeholders.some((p) => typeof p === 'string')) {
+        throw new Error(
+            'Mixing named and positional placeholder should throw error'
+        );
+    }
 
     for (let i = 0; i < sqlFragments.length; i++) {
         newQuery += sqlFragments[i];

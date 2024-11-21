@@ -60,6 +60,37 @@ test('Named placeholder to number placeholder with string', () => {
     });
 });
 
+test('Named placeholder with missing value should throw an error', () => {
+    expect(() =>
+        namedPlaceholder('SELECT * FROM users WHERE id = :id AND age > :age', {
+            id: 1,
+        })
+    ).toThrow();
+});
+
+test('Number of positional placeholder should match with the number of values', () => {
+    expect(() =>
+        toNumberedPlaceholders('SELECT * FROM users WHERE id = ? AND age > ?', [
+            1,
+        ])
+    ).toThrow();
+});
+
+test('Mixing named and positional placeholder should throw error', () => {
+    expect(() =>
+        namedPlaceholder('SELECT * FROM users WHERE id = :id AND age > ?', {
+            id: 1,
+        })
+    ).toThrow();
+
+    expect(() => {
+        toNumberedPlaceholders(
+            `SELECT * FROM users WHERE id = ? AND age > :age`,
+            [1, 30]
+        );
+    }).toThrow();
+});
+
 test('Convert positional placeholder to numbered placeholder', () => {
     expect(
         toNumberedPlaceholders(
