@@ -67,7 +67,11 @@ export abstract class SqlConnection extends Connection {
         }
 
         // Named placeholder
-        const { query: newQuery, bindings } = namedPlaceholder(query, params!);
+        const { query: newQuery, bindings } = namedPlaceholder(
+            query,
+            params!,
+            this.numberedPlaceholder
+        );
         return await this.internalQuery({
             query: newQuery,
             parameters: bindings,

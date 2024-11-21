@@ -36,6 +36,34 @@ function cleanup(data: Record<string, unknown>[]) {
 }
 
 describe('Database Connection', () => {
+    test('Support named parameters', async () => {
+        if (process.env.CONNECTION_TYPE === 'mongo') return;
+
+        const sql =
+            process.env.CONNECTION_TYPE === 'mysql'
+                ? 'SELECT CONCAT(:hello, :world) AS testing_word'
+                : 'SELECT (:hello || :world) AS testing_word';
+
+        const { data } = await db.raw(sql, {
+            hello: 'hello ',
+            world: 'world',
+        });
+
+        expect(data).toEqual([{ testing_word: 'hello world' }]);
+    });
+
+    test('Support positional placeholder', async () => {
+        if (process.env.CONNECTION_TYPE === 'mongo') return;
+
+        const sql =
+            process.env.CONNECTION_TYPE === 'mysql'
+                ? 'SELECT CONCAT(?, ?) AS testing_word'
+                : 'SELECT (? || ?) AS testing_word';
+
+        const { data } = await db.raw(sql, ['hello ', 'world']);
+        expect(data).toEqual([{ testing_word: 'hello world' }]);
+    });
+
     test('Create table', async () => {
         const { error: createTableTeamError } = await db.createTable(
             DEFAULT_SCHEMA,

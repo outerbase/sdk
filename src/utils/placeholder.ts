@@ -28,7 +28,6 @@ function parse(query: string): [string] | [string[], (string | number)[]] {
         do {
             for (i = curpos, end = ppos.index; i < end; ++i) {
                 let chr = query.charCodeAt(i);
-                console.log(i, query[i], inQuote, qchr);
                 if (chr === BSLASH) escape = !escape;
                 else {
                     if (escape) {
@@ -90,7 +89,7 @@ export function namedPlaceholder(
             const key = placeholders[i];
 
             if (numbered) {
-                newQuery += `$${key}`;
+                newQuery += `$${i + 1}`;
             } else {
                 newQuery += `?`;
             }
