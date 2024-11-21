@@ -90,7 +90,7 @@ export class StarbaseConnection extends SqliteBaseConnection {
      * @param parameters - An object containing the parameters to be used in the query.
      * @returns Promise<{ data: any, error: Error | null }>
      */
-    async query<T = Record<string, unknown>>(
+    async internalQuery<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>> {
         if (!this.url) throw new Error('Starbase URL is not set');

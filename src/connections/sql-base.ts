@@ -16,7 +16,7 @@ export abstract class SqlConnection extends Connection {
     abstract dialect: AbstractDialect;
     protected numberedPlaceholder = false;
 
-    abstract query<T = Record<string, unknown>>(
+    abstract internalQuery<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>>;
 
@@ -24,6 +24,23 @@ export abstract class SqlConnection extends Connection {
         if (dataType === ColumnDataType.ID) return 'INTEGER';
         if (dataType === ColumnDataType.NUMBER) return 'INTEGER';
         return dataType;
+    }
+
+    /**
+     * This is a deprecated function, use raw instead. We keep this for
+     * backward compatibility.
+     *
+     * @deprecated
+     * @param query
+     * @returns
+     */
+    async query<T = Record<string, unknown>>(
+        query: Query
+    ): Promise<QueryResult<T>> {
+        return (await this.raw(
+            query.query,
+            query.parameters
+        )) as QueryResult<T>;
     }
 
     async raw(
@@ -51,7 +68,10 @@ export abstract class SqlConnection extends Connection {
 
         // Named placeholder
         const { query: newQuery, bindings } = namedPlaceholder(query, params!);
-        return await this.query({ query: newQuery, parameters: bindings });
+        return await this.internalQuery({
+            query: newQuery,
+            parameters: bindings,
+        });
     }
 
     async select(

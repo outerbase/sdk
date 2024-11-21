@@ -27,7 +27,7 @@ export class PostgreSQLConnection extends PostgreBaseConnection {
         await this.client.end();
     }
 
-    async query<T = Record<string, unknown>>(
+    async internalQuery<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>> {
         try {

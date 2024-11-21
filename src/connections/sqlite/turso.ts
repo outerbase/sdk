@@ -16,7 +16,7 @@ export class TursoConnection extends SqliteBaseConnection {
         this.client = client;
     }
 
-    async query<T = Record<string, unknown>>(
+    async internalQuery<T = Record<string, unknown>>(
         query: Query
     ): Promise<QueryResult<T>> {
         try {
