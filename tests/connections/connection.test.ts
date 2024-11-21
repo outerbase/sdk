@@ -41,15 +41,19 @@ describe('Database Connection', () => {
 
         const sql =
             process.env.CONNECTION_TYPE === 'mysql'
-                ? 'SELECT CONCAT(:hello, :world) AS TESTING_WORD'
-                : 'SELECT (:hello || :world) AS TESTING_WORD';
+                ? 'SELECT CONCAT(:hello, :world) AS testing_word'
+                : 'SELECT (:hello || :world) AS testing_word';
 
         const { data } = await db.raw(sql, {
             hello: 'hello ',
             world: 'world',
         });
 
-        expect(data).toEqual([{ TESTING_WORD: 'hello world' }]);
+        if (process.env.CONNECTION_TYPE === 'snowflake') {
+            expect(data).toEqual([{ TESTING_WORD: 'hello world' }]);
+        } else {
+            expect(data).toEqual([{ testing_word: 'hello world' }]);
+        }
     });
 
     test('Support positional placeholder', async () => {
