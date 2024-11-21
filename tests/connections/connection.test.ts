@@ -37,7 +37,7 @@ function cleanup(data: Record<string, unknown>[]) {
 
 describe('Database Connection', () => {
     test('Support named parameters', async () => {
-        if (process.env.CONNECTION_TYPE === 'mongo') return;
+        if (process.env.CONNECTION_TYPE === 'mongodb') return;
 
         const sql =
             process.env.CONNECTION_TYPE === 'mysql'
