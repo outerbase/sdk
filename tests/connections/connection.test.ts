@@ -53,7 +53,7 @@ describe('Database Connection', () => {
     });
 
     test('Support positional placeholder', async () => {
-        if (process.env.CONNECTION_TYPE === 'mongo') return;
+        if (process.env.CONNECTION_TYPE === 'mongodb') return;
 
         const sql =
             process.env.CONNECTION_TYPE === 'mysql'
