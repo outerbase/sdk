@@ -47,7 +47,7 @@ export abstract class SqlConnection extends Connection {
         query: string,
         params?: Record<string, unknown> | unknown[]
     ): Promise<QueryResult> {
-        if (!params) return await this.query({ query });
+        if (!params) return await this.internalQuery({ query });
 
         // Positional placeholder
         if (Array.isArray(params)) {
@@ -57,13 +57,13 @@ export abstract class SqlConnection extends Connection {
                     params
                 );
 
-                return await this.query({
+                return await this.internalQuery({
                     query: newQuery,
                     parameters: bindings,
                 });
             }
 
-            return await this.query({ query, parameters: params });
+            return await this.internalQuery({ query, parameters: params });
         }
 
         // Named placeholder
