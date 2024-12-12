@@ -332,6 +332,9 @@ export abstract class SqlConnection extends Connection {
             await this.disconnect();
             return { error: error ? error.message : undefined };
         } catch (error) {
+            if (error instanceof Error) {
+                return { error: error.message };
+            }
             return { error: 'Unexpected error' };
         }
     }
