@@ -8,10 +8,13 @@ jest.setTimeout(10000);
 beforeAll(async () => {
     await db.connect();
 
-    // It is better to cleanup here in case any previous test failed
-    await db.dropTable(DEFAULT_SCHEMA, 'persons');
-    await db.dropTable(DEFAULT_SCHEMA, 'people');
-    await db.dropTable(DEFAULT_SCHEMA, 'teams');
+    // Clean up all tables
+    const schemaList = await db.fetchDatabaseSchema();
+    const currentSchema = schemaList[DEFAULT_SCHEMA] ?? {};
+
+    for (const table of Object.values(currentSchema)) {
+        await db.dropTable(DEFAULT_SCHEMA, table.name)
+    }
 });
 
 afterAll(async () => {
