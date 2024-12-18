@@ -10,7 +10,7 @@ beforeAll(async () => {
 
     // Clean up all tables
     const schemaList = await db.fetchDatabaseSchema();
-    const currentSchema = schemaList[DEFAULT_SCHEMA];
+    const currentSchema = schemaList[DEFAULT_SCHEMA] ?? {};
 
     for (const table of Object.values(currentSchema)) {
         await db.dropTable(DEFAULT_SCHEMA, table.name)
