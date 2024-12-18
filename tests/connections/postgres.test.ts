@@ -2,12 +2,10 @@ import createTestClient from './create-test-connection';
 const { client: db, defaultSchema: DEFAULT_SCHEMA } = createTestClient();
 
 beforeAll(async () => {
-    if (process.env.CONNECTION_TYPE !== 'postgres') return;
     await db.connect();
 });
 
 afterAll(async () => {
-    if (process.env.CONNECTION_TYPE !== 'postgres') return;
     await db.disconnect();
 });
 
