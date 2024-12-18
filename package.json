@@ -17,7 +17,7 @@
         "prepack": "npm run build",
         "prepare": "husky install",
         "test": "jest --verbose --testPathPattern=unit",
-        "test:connection": "jest --verbose --testPathPattern=connection",
+        "test:connection": "jest --verbose --testPathPattern=connection --runInBand",
         "test:watch": "jest --watch",
         "test:coverage": "jest --coverage --testPathPattern=unit"
     },

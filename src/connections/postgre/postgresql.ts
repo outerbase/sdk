@@ -1,4 +1,4 @@
-import { Client } from 'pg';
+import { Client, types } from 'pg';
 import { QueryResult } from '..';
 import { Query } from '../../query';
 import { AbstractDialect } from './../../query-builder';
@@ -17,6 +17,13 @@ export class PostgreSQLConnection extends PostgreBaseConnection {
     constructor(pgClient: any) {
         super();
         this.client = pgClient;
+
+        this.client.setTypeParser(types.builtins.TIMESTAMP, str => str)
+        this.client.setTypeParser(types.builtins.DATE, str => str)
+        this.client.setTypeParser(types.builtins.TIMESTAMPTZ, str => str)
+        this.client.setTypeParser(types.builtins.TIME, str => str)
+        this.client.setTypeParser(types.builtins.TIMETZ, str => str)
+        this.client.setTypeParser(types.builtins.JSON, str => str);
     }
 
     async connect() {
