@@ -127,10 +127,10 @@ export function buildMySQLDatabaseSchmea({
 
         columnLookup[
             column.TABLE_SCHEMA +
-                '.' +
-                column.TABLE_NAME +
-                '.' +
-                column.COLUMN_NAME
+            '.' +
+            column.TABLE_NAME +
+            '.' +
+            column.COLUMN_NAME
         ] = columnObject;
 
         table.columns.push(columnObject);
@@ -156,10 +156,10 @@ export function buildMySQLDatabaseSchmea({
 
         constraintLookup[
             constraint.TABLE_SCHEMA +
-                '.' +
-                constraint.TABLE_NAME +
-                '.' +
-                constraint.CONSTRAINT_NAME
+            '.' +
+            constraint.TABLE_NAME +
+            '.' +
+            constraint.CONSTRAINT_NAME
         ] = constraintObject;
 
         table.constraints.push(constraintObject);
@@ -169,22 +169,22 @@ export function buildMySQLDatabaseSchmea({
     for (const constraintColumn of constraintColumnsList) {
         const constraint =
             constraintLookup[
-                constraintColumn.TABLE_SCHEMA +
-                    '.' +
-                    constraintColumn.TABLE_NAME +
-                    '.' +
-                    constraintColumn.CONSTRAINT_NAME
+            constraintColumn.TABLE_SCHEMA +
+            '.' +
+            constraintColumn.TABLE_NAME +
+            '.' +
+            constraintColumn.CONSTRAINT_NAME
             ];
 
         if (!constraint) continue;
 
         const currentColumn =
             columnLookup[
-                constraintColumn.TABLE_SCHEMA +
-                    '.' +
-                    constraintColumn.TABLE_NAME +
-                    '.' +
-                    constraintColumn.COLUMN_NAME
+            constraintColumn.TABLE_SCHEMA +
+            '.' +
+            constraintColumn.TABLE_NAME +
+            '.' +
+            constraintColumn.COLUMN_NAME
             ];
         if (currentColumn && constraintColumn.REFERENCED_COLUMN_NAME) {
             currentColumn.definition.references = {
@@ -377,7 +377,7 @@ export class MySQLConnection extends SqlConnection {
         );
     }
 
-    async connect(): Promise<any> {}
+    async connect(): Promise<any> { }
     async disconnect(): Promise<any> {
         this.conn.destroy();
     }
