@@ -21,15 +21,10 @@
 
 ## What is Outerbase SDK?
 
-Outerbase SDK is a way to interact with your database in a SQL-like manner. This library contains the following primary features:
+The Outerbase SDK is like a building block for creating custom database GUIs. It standardizes the connection interface, making it straightforward and easy to use.
 
-- [**Query Builder**](#chaining-query-operations): Execute queries on your database easily.
-- [**Saved Queries**](#run-saved-outerbase-queries): Run any saved queries from Outerbase in one line.
-- [**Database Model Generator**](#generate-models-from-your-database): Create Typescript models from your database schema.
 
-## Usage
-
-### Install with a package manager
+## Install with a package manager
 
 **npm**
 ```
@@ -41,171 +36,253 @@ npm i @outerbase/sdk
 pnpm add @outerbase/sdk
 ```
 
-### Initialize a connection to your database
 
-This library currently supports connecting to Outerbase connections, which supports **Postgres**, **MySQL**, **SQLite**, **SQL Server**, **Clickhouse** and more with direct integrations with platforms such as [DigitalOcean](https://digitalocean.com), [Neon](https://neon.tech), and [Turso](https://turso.tech).
+## Connection
 
-First we start by creating a connection object which is intended to be extensible where contributors can create a variety of connection types to other databases or additional third party tools to interact with. In this example we use the included `OuterbaseConnection` class.
 
-With a connection object instantiated we can create a new database instance to interact with that connection interface.
 
-```ts
-import { Outerbase, OuterbaseConnection } from '@outerbase/sdk'
+The Outerbase SDK supports Postgres, MySQL, SQLite, Motherduck, BigQuery, and MongoDB. It wraps, not manages, your connections, providing a unified interface for easy interaction.
 
-// ...
+#### Postgres
 
-const connection: OuterbaseConnection = new OuterbaseConnection('INSERT_API_TOKEN');
-const db = Outerbase(connection);
+```typescript
+import { PostgreSQLConnection } from "@outerbase/sdk";
+import { Client } from 'pg';
+
+const db = new PostgreSQLConnection(
+    new PgClient({
+        host: "localhost",
+        user: "postgres",
+        password: "postgres",
+        database: "postgres",
+        port: 5432
+    })
+);
 ```
 
-#### How to create an Outerbase Connection token
+#### MySQL
 
-When using the `OuterbaseConnection` class, you are required to provide an API token from Outerbase.
+```typescript
+import { MySQLConnection } from "@outerbase/sdk";
+import { createConnection } from 'mysql2';
 
-1. Create an account on [Outerbase](https://app.outerbase.com/)
-2. Attach the database you want to use
-3. Open your Base and click on _Base Settings_ on the left menu
-4. Select the _General_ section
-5. Underneath the _API Token_ section you will see a button to "Generate API Key". Click that and copy your API token to use it in declaring a new `OuterbaseConnection` object.
+const db = new MySQLConnection(
+    createConnection({
+        host: "localhost",
+        user: "root",
+        password: "123456",
+        database: "chinook",
+        port: 3306,
+    })
+);
+```
+## Connection Interface
 
-### Chaining query operations
+### Get Schema
 
-Instead of writing SQL directly in your code you can chain commands together that create simple and complex SQL queries for you.
+```typescript
+import { PostgreSQLConnection } from "@outerbase/sdk";
+import { Client } from 'pg';
 
-After you construct the series of SQL-like operations you intend to execute, you should end it by calling the `.query()` function call which will send the request to the database for exection.
+const db = new PostgreSQLConnection(new PgClient({...}));
+await db.connect();
 
-#### Select data from database
-```ts
-let { data, error } = await db
-    .selectFrom([
-        {
-            schema: 'public', // <- Optional
-            table: 'person',
-            columns: ['first_name', 'last_name', 'position', 'avatar'],
-        },
-        { table: 'users', columns: ['email'] },
-    ])
-    .leftJoin('users', equalsColumn('person.user_id', 'users.id'))
-    .where(isNot('first_name', null))
-    .where(equals('last_name', 'Doe'))
-    .where(equalsNumber('avatar', 0))
-    .limit(10)
-    .offset(0)
-    .orderBy(descending('first_name'))
-    .asClass(Person)
-    .query()
+// Get database schema
+await db.fetchDatabaseSchema();
+
+await db.disconnect();
 ```
 
-#### Insert data into a table
-```ts
-let { data } = await db
-    .insert({ first_name: 'John', last_name: 'Doe', position: 'Developer', avatar: 0 })
-    .into('person')
-    .returning(['id'])
-    .query();
-```
+### Create Table
 
-#### Update data in a table
-```ts
-let { data } = await db
-    .update({ first_name: 'Johnny' })
-    .into('person')
-    .where(equals('last_name', 'Doe'))
-    .query();
-```
-
-#### Delete data from a table
-```ts
-let { data } = await db
-    .deleteFrom('person')
-    .where(equals('id', '1234'))
-    .query();
-```
-
-> IMPORTANT! To prevent your code from performing actions you do not want to happen, such as deleting data, make sure the database user role you provide in Outerbase has restricted scopes.
-
-### Executing raw SQL queries
-
-Executing raw SQL queries against your database is possible by passing a valid SQL statement into a database instance created by the library.
-
-```ts
-let { data, error } = await db.queryRaw('SELECT * FROM person');
-```
-
-You can optionally pass in an array of parameters for sanitizing your SQL inputs.
-
-```ts
-let { data, error } = await db.queryRaw('SELECT * FROM person WHERE id=:id', { id: "123" });
-```
-
-### Run saved Outerbase queries
-
-When you save queries to your Outerbase bases you can then directly execute those queries from this library. This enables you to make modifications to your query without having to alter and redeploy your codebase, and instead just make the modifications via Outerbase directly for convenience.
-
-```ts
-let { data, error } = await connection.runSavedQuery(
-    'ea72da5f-5f7a-4bab-9f72-ffffffffffff'
-)
-```
-
-Note that this is an exported function directly from the `OuterbaseConnection` class.
-
-### Map results to class models
-
-As you construct a SQL statement to be ran you can also pass in a class type you would like the output to attempt to map to by using `.asClass(ClassName)`. In the below example we pass in `Person` as the class type and the query builder will know to respond either as a single `Person` object or a `Person[]` array based on the contents of the response.
-
-```ts
-let { data, error } = await db
-    .asClass(Person)
-    .queryRaw('SELECT * FROM person');
-```
-
-If your response cannot map to that class type based on property mismatch, you may not see any data being returned in your model.
-
-### Generate models from your database
-
-> NOTE: This feature is still in early development.
-
-If your database is connected to Outerbase, then you can add a command to your `package.json` file in your project that can be executed to sync and download your database tables as Typescript models. These models are usable in your project and in many cases should map directly to the responses provided by the query builder library.
-
-To get started first add the following to your `package.json` file:
-
-##### package.json
-```ts
-"scripts": {
-    "sync-models": "sync-database-models PATH=./folder/path/to/add/models API_KEY=outerbase_api_key"
-}
-```
-
-Based on your `API_KEY` value the command will know how to fetch your database schema from Outerbase. It will convert your schema into various Typescript models and save each file to the path you provide. To run this command and generate the files you can execute the command as it is written above by typing:
-
-```
-npm run sync-models
-```
-
-The output produces a series of files, one per database table, that is a Typescript class for your queries to map their results to and you can access programatically easily. A sample output looks like the following where each property maps to a column in your database.
-
-```ts
-export interface PersonType {
-    firstName: string;
-    lastName: string;
-    position?: string;
-    avatar?: number;
-}
-
-export class Person implements PersonType {
-    firstName: string;
-    lastName: string;
-    position?: string;
-    avatar?: number;
-    
-    constructor(data: any) {
-        this.firstName = data.first_name;
-        this.lastName = data.last_name;
-        this.position = data.position;
-        this.avatar = data.avatar;
+```typescript
+await db.createTable("public", "users", [
+    { name: "id", definition: { type: "INTEGER", primaryKey: true } },
+    { name: "name", definition: { type: "STRING" } },
+    {
+        name: "referral_id",
+        definition: {
+            type: "INTEGER",
+            references: { // Foreign Key
+                column: ["id"],
+                table: "users"
+            }
+        }
     }
-}
+]);
+```
+
+### Drop Table
+
+```typescript
+await db.dropTable("public", "users");
+```
+
+### Rename Table
+
+```typescript
+await db.renameTable("public", "users", "people");
+```
+
+### Add Column
+
+### Drop Column
+
+### Rename Column
+
+### Select
+
+```typescript
+const { data, headers } = await db.select("public", "persons");
+console.log(data);
+/*
+[
+  { "id": 1, "name": "Brayden" },
+  { "id": 2, "name": "Brandon" }
+]
+*/
+
+console.log(headers);
+/*
+[
+  { "name": "id", "displayName": "id" },
+  { "name": "name", "displayName": "name" },
+]
+*/
+```
+
+
+The select comes with several limited options
+
+```typescript
+const { data } = await db.select("public", "persons", {
+    where: { name: "id", operator: ">", value: 10 },
+    orderBy: "id",
+    limit: 20,
+    offset: 10
+});
+```
+
+### Delete
+
+```typescript
+await db.delete("public", "users", { id: 1 });
+```
+
+### Insert
+
+```typescript
+await db.insert("public", "users", { id: 1, name: "Brayden" });
+```
+
+### Update
+
+```typescript
+await db.insert(
+    "public", "users",
+    { name: "Brayden Junior" },
+    { id: 1 }
+);
+```
+
+### Raw
+
+```typescript
+const { data, headers } = await db.raw("SELECT 1 AS a, 2 AS a;");
+
+console.log(data);
+/*
+Outerbase SQL detect header name collision and rename to other
+[
+  { "a": 1, "a1": 2 }
+]
+*/
+
+console.log(headers);
+/*
+[
+  { "name": "a", displayName: "a" },
+  { "name": "a1", displayName: "a" }
+]
+*/
+```
+
+## Query Builder
+
+Our connection interface offers a streamlined, unified API across database drivers. For complex query construction, you can use `raw` SQL or wrap your connection with our query builder.
+
+```typescript
+import { PostgreSQLConnection, Outerbase } from "@outerbase/sdk";
+import { Client } from 'pg';
+
+const db = new PostgreSQLConnection(new PgClient({...}));
+await db.connect();
+
+// Using our query builder
+const qb = Outerbase(db);
+
+const builder = qb.createTable('persons')
+    .column('id', { type: 'SERIAL', primaryKey: true })
+    .column('first_name', { type: 'VARCHAR(50)' })
+    .column('last_name', { type: 'VARCHAR(50)' });
+
+// If you want to preview your SQL query
+console.log(builder.toQuery());
+// { query: 'CREATE TABLE IF NOT EXISTS "persons" ("id" SERIAL PRIMARY KEY, "first_name" VARCHAR(50), "last_name" VARCHAR(50))' }
+
+// Or you can directly execute it
+await builder.query();
+```
+
+More Examples:
+
+```typescript
+// Insert
+await qb.insert({
+    last_name: 'Visal',
+    first_name: 'In' 
+}).into('persons').query();
+
+// Select
+const { data } = await qb
+    .select('id', 'name')
+    .from('users')
+    .where({ name: 'Brayden' });
+
+const { data } = await qb
+    .select('id', 'name')
+    .from('users')
+    .where('name', 'LIKE', '%Bray%')
+    .limit(10)
+    .offset(5)
+    .query();
+
+qb.select('id', 'name')
+    .from('users')
+    .where(
+        q.or(
+            q.where('age', '>', 18),
+            q.where('gender', '=', 'female'),
+            q.and(q.where('active', '=', 1), q.where('deleted', '=', 0))
+        )
+    )
+    .toQuery();
+
+/*
+{
+    'query': 'SELECT "id", "name" FROM "users" WHERE "age" > ? OR "gender" = ? OR ("active" = ? AND "deleted" = ?)'
+    'parameters': [18, 'female', 1, 0]
+} 
+*/
+
+// Update
+await qb()
+    .update({ last_name: 'Visal', first_name: 'In' })
+    .into('persons').
+    .where({
+        id: 123,
+        active: 1,
+    }).query();
 ```
 
 ## Contributing
