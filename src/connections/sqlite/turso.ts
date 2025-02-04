@@ -5,7 +5,11 @@ import { QueryResult } from '..';
 import { Query } from '../../query';
 import { PostgresDialect } from './../../query-builder/dialects/postgres';
 import { SqliteBaseConnection } from './base';
-import { transformArrayBasedResult } from './../../utils/transformer';
+import {
+    createErrorResult,
+    transformFromSdkTransform,
+} from './../../utils/transformer';
+import { transformTursoResult } from '@outerbase/sdk-transform';
 
 export class TursoConnection extends SqliteBaseConnection {
     client: Client;
@@ -25,26 +29,12 @@ export class TursoConnection extends SqliteBaseConnection {
                 args: (query.parameters ?? []) as InValue[],
             });
 
-            return transformArrayBasedResult(
-                result.columns,
-                (header) => ({ name: header }),
-                result.rows as unknown as unknown[][]
-            ) as QueryResult<T>;
+            return transformFromSdkTransform(transformTursoResult(result));
         } catch (e) {
             if (e instanceof Error) {
-                return {
-                    data: [],
-                    error: { message: e.message, name: e.name },
-                    query: query.query,
-                    headers: [],
-                };
+                return createErrorResult(e.message) as QueryResult<T>;
             } else {
-                return {
-                    data: [],
-                    error: { message: 'Unknown error', name: 'Unknown' },
-                    query: query.query,
-                    headers: [],
-                };
+                return createErrorResult('Unknown error') as QueryResult<T>;
             }
         }
     }

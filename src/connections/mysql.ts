@@ -7,20 +7,15 @@ import {
 import { SqlConnection } from './sql-base';
 import { Query } from '../query';
 import { QueryType } from '../query-params';
-import {
-    Constraint,
-    Database,
-    Table,
-    TableColumn,
-    TableColumnDefinition,
-} from './../models/database';
+import { Constraint, Database, Table, TableColumn } from './../models/database';
 import { MySQLDialect } from './../query-builder/dialects/mysql';
 import {
     createErrorResult,
-    transformArrayBasedResult,
+    transformFromSdkTransform,
 } from './../utils/transformer';
 import { QueryResult } from '.';
 import { ColumnDataType } from '../query-builder';
+import { transformMySQLResult } from '@outerbase/sdk-transform';
 
 interface MySQLSchemaResult {
     SCHEMA_NAME: string;
@@ -127,10 +122,10 @@ export function buildMySQLDatabaseSchmea({
 
         columnLookup[
             column.TABLE_SCHEMA +
-            '.' +
-            column.TABLE_NAME +
-            '.' +
-            column.COLUMN_NAME
+                '.' +
+                column.TABLE_NAME +
+                '.' +
+                column.COLUMN_NAME
         ] = columnObject;
 
         table.columns.push(columnObject);
@@ -156,10 +151,10 @@ export function buildMySQLDatabaseSchmea({
 
         constraintLookup[
             constraint.TABLE_SCHEMA +
-            '.' +
-            constraint.TABLE_NAME +
-            '.' +
-            constraint.CONSTRAINT_NAME
+                '.' +
+                constraint.TABLE_NAME +
+                '.' +
+                constraint.CONSTRAINT_NAME
         ] = constraintObject;
 
         table.constraints.push(constraintObject);
@@ -169,22 +164,22 @@ export function buildMySQLDatabaseSchmea({
     for (const constraintColumn of constraintColumnsList) {
         const constraint =
             constraintLookup[
-            constraintColumn.TABLE_SCHEMA +
-            '.' +
-            constraintColumn.TABLE_NAME +
-            '.' +
-            constraintColumn.CONSTRAINT_NAME
+                constraintColumn.TABLE_SCHEMA +
+                    '.' +
+                    constraintColumn.TABLE_NAME +
+                    '.' +
+                    constraintColumn.CONSTRAINT_NAME
             ];
 
         if (!constraint) continue;
 
         const currentColumn =
             columnLookup[
-            constraintColumn.TABLE_SCHEMA +
-            '.' +
-            constraintColumn.TABLE_NAME +
-            '.' +
-            constraintColumn.COLUMN_NAME
+                constraintColumn.TABLE_SCHEMA +
+                    '.' +
+                    constraintColumn.TABLE_NAME +
+                    '.' +
+                    constraintColumn.COLUMN_NAME
             ];
         if (currentColumn && constraintColumn.REFERENCED_COLUMN_NAME) {
             currentColumn.definition.references = {
@@ -254,18 +249,11 @@ export class MySQLConnection extends SqlConnection {
             );
 
             if (error) {
-                return createErrorResult(error.message) as QueryResult<T>;
+                return createErrorResult<T>(error.message);
             } else {
-                return transformArrayBasedResult(
-                    fields,
-                    (header) => {
-                        return {
-                            name: header.name,
-                            tableName: header.table,
-                        };
-                    },
-                    rows as unknown[][]
-                ) as QueryResult<T>;
+                return transformFromSdkTransform(
+                    transformMySQLResult([rows, fields])
+                );
             }
         } catch {
             return createErrorResult('Unknown error') as QueryResult<T>;
@@ -377,7 +365,7 @@ export class MySQLConnection extends SqlConnection {
         );
     }
 
-    async connect(): Promise<any> { }
+    async connect(): Promise<any> {}
     async disconnect(): Promise<any> {
         this.conn.destroy();
     }

@@ -1,23 +1,17 @@
+import { ColumnHeader, ResultSet } from '@outerbase/sdk-transform';
 import {
     Database,
     TableColumn,
     TableColumnDefinition,
 } from '../models/database';
 
-export interface QueryResultHeader {
-    name: string;
-    displayName: string;
-    type?: string;
-    tableName?: string;
-}
-export interface QueryResult<T = Record<string, unknown>> {
+export interface QueryResult<T = Record<string, unknown>>
+    extends Omit<ResultSet, 'rows'> {
     data: T[];
     count?: number;
-    headers: QueryResultHeader[];
     error: Error | null;
     query: string;
 }
-
 export interface ConnectionSelectOptions {
     where?: { name: string; value: unknown; operator: string }[];
     orderBy?: (string | [string, 'ASC' | 'DESC'])[];

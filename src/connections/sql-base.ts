@@ -161,7 +161,18 @@ export abstract class SqlConnection extends Connection {
             );
         }
 
-        return { data: [], error: null, query: '', headers: [] };
+        return {
+            data: [],
+            error: null,
+            query: '',
+            headers: [],
+            stat: {
+                queryDurationMs: 0,
+                rowsAffected: 0,
+                rowsRead: 0,
+                rowsWritten: 0,
+            },
+        };
     }
 
     async update(
