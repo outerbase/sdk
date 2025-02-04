@@ -1,13 +1,14 @@
-import { Client, types } from 'pg';
+import { Client } from 'pg';
 import { QueryResult } from '..';
 import { Query } from '../../query';
 import { AbstractDialect } from './../../query-builder';
 import { PostgresDialect } from './../../query-builder/dialects/postgres';
 import {
     createErrorResult,
-    transformArrayBasedResult,
+    transformFromSdkTransform,
 } from './../../utils/transformer';
 import { PostgreBaseConnection } from './base';
+import { setPgParser, transformPgResult } from '@outerbase/sdk-transform';
 
 export class PostgreSQLConnection extends PostgreBaseConnection {
     client: Client;
@@ -17,13 +18,7 @@ export class PostgreSQLConnection extends PostgreBaseConnection {
     constructor(pgClient: any) {
         super();
         this.client = pgClient;
-
-        this.client.setTypeParser(types.builtins.TIMESTAMP, str => str)
-        this.client.setTypeParser(types.builtins.DATE, str => str)
-        this.client.setTypeParser(types.builtins.TIMESTAMPTZ, str => str)
-        this.client.setTypeParser(types.builtins.TIME, str => str)
-        this.client.setTypeParser(types.builtins.TIMETZ, str => str)
-        this.client.setTypeParser(types.builtins.JSON, str => str);
+        setPgParser(this.client);
     }
 
     async connect() {
@@ -38,24 +33,18 @@ export class PostgreSQLConnection extends PostgreBaseConnection {
         query: Query
     ): Promise<QueryResult<T>> {
         try {
-            const { rows, fields } = await this.client.query({
+            const result = await this.client.query({
                 text: query.query,
                 rowMode: 'array',
                 values: query.parameters as unknown[],
             });
 
-            return transformArrayBasedResult(
-                fields,
-                (field) => ({
-                    name: field.name,
-                }),
-                rows
-            ) as QueryResult<T>;
+            return transformFromSdkTransform(transformPgResult(result));
         } catch (e) {
             if (e instanceof Error) {
-                return createErrorResult(e.message) as QueryResult<T>;
+                return createErrorResult<T>(e.message);
             }
-            return createErrorResult('Unknown error') as QueryResult<T>;
+            return createErrorResult<T>('Unknown error');
         }
     }
 }

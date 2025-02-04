@@ -3,7 +3,7 @@ import { Query } from '../../query';
 import { QueryResult } from '..';
 import {
     createErrorResult,
-    transformArrayBasedResult,
+    transformFromSdkTransform,
 } from '../../utils/transformer';
 import { Database, TableColumn } from '../../models/database';
 import { PostgreBaseConnection } from './../postgre/base';
@@ -11,6 +11,8 @@ import {
     buildMySQLDatabaseSchmea,
     MySQLConstraintColumnResult,
 } from '../mysql';
+
+import { transformArrayBasedResult } from '@outerbase/sdk-transform';
 
 export class SnowflakeConnection extends PostgreBaseConnection {
     protected db: snowflake.Connection;
@@ -199,15 +201,35 @@ export class SnowflakeConnection extends PostgreBaseConnection {
             });
 
             if (err) return createErrorResult(err.message) as QueryResult<T>;
-            return transformArrayBasedResult(
-                headers,
-                (header) => ({
-                    name: header,
+            return transformFromSdkTransform({
+                ...transformArrayBasedResult({
+                    headers,
+                    rows,
+                    headersMapper: (header) => ({
+                        name: header,
+                        displayName: header,
+                        originalType: null,
+                    }),
                 }),
-                rows
-            ) as QueryResult<T>;
+                stat: {
+                    queryDurationMs: 0,
+                    rowsAffected: 0,
+                    rowsRead: 0,
+                    rowsWritten: 0,
+                },
+            }) as QueryResult<T>;
         } catch (e) {
             return createErrorResult('Unknown error') as QueryResult<T>;
         }
     }
 }
+
+/*
+                 headers,
+                    (header) => ({
+                        name: header,
+                        displayName: header,
+                        originalType: null,
+                    }),
+                    rows
+*/

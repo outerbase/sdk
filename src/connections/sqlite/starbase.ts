@@ -5,8 +5,10 @@ import { SqliteBaseConnection } from './base';
 import { QueryResult } from '..';
 import {
     createErrorResult,
-    transformArrayBasedResult,
+    transformFromSdkTransform,
 } from '../../utils/transformer';
+
+import { transformStarbaseResult } from '@outerbase/sdk-transform';
 
 export type StarbaseConnectionDetails = {
     url: string;
@@ -120,11 +122,7 @@ export class StarbaseConnection extends SqliteBaseConnection {
                 ? json.result[0]
                 : json.result;
 
-            return transformArrayBasedResult(
-                items.columns,
-                (header) => ({ name: header }),
-                items.rows
-            ) as QueryResult<T>;
+            return transformFromSdkTransform(transformStarbaseResult(items));
         }
 
         return createErrorResult('ss') as QueryResult<T>;
