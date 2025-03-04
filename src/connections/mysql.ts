@@ -1,5 +1,6 @@
 import {
     FieldPacket,
+    OkPacketParams,
     QueryError,
     type Connection,
     type QueryResult as MySQLQueryResult,
@@ -225,7 +226,7 @@ export class MySQLConnection extends SqlConnection {
     ): Promise<QueryResult<T>> {
         try {
             const { fields, rows, error } = await new Promise<{
-                rows: MySQLQueryResult;
+                rows: MySQLQueryResult | OkPacketParams;
                 error: QueryError | null;
                 fields: FieldPacket[];
             }>((r) =>
@@ -236,14 +237,11 @@ export class MySQLConnection extends SqlConnection {
                     },
                     query.parameters,
                     (error, result, fields) => {
-                        if (Array.isArray(result)) {
-                            r({
-                                rows: (result as MySQLQueryResult) ?? [],
-                                fields: fields,
-                                error,
-                            });
-                        }
-                        return r({ rows: [], error, fields: [] });
+                        return r({
+                            rows: result,
+                            error,
+                            fields,
+                        });
                     }
                 )
             );
