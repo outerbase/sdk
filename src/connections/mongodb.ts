@@ -101,7 +101,10 @@ export class MongoDBConnection implements Connection {
             await this.connect();
             await this.disconnect();
             return {};
-        } catch {
+        } catch (e) {
+            if (e instanceof Error) {
+                return { error: e.message };
+            }
             return { error: 'Failed to connect to MongoDB' };
         }
     }
